@@ -1,0 +1,52 @@
+.order-section{display:grid;grid-template-columns:.85fr 1.15fr;gap:72px;align-items:start;padding:48px 0}
+.order-intro h2{max-width:380px}
+.order-intro>p{margin-top:24px;color:var(--muted);font-size:14px;max-width:340px}
+.order-assurance{display:flex;flex-direction:column;gap:18px;margin-top:40px;font-size:12px;letter-spacing:.04em}
+.order-intro .form-notice{font-size:11px;margin-top:40px;border-left:1px solid var(--border);padding-left:16px;line-height:1.6}
+.order-form{background:var(--card);border-radius:12px;padding:32px;min-width:0}
+.form-progress{display:flex;justify-content:space-between;gap:8px;list-style:none;margin:0 0 36px;padding:0}
+.form-progress li{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:10px}
+.form-progress li>span{width:23px;height:23px;border:1px solid var(--border);border-radius:50%;display:grid;place-items:center;font-size:10px}
+.form-progress li[aria-current]{color:var(--text)}
+.form-progress li[aria-current]>span{background:var(--accent);color:var(--card);border-color:var(--accent)}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+legend{font-size:24px;font-weight:480;margin-bottom:24px;padding:0;line-height:1.25;outline:none!important}
+.order-form label{display:block;font-size:12px;margin:20px 0 9px;line-height:1.4}
+.order-form label:first-of-type{margin-top:0}
+.order-form input:not([type=checkbox]):not([type=file]),.order-form select,.order-form textarea{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:28px;width:100%;min-height:48px;padding:12px 18px;font-size:13px}
+.order-form select{background:var(--card);padding-right:30px}
+.order-form textarea{border-radius:20px;resize:vertical;min-height:96px}
+.order-form input::placeholder,.order-form textarea::placeholder{color:var(--muted)}
+.field-help{font-size:11px;color:var(--muted);line-height:1.6;margin-top:12px}
+.field-row{display:grid;grid-template-columns:1fr 1.8fr;gap:16px;margin-top:20px}
+.field-row label{margin-top:0}
+.optional{color:var(--muted);font-size:10px;margin-left:5px}
+.order-form label.checkbox{display:flex;align-items:flex-start;gap:10px;font-size:11px;line-height:1.6;margin-top:18px;color:var(--muted)}
+.checkbox input{margin:3px 0 0;accent-color:var(--accent);width:16px;height:16px;flex-shrink:0}
+.checkbox a{text-decoration:underline;text-underline-offset:2px}
+.upload-zone{border:1px dashed var(--border);border-radius:12px;position:relative;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:20px;text-align:center}
+.upload-zone>span{font-size:28px}
+.upload-zone strong{font-size:13px;font-weight:480}
+.upload-zone small{font-size:10px;color:var(--muted)}
+.upload-zone input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.upload-zone:focus-within{outline:2px solid var(--accent);outline-offset:4px}
+.file-previews{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.file-previews>div{display:flex;align-items:center;gap:12px;font-size:11px;overflow-wrap:anywhere}
+.file-previews img{width:52px;height:52px;border-radius:8px}
+.second-child{border-top:1px solid var(--line);padding-top:24px;margin-top:24px}
+.second-child h3{font-size:20px;margin-bottom:20px}
+.name-suggestion{background:var(--control);border-radius:32px;padding:8px 14px;font-size:12px;margin-top:8px;border:1px solid var(--border)}
+.form-controls{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);margin-top:28px;padding-top:24px}
+.form-controls .button{font-size:12px;padding:12px 20px;gap:16px}
+.order-total{font-size:10px;color:var(--muted);display:flex;flex-direction:column}
+.order-total strong{font-size:17px;font-weight:480;color:var(--text)}
+.form-error{color:var(--accent-hover);border-left:1px solid var(--accent);padding:8px 12px;font-size:12px;margin-top:20px;background:var(--control)}
+.order-summary{margin:0}
+.order-summary>div{display:flex;gap:20px;justify-content:space-between;margin-bottom:12px;font-size:12px}
+.order-summary dt{color:var(--muted)}
+.order-summary dd{margin:0;text-align:right;overflow-wrap:anywhere;max-width:70%}
+.preview-layout{background:var(--control);position:relative;min-height:220px;padding:24px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;margin-top:24px;overflow:hidden}
+.preview-layout .eyebrow{font-size:8px}
+.preview-name{font-size:24px;line-height:1.3;overflow-wrap:anywhere}
+.preview-layout+.field-help{margin-block:20px}
+.order-form>fieldset>.button{white-space:normal}
