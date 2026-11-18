@@ -1,0 +1,46 @@
+name: videovitannya
+services:
+  web:
+    image: ${NODE_IMAGE:-node:24-alpine}
+    restart: unless-stopped
+    working_dir: /app
+    user: node
+    command: ["node", "server.mjs", "--production"]
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      TRUST_PROXY: "true"
+    volumes:
+      - ./releases/${RELEASE:-66152d2}:/app:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [application]
+    healthcheck:
+      test: ["CMD", "node", "--input-type=module", "-e", "const r=await fetch('http://127.0.0.1:3000/');if(r.status!==200)process.exit(1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    labels:
+      traefik.enable: ${ROUTING_ENABLED:-false}
+      traefik.docker.network: videovitannya_application
+      traefik.http.routers.videovitannya.rule: Host(`videovitannya.com.ua`) || Host(`www.videovitannya.com.ua`)
+      traefik.http.routers.videovitannya.entrypoints: websecure
+      traefik.http.routers.videovitannya.tls: "true"
+      traefik.http.routers.videovitannya.tls.certresolver: letsencrypt-http
+      traefik.http.routers.videovitannya.service: videovitannya
+      traefik.http.services.videovitannya.loadbalancer.server.port: "3000"
+networks:
+  application:
+    name: videovitannya_application
