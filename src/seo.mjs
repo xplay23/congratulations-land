@@ -2,10 +2,11 @@ import { products, home, hubs, articles, site, prices, articlePath, productPath 
 import { features } from './features.mjs';
 
 export const homeFaq = [
-  ['Як замовити відеопривітання онлайн?', 'Оберіть продукт, заповніть форму з ім’ям, перегляньте прев’ю та оплатіть.'],
-  ['Скільки часу готується привітання?', 'Точний час підготовки буде вказано перед запуском генерації. Його визначимо після тестування сервісу.'],
-  ['Скільки коштує відеопривітання?', 'Від 199 грн за оживлення фото. Відео від казкового героя та пісня — від 399 грн, пакет фото + пісня — 549 грн.'],
-  ['Чи безпечно додавати фото?', 'У демонстраційній формі фото обробляються лише у вашому браузері й не надсилаються на сервер. Правила обробки для запуску будуть опубліковані в політиці конфіденційності.']
+  ['Як замовити відео привітання з іменем?', "Оберіть привітання, вкажіть ім'я та кілька слів про людину, перегляньте прев'ю і зробіть оплату. Відео приходить на вашу пошту."],
+  ['Скільки готується відео привітання?', 'Приблизно 5 хвилин після оплати. Готове відео надсилається на пошту, яку ви вказали в замовленні.'],
+  ['Скільки коштує відео привітання від Святого Миколая?', `Від ${prices.winter} грн. Точну ціну ви бачите перед оплатою, а повний перелік на сторінці «Ціни».`],
+  ["Чи можна подивитися прев'ю до оплати?", 'Так. Ви бачите короткий фрагмент з іменем, а готове відео приходить без водяного знака.'],
+  ['Чи безпечно завантажувати фото?', 'Фото використовується лише для вашого замовлення. Докладніше в політиці конфіденційності.']
 ];
 export const priceFaq = [
   ['Чи є підписка?', 'Ні, оплата разова за кожне замовлення.'],
@@ -61,7 +62,7 @@ export function head(path, hasQuery = false) {
   const org = { '@type': 'Organization', '@id': site.url + '/#organization', name: site.name, url: site.url, logo: site.url + '/assets/video-gift.svg' };
   const graph = [];
   if (meta.kind === 'home') graph.push(org, { '@type': 'WebSite', name: site.name, url: site.url });
-  if (meta.kind === 'product') graph.push({ '@type': 'Service', name: meta.h1, description: meta.description, provider: org, areaServed: { '@type': 'Country', name: 'UA' }, ...(meta.price !== null ? { offers: { '@type': 'AggregateOffer', lowPrice: meta.id === 'birthday' ? prices.photo : meta.price, highPrice: meta.id === 'birthday' ? prices.birthday : ['newyear', 'mykolay'].includes(meta.id) ? prices.winterTwo : meta.price, priceCurrency: 'UAH', offerCount: meta.id === 'birthday' ? 3 : ['newyear', 'mykolay'].includes(meta.id) ? 2 : 1 } } : {}) });
+  if (meta.kind === 'product') graph.push({ '@type': 'Service', name: meta.h1, description: meta.description, provider: org, areaServed: { '@type': 'Country', name: 'UA' }, ...(meta.price !== null ? { offers: { '@type': 'AggregateOffer', lowPrice: meta.id === 'birthday' ? prices.photo : meta.price, highPrice: meta.id === 'birthday' ? prices.birthday : meta.id === 'newyear' ? prices.winterTwo : meta.price, priceCurrency: 'UAH', offerCount: meta.id === 'birthday' ? 3 : meta.id === 'newyear' ? 2 : 1 } } : {}) });
   if (meta.kind === 'prices') graph.push({ '@type': 'ItemList', itemListElement: products.filter(p => p.price !== null).map((p, i) => ({ '@type': 'ListItem', position: i + 1, item: { '@type': 'Service', name: p.label, url: site.url + productPath(p), offers: { '@type': 'Offer', price: p.price, priceCurrency: 'UAH' } } })) });
   if (meta.kind === 'article') graph.push({ '@type': 'Article', headline: meta.title, image: `${site.url}/assets/og-christmas-mykolay.jpg`, datePublished: site.modified, dateModified: site.modified, author: { '@type': 'Organization', name: 'Редакція Videovitannya', url: site.url + '/pro-nas/' }, publisher: org, mainEntityOfPage: site.url + path });
   if (meta.faq) graph.push({ '@type': 'FAQPage', mainEntity: meta.faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) });

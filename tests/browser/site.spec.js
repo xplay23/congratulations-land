@@ -9,7 +9,7 @@ test('Vue hydrates, local media loads and layouts fit the viewport', async ({ pa
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error' || /hydration/i.test(m.text())) errors.push(m.text()); });
-  for (const path of ['/', '/svyatyj-mykolaj/', '/tsiny/', '/blog/']) {
+  for (const path of ['/', '/svyatyj-mykolaj/', '/den-narodzhennya/', '/ozhyvyty-foto/', '/pisnya-na-zamovlennya/', '/tsiny/', '/blog/']) {
     await page.goto(path);
     await page.evaluate(() => document.fonts.ready);
     await dismissCookies(page);
@@ -66,18 +66,18 @@ test('song order validates fields, preserves values and never transmits personal
   expect(submissions).toEqual([]);
 });
 
-test('two-child order requires each name and photo and uses 599 UAH', async ({ page }) => {
+test('Mykolay uses a separate order per recipient and requires a photo', async ({ page }) => {
   await page.goto('/zamovlennya/'); await dismissCookies(page);
-  await page.locator('#children').selectOption('2');
-  await expect(page.locator('.order-total')).toContainText('599 грн');
+  await expect(page.locator('#children option[value="2"]')).toHaveCount(0);
+  await expect(page.locator('.order-total')).toContainText('399 грн');
+  await expect(page.getByText('Для кількох дітей оформіть окреме замовлення для кожної дитини.')).toBeVisible();
   await page.getByRole('button', { name: 'Далі', exact: false }).click();
-  await expect(page.locator('#name2')).toBeVisible();
-  await page.locator('#name').fill('Тарасе'); await page.locator('#name2').fill('Маріє');
-  await page.locator('#photos').setInputFiles(['public/assets/logo.png']);
+  await expect(page.locator('#name2')).toHaveCount(0);
+  await page.locator('#name').fill('Тарасе');
   await page.locator('input[type=checkbox]').check();
   await page.getByRole('button', { name: 'Далі', exact: false }).click();
-  await expect(page.getByRole('alert')).toContainText('фото кожної дитини');
-  await page.locator('#photos').setInputFiles([{ name: 'one.png', mimeType: 'image/png', buffer: Buffer.from('test') }, { name: 'two.png', mimeType: 'image/png', buffer: Buffer.from('test') }]);
+  await expect(page.getByRole('alert')).toContainText('Додайте фото');
+  await page.locator('#photos').setInputFiles(['public/assets/logo.png']);
   await page.getByRole('button', { name: 'Далі', exact: false }).click();
   await expect(page.locator('#email')).toBeVisible();
 });

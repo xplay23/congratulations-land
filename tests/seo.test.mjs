@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { allPaths, metadata, head, sitemap, robots } from '../src/seo.mjs';
 import { features } from '../src/features.mjs';
-import { site, productCatalogue } from '../src/content.mjs';
+import { site, products, productCatalogue } from '../src/content.mjs';
 
 const approvedSeo = [
   ['/', 'Відео привітання на замовлення з іменем | Videovitannya', 'Замовте відео привітання з іменем від Святого Миколая, Діда Мороза чи Санта Клауса. Перегляд до оплати.', 'Відео привітання на замовлення з іменем'],
@@ -28,7 +28,7 @@ test('approved SEO copy is exact in metadata, social tags and prerendered headin
     assert.equal(html.match(/<h1[^>]*>(.*?)<\/h1>/s)[1], h1, path);
   }
   const mykolay = await readFile('dist/svyatyj-mykolaj/index.html', 'utf8');
-  for (const title of ['Як замовити відео від Миколая', 'Для дитини', 'Для дорослих', 'Скільки коштує', 'Питання й відповіді']) {
+  for (const title of ['Як замовити відео від Святого Миколая', 'Для дитини', 'Для дорослих', 'Скільки коштує', 'Питання та відповіді']) {
     assert.ok(mykolay.includes(`<h2>${title}</h2>`), title);
   }
 });
@@ -45,6 +45,39 @@ test('indexable pages have complete, unique metadata within the specified limits
     descriptions.add(meta.description);
     assert.ok(head(path).includes(`href="${site.url}${path}"`));
   }
+});
+
+test('new product copy, FAQs and cross-links are rendered without editorial placeholders', async () => {
+  for (const product of products.filter(p => p.sections)) {
+    const html = await readFile(`dist/${product.slug}/index.html`, 'utf8');
+    const text = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '').replace(/<[^>]+>/g, ' ').replaceAll('&#39;', "'").replaceAll('&quot;', '"').replace(/\s+/g, ' ');
+    assert.ok(text.includes(product.intro), product.id);
+    for (const section of product.sections) {
+      assert.ok(html.includes(`<h2>${section.title}</h2>`), `${product.id}: ${section.title}`);
+      if (section.text) assert.ok(text.includes(section.text), product.id);
+      for (const step of section.steps || []) assert.ok(text.includes(step), `${product.id}: ${step}`);
+      if (section.price) assert.ok(text.includes(`Від ${product.price} грн.`), product.id);
+    }
+    const graph = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
+    const faq = graph.find(item => item['@type'] === 'FAQPage');
+    assert.deepEqual(faq.mainEntity.map(item => [item.name, item.acceptedAnswer.text]), product.faq);
+    for (const [question, answer] of product.faq) { assert.ok(text.includes(question), question); assert.ok(text.includes(answer), answer); }
+    for (const id of product.related || []) {
+      const linked = products.find(p => p.id === id);
+      if (linked) assert.ok(html.includes(`href="/${linked.slug}/"`), `${product.id}: ${id}`);
+    }
+    assert.doesNotMatch(text, /\{(?:TIME_FULL|TIME_SONG|PRICE_NY)\}|фігурних дужках|гіпотеза/);
+  }
+  const mykolay = await readFile('dist/svyatyj-mykolaj/index.html', 'utf8');
+  assert.ok(mykolay.includes('окреме замовлення для кожної дитини'));
+  assert.ok(!mykolay.includes('599 грн'));
+  const photo = await readFile('dist/ozhyvyty-foto/index.html', 'utf8');
+  assert.ok(photo.includes('1 хвилину. Сервіс повідомить на пошту, коли відео готове.'));
+  const song = await readFile('dist/pisnya-na-zamovlennya/index.html', 'utf8');
+  assert.ok(!song.includes('Скільки чекати?'));
+  const home = await readFile('dist/index.html', 'utf8');
+  assert.ok(home.includes('Відео привітання на замовлення: для кого і коли'));
+  assert.ok(home.includes('Для дитини, мами, колеги чи друга'));
 });
 
 test('sitemap excludes service paths, empty hubs and the future cartoon product', () => {

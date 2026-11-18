@@ -9,13 +9,13 @@ const winter = computed(() => ['newyear', 'mykolay'].includes(data.product));
 const effectiveProduct = computed(() => data.product === 'birthday' ? data.variant : data.product);
 const needsSong = computed(() => ['song', 'birthday'].includes(effectiveProduct.value));
 const needsPhoto = computed(() => effectiveProduct.value !== 'song');
-const twoChildren = computed(() => winter.value && data.children === '2');
+const twoChildren = computed(() => data.product === 'newyear' && data.children === '2');
 const amount = computed(() => winter.value ? (twoChildren.value ? prices.winterTwo : prices.winter) : prices[effectiveProduct.value]);
 const product = computed(() => products.find(p => p.id === data.product));
 const names = { Олена: 'Олено', Оленка: 'Оленко', Тарас: 'Тарасе', Марія: 'Маріє', Андрій: 'Андрію', Іван: 'Іване', Софія: 'Софіє', Анна: 'Анно', Максим: 'Максиме', Михайло: 'Михайле', Наталія: 'Наталіє', Олександр: 'Олександре', Дмитро: 'Дмитре', Артем: 'Артеме', Богдан: 'Богдане', Катерина: 'Катерино' };
 const suggested = computed(() => names[data.name.trim()]);
 const progress = ['Подарунок', 'Деталі', 'Контакти', 'Перевірка'];
-watch(() => data.product, value => { data.hero = value === 'mykolay' ? 'mykolay' : 'did'; error.value = ''; });
+watch(() => data.product, value => { data.hero = value === 'mykolay' ? 'mykolay' : 'did'; data.children = '1'; error.value = ''; });
 function release() { files.value.forEach(file => { if (file.url) URL.revokeObjectURL(file.url); }); }
 function selectPhotos(event) {
   error.value = '';
@@ -63,9 +63,9 @@ onBeforeUnmount(release);
       <div class="sr-only" role="status" aria-live="polite">Крок {{ step + 1 }} з 4: {{ progress[step] }}</div>
       <fieldset v-if="step === 0"><legend tabindex="-1">Що подаруємо?</legend><label for="product">Привітання</label><select id="product" v-model="data.product"><option v-for="p in products.filter(p => p.price !== null)" :key="p.id" :value="p.id">{{ p.label }}</option></select>
         <template v-if="winter">
-          <template v-if="data.product === 'newyear'"><p id="hero-label">Хто вітатиме?</p><div class="hero-choices" role="radiogroup" aria-labelledby="hero-label"><label class="hero-choice"><input v-model="data.hero" type="radio" name="hero" value="did">Дід Мороз</label><label class="hero-choice"><input v-model="data.hero" type="radio" name="hero" value="santa">Санта Клаус</label></div></template>
+          <template v-if="data.product === 'newyear'"><p id="hero-label">Хто вітатиме?</p><div id="hero-choices" class="hero-choices" role="radiogroup" aria-labelledby="hero-label"><label class="hero-choice"><input v-model="data.hero" type="radio" name="hero" value="did"><span>Дід Мороз<small>Традиційне привітання з рідною інтонацією.</small></span></label><label class="hero-choice"><input v-model="data.hero" type="radio" name="hero" value="santa"><span>Санта Клаус<small>Яскраве привітання в новорічному стилі.</small></span></label></div></template>
           <template v-else><label for="hero">Хто вітатиме?</label><select id="hero" v-model="data.hero"><option value="mykolay">Святий Миколай</option></select></template>
-          <label for="children">Для кого?</label><select id="children" v-model="data.children"><option value="1">Для дитини чи дорослого — {{ prices.winter }} грн</option><option value="2">Для двох дітей — {{ prices.winterTwo }} грн</option></select>
+          <label for="children">Для кого?</label><select id="children" v-model="data.children"><option value="1">Для дитини чи дорослого — {{ prices.winter }} грн</option><option v-if="data.product === 'newyear'" value="2">Для двох дітей — {{ prices.winterTwo }} грн</option></select><p v-if="data.product === 'mykolay'" class="field-help">Для кількох дітей оформіть окреме замовлення для кожної дитини.</p>
         </template>
         <template v-if="data.product === 'birthday'"><label for="variant">Варіант подарунка</label><select id="variant" v-model="data.variant"><option value="birthday">Фото + пісня — 549 грн</option><option value="photo">Оживлення фото — 199 грн</option><option value="song">Пісня — 399 грн</option></select></template>
         <p class="field-help">Спершу перевірте короткий фрагмент. Оплата повної версії — лише після прев’ю.</p>
