@@ -1,5 +1,5 @@
 """Usage: python scripts/prepare-background.py SOURCE FFMPEG
-Creates silent VP9/WebM and H.264/MP4 variants plus the first non-black frame.
+Creates silent H.264/MP4 variants plus the first non-black frame.
 Only the initial black frame is removed; the remaining video is preserved.
 """
 from pathlib import Path
@@ -24,6 +24,5 @@ for width, height in [(1280, 720), (854, 480)]:
     base = ['-map', '0:v:0', '-an', '-sn', '-dn', '-vf', f'trim=start_frame=1,setpts=PTS-STARTPTS,scale={width}:{height}', '-pix_fmt', 'yuv420p', '-threads', '4']
     rate = '1400k' if height == 720 else '650k'
     run(*base, '-c:v', 'libx264', '-preset', 'slow', '-crf', '28', '-maxrate', rate, '-bufsize', '2800k', '-profile:v', 'high', '-movflags', '+faststart', '-g', '48', str(out / f'hero-andriiko-{height}.mp4'))
-    run(*base, '-c:v', 'libvpx-vp9', '-crf', '38', '-b:v', '850k' if height == 720 else '400k', '-maxrate', rate, '-bufsize', '2800k', '-deadline', 'good', '-cpu-used', '3', '-row-mt', '1', '-g', '48', str(out / f'hero-andriiko-{height}.webm'))
 for file in sorted(out.glob('hero-andriiko-*')):
     print(file.name, file.stat().st_size, flush=True)

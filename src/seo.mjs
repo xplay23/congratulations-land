@@ -57,7 +57,7 @@ export function allPaths() {
 const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export function head(path, hasQuery = false) {
   const meta = metadata(path);
-  const title = meta.title.length + 16 <= 60 ? `${meta.title} | Videovitannya` : meta.title;
+  const title = meta.appendBrand !== false && !meta.title.endsWith(' | Videovitannya') && meta.title.length + 16 <= 60 ? `${meta.title} | Videovitannya` : meta.title;
   const org = { '@type': 'Organization', '@id': site.url + '/#organization', name: site.name, url: site.url, logo: site.url + '/assets/video-gift.svg' };
   const graph = [];
   if (meta.kind === 'home') graph.push(org, { '@type': 'WebSite', name: site.name, url: site.url });

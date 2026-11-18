@@ -2,7 +2,7 @@
 
 ## Текущие медиа — 2026-11-18
 
-Фон: предоставленный владельцем `pilot_andriiko_ua_720p.mp4` из `Downloads/Telegram Desktop`. Веб-копии `hero-andriiko-{480,720}.{webm,mp4}`: VP9/H.264, без аудиодорожек, 49,04 с. Плейсхолдер `hero-andriiko-poster-{640,960,1280}.{avif,webp,jpg}` — первый нечёрный кадр (№ 1). Исходник сохранён. Размеры, параметры и результаты проверки приведены в [PERFORMANCE.md](../PERFORMANCE.md); команды кодирования — `scripts/prepare-background.py`.
+Фон: предоставленный владельцем `pilot_andriiko_ua_720p.mp4` из `Downloads/Telegram Desktop`. Веб-копии `hero-andriiko-{480,720}.mp4`: H.264, без аудиодорожек, 49,04 с. WebM удалён по запросу владельца. Плейсхолдер `hero-andriiko-poster-{640,960,1280}.{avif,webp,jpg}` — первый нечёрный кадр (№ 1). Исходник сохранён. Размеры, параметры и результаты проверки приведены в [PERFORMANCE.md](../PERFORMANCE.md); команды кодирования — `scripts/prepare-background.py`.
 
 Фото каталога `christmas-{gifts,birthday,photo,song}` имеют производные AVIF/WebP/JPEG шириной 360, 640 и 720 px. Пользовательское фото `mykolay-station` — 360, 640, 960 и 1280 px. Подготовка: `scripts/prepare-images.py`. SVG-знак `video-gift.svg` используется без текстового названия; шрифт интерфейса — Rubik Variable.
 

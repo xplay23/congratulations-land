@@ -2,7 +2,7 @@
 import ProductImage from './components/ProductImage.vue';
 import { features } from './features.mjs';
 import { computed, ref, defineAsyncComponent } from 'vue';
-import { products, hubs, articles, articlePath } from './content.mjs';
+import { products, hubs, articles, articlePath, prices } from './content.mjs';
 import { metadata, priceFaq } from './seo.mjs';
 import SiteHeader from './components/SiteHeader.vue';
 import SiteFooter from './components/SiteFooter.vue';
@@ -39,7 +39,11 @@ const crumbs = computed(() => {
         <section class="product-hero wrap"><div><span class="eyebrow">{{ p.tag }}</span><h1>{{ p.h1 }}</h1><p class="lead">{{ p.intro }}</p><a v-if="!p.noindex" class="button primary" href="#order">{{ p.id === 'song' ? 'Замовити пісню' : 'Замовити відео' }} ↗</a><a v-else class="button ghost" href="/#gifts">Інші привітання ↗</a><div v-if="p.id === 'newyear'" class="hero-switch"><span>Дід Мороз / Санта</span><a href="/svyatyj-mykolaj/">Від Святого Миколая ↗</a></div><p class="hero-footnote">Без підписки. З увагою до вашої історії.</p></div><div id="example" class="example-card"><ProductImage :product="p" eager /><span class="example-label">Концепт атмосфери · не деморолик</span></div></section>
         <div v-if="!p.noindex" class="wrap section"><OrderForm :selected="p.id" /></div>
         <section class="section wrap product-detail"><span class="eyebrow">Продумано до деталей</span><h2>{{ p.detailTitle }}</h2><p>{{ p.detail }}</p><div class="included"><span>Іменне звертання</span><span>Прев’ю перед оплатою</span><span>Посилання для подарунка</span></div></section>
-        <HowItWorks v-if="!p.noindex" /><FaqSection :items="p.faq" :title="`Питання про ${p.id === 'song' ? 'пісню' : 'привітання'}`" />
+        <template v-if="p.id === 'mykolay'">
+          <section class="section wrap product-detail"><h2>Для дорослих</h2><p>Подаруйте мамі, татові, друзям або колезі особисте привітання від Святого Миколая. Додайте ім’я, улюблені справи та кілька теплих слів — герой згадає те, що важливе саме для вашої людини.</p></section>
+          <section class="section wrap product-detail"><h2>Скільки коштує</h2><p>Персональне відео для одного отримувача — {{ prices.winter }} грн. Привітання для двох дітей в одному відео — {{ prices.winterTwo }} грн. Спочатку перегляньте прев’ю, потім вирішуйте щодо оплати.</p><a class="text-link" href="/tsiny/">Переглянути всі ціни ↗</a></section>
+        </template>
+        <HowItWorks v-if="!p.noindex" :title="p.id === 'mykolay' ? 'Як замовити відео від Миколая' : undefined" /><FaqSection :items="p.faq" :title="p.id === 'mykolay' ? 'Питання й відповіді' : `Питання про ${p.id === 'song' ? 'пісню' : 'привітання'}`" />
         <section class="section wrap"><div class="section-heading"><h2>Інші способи сказати «люблю»</h2><a class="text-link" href="/tsiny/">Усі ціни ↗</a></div><div class="related-products"><ProductCard v-for="product in products.filter(x => x.id !== p.id && x.price !== null).slice(0, 3)" :key="product.id" :product="product" /></div></section>
         <section v-if="features.blogVisible" class="section wrap"><h2>Ідеї для вашого привітання</h2><ArticleCards :articles="articles" /></section>
       </template>

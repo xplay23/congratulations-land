@@ -3,7 +3,35 @@ import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { allPaths, metadata, head, sitemap, robots } from '../src/seo.mjs';
 import { features } from '../src/features.mjs';
-import { site } from '../src/content.mjs';
+import { site, productCatalogue } from '../src/content.mjs';
+
+const approvedSeo = [
+  ['/', 'Відео привітання на замовлення з іменем | Videovitannya', 'Замовте відео привітання з іменем від Святого Миколая, Діда Мороза чи Санта Клауса. Перегляд до оплати.', 'Відео привітання на замовлення з іменем'],
+  ['/svyatyj-mykolaj/', 'Відео привітання від Святого Миколая | Videovitannya', 'Святий Миколай привітає дитину чи дорослого по імені. Персональне відео з вашими побажаннями, готове швидко. Перегляд до оплати, оплата онлайн.', 'Відео привітання від Святого Миколая для дітей і дорослих'],
+  ['/novyj-rik/', 'Відео привітання від Діда Мороза з іменем | Videovitannya', 'Оберіть Діда Мороза або Санта Клауса: новорічне відео з привітанням по імені для дитини чи дорослого. Перегляд до оплати, швидке виконання.', 'Відео привітання з Новим роком від Діда Мороза або Санта Клауса'],
+  ['/pisnya-na-zamovlennya/', 'Пісня на замовлення з іменем: створити пісню', "Іменна пісня на замовлення: вкажіть ім'я та побажання, і отримайте пісню з вашим текстом. Подарунок на день народження, Новий рік чи ювілей.", 'Іменна пісня на замовлення'],
+  ['/ozhyvyty-foto/', 'Оживити фото онлайн: старе фото у відео | Videovitannya', 'Оживіть старе фото онлайн: людина на знімку усміхнеться, моргне й поверне голову. Завантажте фото й перегляньте результат до оплати.', 'Оживити фото онлайн']
+];
+
+test('approved SEO copy is exact in metadata, social tags and prerendered headings', async () => {
+  for (const [path, title, description, h1] of approvedSeo) {
+    const hidden = path === '/novyj-rik/' && !features.santaVisible;
+    const meta = hidden ? productCatalogue.find(p => p.id === 'newyear') : metadata(path);
+    assert.deepEqual([meta.title, meta.description, meta.h1], [title, description, h1], path);
+    if (hidden) continue;
+    const html = await readFile(`dist${path}index.html`, 'utf8');
+    const escapedDescription = description.replaceAll("'", '&#39;');
+    assert.ok(html.includes(`<title>${title}</title>`), path);
+    assert.ok(html.includes(`<meta name="description" content="${escapedDescription}">`), path);
+    assert.ok(html.includes(`<meta property="og:title" content="${title}">`), path);
+    assert.ok(html.includes(`<meta property="og:description" content="${escapedDescription}">`), path);
+    assert.equal(html.match(/<h1[^>]*>(.*?)<\/h1>/s)[1], h1, path);
+  }
+  const mykolay = await readFile('dist/svyatyj-mykolaj/index.html', 'utf8');
+  for (const title of ['Як замовити відео від Миколая', 'Для дитини', 'Для дорослих', 'Скільки коштує', 'Питання й відповіді']) {
+    assert.ok(mykolay.includes(`<h2>${title}</h2>`), title);
+  }
+});
 
 test('indexable pages have complete, unique metadata within the specified limits', () => {
   const descriptions = new Set();
@@ -12,7 +40,7 @@ test('indexable pages have complete, unique metadata within the specified limits
     if (meta.noindex) continue;
     assert.ok(meta.h1, path);
     assert.ok(meta.title.length <= 60, `${path}: title too long`);
-    assert.ok(meta.description.length >= 120 && meta.description.length <= 155, `${path}: description ${meta.description.length}`);
+    assert.ok(meta.description.length >= 90 && meta.description.length <= 155, `${path}: description ${meta.description.length}`);
     assert.ok(!descriptions.has(meta.description), `${path}: duplicate description`);
     descriptions.add(meta.description);
     assert.ok(head(path).includes(`href="${site.url}${path}"`));
@@ -38,7 +66,9 @@ test('temporary settings remove Santa and keep every page out of search', async 
   for (const path of allPaths()) {
     const html = await readFile(`dist${path}index.html`, 'utf8');
     assert.ok(html.includes('<meta name="robots" content="noindex, nofollow">'), path);
-    assert.doesNotMatch(html, /Дід[а]? Мороз|Санта|Санти|href="\/novyj-rik\//, path);
+    // The approved home meta description mentions these heroes; their UI remains hidden.
+    const body = html.match(/<body[^>]*>(.*?)<\/body>/s)[1];
+    assert.doesNotMatch(body, /Дід[а]? Мороз|Санта|Санти|href="\/novyj-rik\//, path);
   }
 });
 

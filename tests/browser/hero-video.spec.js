@@ -1,11 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 test('hero video plays silently, pauses on request and stops outside the viewport', async ({ page }, testInfo) => {
+  const webmRequests = [];
+  page.on('request', request => { if (/\.webm(?:\?|$)/.test(request.url())) webmRequests.push(request.url()); });
   await page.goto('/');
   const cookies = page.getByRole('button', { name: 'Лише необхідні' });
   if (await cookies.isVisible()) await cookies.click();
   const video = page.locator('.hero-video');
   await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(0);
+  await expect(video.locator('source:not([type="video/mp4"])')).toHaveCount(0);
+  expect(await video.evaluate(v => v.currentSrc)).toMatch(/hero-andriiko-(480|720)\.mp4$/);
+  expect(webmRequests).toEqual([]);
   expect(await video.evaluate(v => ({ muted: v.muted, loop: v.loop, inline: v.playsInline, error: v.error }))).toEqual({ muted: true, loop: true, inline: true, error: null });
   await page.getByRole('button', { name: 'Пауза — призупинити фонове відео' }).click();
   await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);

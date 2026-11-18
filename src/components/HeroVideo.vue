@@ -87,9 +87,7 @@ onBeforeUnmount(() => {
 <template>
   <ResponsiveImage class="hero-poster" base="/assets/hero-andriiko-poster" :widths="[640, 960, 1280]" :width="1280" :height="720" sizes="(max-width: 640px) 960px, 100vw" eager />
   <video ref="video" class="hero-video" :style="{ opacity: frameReady && !failed ? 1 : 0 }" width="1280" height="720" muted loop playsinline preload="none" aria-hidden="true" tabindex="-1" @play="playing = true" @playing="frameReady = true" @pause="playing = false" @error="failed = true">
-    <source :src="sourcesReady ? '/assets/hero-andriiko-480.webm' : undefined" media="(max-width: 640px)" type="video/webm; codecs=vp9">
     <source :src="sourcesReady ? '/assets/hero-andriiko-480.mp4' : undefined" media="(max-width: 640px)" type="video/mp4">
-    <source :src="sourcesReady ? '/assets/hero-andriiko-720.webm' : undefined" type="video/webm; codecs=vp9">
     <source :src="sourcesReady ? '/assets/hero-andriiko-720.mp4' : undefined" type="video/mp4">
   </video>
   <button v-if="mounted && !failed" class="hero-playback" type="button" :aria-label="playing ? 'Пауза — призупинити фонове відео' : 'Відтворити фонове відео'" @click="togglePlayback">

@@ -2,7 +2,7 @@
 import { features } from '../features.mjs';
 import { ref } from 'vue';
 import { PhArrowRight, PhCaretDown, PhShieldCheck } from '@phosphor-icons/vue';
-import { products, articles, defaultProductId } from '../content.mjs';
+import { products, articles, defaultProductId, home } from '../content.mjs';
 import { homeFaq } from '../seo.mjs';
 import ProductCard from './ProductCard.vue';
 import HowItWorks from './HowItWorks.vue';
@@ -18,7 +18,7 @@ const selected = ref(defaultProductId);
     <HeroVideo />
     <div class="hero-shade"></div>
     <div class="hero-content wrap">
-      <h1>Відеопривітання<br>на замовлення з іменем</h1>
+      <h1>{{ home.h1 }}</h1>
       <p>Персональне відео, оживлене фото або пісня.<br class="desktop-break"> Ваша історія — подарунок для близької людини.</p>
       <form class="hero-order" action="/zamovlennya/" method="get">
         <div class="hero-select"><label for="hero-product" class="sr-only">Оберіть привітання</label><select id="hero-product" v-model="selected" name="product"><option v-for="p in products.filter(p => p.price !== null)" :key="p.id" :value="p.id">{{ p.label }}</option></select><PhCaretDown :size="16" aria-hidden="true" /></div>

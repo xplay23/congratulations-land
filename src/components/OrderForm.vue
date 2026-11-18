@@ -62,7 +62,11 @@ onBeforeUnmount(release);
       <ol class="form-progress" aria-label="Кроки замовлення"><li v-for="(label, i) in progress" :key="label" :class="{ complete: i < step }" :aria-current="i === step ? 'step' : undefined"><span>{{ i + 1 }}</span>{{ label }}</li></ol>
       <div class="sr-only" role="status" aria-live="polite">Крок {{ step + 1 }} з 4: {{ progress[step] }}</div>
       <fieldset v-if="step === 0"><legend tabindex="-1">Що подаруємо?</legend><label for="product">Привітання</label><select id="product" v-model="data.product"><option v-for="p in products.filter(p => p.price !== null)" :key="p.id" :value="p.id">{{ p.label }}</option></select>
-        <template v-if="winter"><label for="hero">Хто вітатиме?</label><select id="hero" v-model="data.hero"><option v-if="data.product === 'newyear'" value="did">Дід Мороз</option><option v-if="data.product === 'newyear'" value="santa">Санта</option><option v-if="data.product === 'mykolay'" value="mykolay">Святий Миколай</option></select><label for="children">Для скількох дітей?</label><select id="children" v-model="data.children"><option value="1">Для однієї — 399 грн</option><option value="2">Для двох — 599 грн</option></select></template>
+        <template v-if="winter">
+          <template v-if="data.product === 'newyear'"><p id="hero-label">Хто вітатиме?</p><div class="hero-choices" role="radiogroup" aria-labelledby="hero-label"><label class="hero-choice"><input v-model="data.hero" type="radio" name="hero" value="did">Дід Мороз</label><label class="hero-choice"><input v-model="data.hero" type="radio" name="hero" value="santa">Санта Клаус</label></div></template>
+          <template v-else><label for="hero">Хто вітатиме?</label><select id="hero" v-model="data.hero"><option value="mykolay">Святий Миколай</option></select></template>
+          <label for="children">Для кого?</label><select id="children" v-model="data.children"><option value="1">Для дитини чи дорослого — {{ prices.winter }} грн</option><option value="2">Для двох дітей — {{ prices.winterTwo }} грн</option></select>
+        </template>
         <template v-if="data.product === 'birthday'"><label for="variant">Варіант подарунка</label><select id="variant" v-model="data.variant"><option value="birthday">Фото + пісня — 549 грн</option><option value="photo">Оживлення фото — 199 грн</option><option value="song">Пісня — 399 грн</option></select></template>
         <p class="field-help">Спершу перевірте короткий фрагмент. Оплата повної версії — лише після прев’ю.</p>
       </fieldset>
