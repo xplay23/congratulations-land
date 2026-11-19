@@ -2,6 +2,9 @@ import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
+import { parseEnv } from 'node:util';
+import { createPlataTest } from './lib/plata-test.mjs';
 import { serveVideo } from './lib/serve-video.mjs';
 import { sitemap, robots } from './src/seo.mjs';
 import { features } from './src/features.mjs';
@@ -10,6 +13,16 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 const production = process.argv.includes('--production');
 const port = Number(process.env.PORT || 5173);
 const host = process.env.HOST || '127.0.0.1';
+let testToken = process.env.MONO_TEST_TOKEN;
+if (!testToken) {
+  try { testToken = parseEnv(await readFile(resolve(root, '.env.mono-test'), 'utf8')).MONO_TEST_TOKEN; }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+}
+const paymentOrigin = new URL(process.env.MONO_SITE_ORIGIN || `http://${host}:${port}`).origin;
+const handlePayment = createPlataTest({
+  token: testToken?.trim(), origin: paymentOrigin,
+  directory: process.env.MONO_TEST_DATA_DIR || resolve(tmpdir(), 'videovitannya-plata-test')
+});
 const contentTypes = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.avif': 'image/avif', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2', '.mp4': 'video/mp4', '.webm': 'video/webm', '.xml': 'application/xml; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.ico': 'image/x-icon' };
 const vite = production ? null : await (await import('vite')).createServer({ root, appType: 'custom', server: { middlewareMode: true } });
 
@@ -23,6 +36,7 @@ const server = http.createServer(async (req, res) => {
     let path;
     try { path = decodeURIComponent(url.pathname); } catch { res.writeHead(400); res.end('Bad request'); return; }
     if (path.includes('\\') || path.includes('\0') || path.split('/').some(p => p === '..') || path.startsWith('/.')) { res.writeHead(404); res.end('Not found'); return; }
+    if (path.startsWith('/api/plata/')) { await handlePayment(req, res, path); return; }
     if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { Allow: 'GET, HEAD' }); res.end('Method not allowed'); return; }
     // These canonical domain redirects are enabled only behind a trusted TLS proxy.
     if (process.env.TRUST_PROXY === 'true' && (req.headers.host === 'www.videovitannya.com.ua' || req.headers['x-forwarded-proto'] === 'http')) {
@@ -44,7 +58,7 @@ const server = http.createServer(async (req, res) => {
       const { render } = await vite.ssrLoadModule('/src/entry-server.js');
       const result = await render(path, !!url.search);
       res.writeHead(result.status, { 'Content-Type': contentTypes['.html'], 'Cache-Control': 'no-store' });
-      res.end(req.method === 'HEAD' ? undefined : template.replace('<!--page-head-->', result.head).replace('<!--app-html-->', result.html)); return;
+      res.end(req.method === 'HEAD' ? undefined : template.replace('<html lang="uk">', `<html lang="${result.lang}">`).replace('<!--page-head-->', result.head).replace('<!--app-html-->', result.html)); return;
     }
     const dist = resolve(root, 'dist');
     const file = resolve(dist, '.' + path, ...(extname(path) ? [] : ['index.html']));

@@ -6,11 +6,11 @@ import { features } from '../src/features.mjs';
 import { site, products, productCatalogue } from '../src/content.mjs';
 
 const approvedSeo = [
-  ['/', 'Відео привітання на замовлення з іменем | Videovitannya', 'Замовте відео привітання з іменем від Святого Миколая, Діда Мороза чи Санта Клауса. Перегляд до оплати.', 'Відео привітання на замовлення з іменем'],
-  ['/svyatyj-mykolaj/', 'Відео привітання від Святого Миколая | Videovitannya', 'Святий Миколай привітає дитину чи дорослого по імені. Персональне відео з вашими побажаннями, готове швидко. Перегляд до оплати, оплата онлайн.', 'Відео привітання від Святого Миколая для дітей і дорослих'],
-  ['/novyj-rik/', 'Відео привітання від Діда Мороза з іменем | Videovitannya', 'Оберіть Діда Мороза або Санта Клауса: новорічне відео з привітанням по імені для дитини чи дорослого. Перегляд до оплати, швидке виконання.', 'Відео привітання з Новим роком від Діда Мороза або Санта Клауса'],
+  ['/', 'Відео привітання на замовлення з іменем | Videovitannya', 'Замовте відео привітання з іменем від Святого Миколая, Діда Мороза чи Санта Клауса. Додайте ім’я, особисту історію та побажання.', 'Відео привітання на замовлення з іменем'],
+  ['/svyatyj-mykolaj/', 'Відео привітання від Святого Миколая | Videovitannya', 'Святий Миколай привітає дитину чи дорослого по імені. Персональне відео з вашими побажаннями, готове швидко. Готове відео надійде на пошту.', 'Відео привітання від Святого Миколая для дітей і дорослих'],
+  ['/novyj-rik/', 'Відео привітання від Діда Мороза з іменем | Videovitannya', 'Оберіть Діда Мороза або Санта Клауса: новорічне відео з привітанням по імені для дитини чи дорослого. Готове відео надійде на вашу пошту.', 'Відео привітання з Новим роком від Діда Мороза або Санта Клауса'],
   ['/pisnya-na-zamovlennya/', 'Пісня на замовлення з іменем: створити пісню', "Іменна пісня на замовлення: вкажіть ім'я та побажання, і отримайте пісню з вашим текстом. Подарунок на день народження, Новий рік чи ювілей.", 'Іменна пісня на замовлення'],
-  ['/ozhyvyty-foto/', 'Оживити фото онлайн: старе фото у відео | Videovitannya', 'Оживіть старе фото онлайн: людина на знімку усміхнеться, моргне й поверне голову. Завантажте фото й перегляньте результат до оплати.', 'Оживити фото онлайн']
+  ['/ozhyvyty-foto/', 'Оживити фото онлайн: старе фото у відео | Videovitannya', 'Оживіть старе фото онлайн: людина на знімку усміхнеться, моргне й поверне голову. Завантажте фото й отримайте коротке відео на пошту.', 'Оживити фото онлайн']
 ];
 
 test('approved SEO copy is exact in metadata, social tags and prerendered headings', async () => {
@@ -88,6 +88,28 @@ test('sitemap excludes service paths, empty hubs and the future cartoon product'
   assert.ok(head('/kabinet/').includes('noindex, nofollow'));
 });
 
+test('birthday offers, language alternates and FAQs match the two rendered pages', async () => {
+  for (const path of ['/den-narodzhennya/', '/ru/den-rozhdeniya/']) {
+    const html = await readFile(`dist${path}index.html`, 'utf8');
+    const meta = metadata(path);
+    const graph = JSON.parse(html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)[1])['@graph'];
+    const service = graph.find(item => item['@type'] === 'Service');
+    assert.equal(service.name, meta.serviceName);
+    assert.deepEqual([service.offers['@type'], service.offers.price, service.offers.priceCurrency], ['Offer', meta.price, 'UAH']);
+    assert.equal(meta.faq.length, 6);
+    assert.deepEqual(graph.find(item => item['@type'] === 'FAQPage').mainEntity.map(q => [q.name, q.acceptedAnswer.text]), meta.faq);
+    for (const [lang, url] of [['uk','/den-narodzhennya/'], ['ru','/ru/den-rozhdeniya/'], ['x-default','/den-narodzhennya/']]) {
+      assert.ok(html.includes(`hreflang="${lang}" href="${site.url}${url}"`));
+    }
+    assert.ok(html.includes(`<meta property="og:title" content="${meta.title} | Videovitannya">`));
+    assert.ok(!graph.some(item => item['@type'] === 'VideoObject'));
+  }
+  for (const path of allPaths()) {
+    const html = await readFile(`dist${path}index.html`, 'utf8');
+    assert.doesNotMatch(html, /прев[’'ʼ]?ю|перегляд до оплати|просмотр до оплаты|фрагмент[а-яіїє ]{0,35}(?:оплат|сплат)/i, path);
+  }
+});
+
 test('temporary settings remove Santa and keep every page out of search', async () => {
   assert.equal(features.indexingEnabled, false);
   assert.equal(features.santaVisible, false);
@@ -110,7 +132,7 @@ test('generated Vue HTML has one H1, static content, valid JSON-LD and local ima
   for (const path of allPaths()) {
     const html = await readFile(`dist${path}index.html`, 'utf8');
     assert.equal([...html.matchAll(/<h1(?:\s[^>]*)?>/g)].length, 1, path);
-    assert.ok(html.includes('<html lang="uk">'), path);
+    assert.ok(html.includes(`<html lang="${metadata(path).lang || 'uk'}">`), path);
     assert.ok(!html.includes('<!--app-html-->'), path);
     const match = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
     if (match) {

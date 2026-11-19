@@ -71,3 +71,7 @@ Create a cinematic premium photographic website hero background for a Ukrainian 
 ## Промпт предметных изображений
 
 Create a wide photographic triptych image containing THREE equal vertical panels side by side with no margins or dividing lines, for cropping into separate website cards. Overall image 3:1 landscape composition. Each panel must independently show a complete centered still life on dark charcoal graphite background with subtle muted warm light, premium understated photo, NOT illustration, no text, no logos, no people. LEFT third: small beautifully made birthday cake with thin lit candles on a charcoal table, cream frosting, warm candle light, tasteful moody celebration. CENTER third: elegant old wooden photograph frame displaying an indistinct vintage landscape photo (no human faces), lying with a few analog photos on a dark desk, contemplative nostalgic light. RIGHT third: black vinyl record and minimal headphones on a midnight graphite desk with soft ivory light, rich texture. Consistent quiet premium editorial photography across panels. No saturated colors. All subjects clearly legible on dark background. Objects stay within each panel and are centered in their own panel.
+
+## Иллюстрация музыкального поздравления на день рождения
+
+Изображение пластинки с семейной фотографией создано в ImageGen для страницы дня рождения. Люди на обложке вымышлены. Файлы `birthday-music-*` содержат адаптивные версии, а `og-birthday-music.jpg` — обложку 1200 × 630 для ссылки.

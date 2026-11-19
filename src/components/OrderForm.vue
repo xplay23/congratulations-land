@@ -1,16 +1,19 @@
 <script setup>
-import { computed, nextTick, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, nextTick, onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { products, prices, defaultProductId } from '../content.mjs';
+import { useTestCheckout } from '../useTestCheckout.js';
+const BirthdayOrder = defineAsyncComponent(() => import('./BirthdayOrder.vue'));
 const props = defineProps({ selected: { type: String, default: () => defaultProductId } });
 const step = ref(0), error = ref(''), form = ref(null), fileInput = ref(null);
 const files = ref([]);
-const data = reactive({ product: props.selected, hero: props.selected === 'mykolay' ? 'mykolay' : 'did', children: '1', variant: 'birthday', name: '', name2: '', age: '', age2: '', interest: '', interest2: '', achievement: '', achievement2: '', wish: '', genre: 'Поп', mood: 'Теплий', fact1: '', fact2: '', fact3: '', story: '', email: '', contact: '', photoRights: false, consent: false });
+const data = reactive({ product: props.selected, hero: props.selected === 'mykolay' ? 'mykolay' : 'did', children: '1', name: '', name2: '', age: '', age2: '', interest: '', interest2: '', achievement: '', achievement2: '', wish: '', genre: 'Поп', mood: 'Теплий', fact1: '', fact2: '', fact3: '', story: '', email: '', contact: '', photoRights: false, consent: false });
 const winter = computed(() => ['newyear', 'mykolay'].includes(data.product));
-const effectiveProduct = computed(() => data.product === 'birthday' ? data.variant : data.product);
-const needsSong = computed(() => ['song', 'birthday'].includes(effectiveProduct.value));
-const needsPhoto = computed(() => effectiveProduct.value !== 'song');
+const selection = computed(() => ({ product: data.product, children: data.product === 'newyear' ? data.children : undefined }));
+const { available: testAvailable, paying, paymentError, lastPayment, checkAvailability, pay, resetOrder } = useTestCheckout(selection);
+const needsSong = computed(() => data.product === 'song');
+const needsPhoto = computed(() => data.product !== 'song');
 const twoChildren = computed(() => data.product === 'newyear' && data.children === '2');
-const amount = computed(() => winter.value ? (twoChildren.value ? prices.winterTwo : prices.winter) : prices[effectiveProduct.value]);
+const amount = computed(() => winter.value ? (twoChildren.value ? prices.winterTwo : prices.winter) : prices[data.product]);
 const product = computed(() => products.find(p => p.id === data.product));
 const names = { Олена: 'Олено', Оленка: 'Оленко', Тарас: 'Тарасе', Марія: 'Маріє', Андрій: 'Андрію', Іван: 'Іване', Софія: 'Софіє', Анна: 'Анно', Максим: 'Максиме', Михайло: 'Михайле', Наталія: 'Наталіє', Олександр: 'Олександре', Дмитро: 'Дмитре', Артем: 'Артеме', Богдан: 'Богдане', Катерина: 'Катерино' };
 const suggested = computed(() => names[data.name.trim()]);
@@ -31,9 +34,12 @@ async function go(value) {
   step.value = value; error.value = '';
   await nextTick();
   form.value?.querySelector('fieldset legend')?.focus();
+  if (value === 3) await checkAvailability();
 }
+watch(data, resetOrder);
 function submit() {
   error.value = '';
+  if (step.value === 3) { pay(); return; }
   if (!form.value.reportValidity()) return;
   if (step.value === 1) {
     if (!data.name.trim() || (twoChildren.value && !data.name2.trim())) { error.value = 'Вкажіть, як звертатися до кожного отримувача.'; return; }
@@ -56,9 +62,11 @@ onBeforeUnmount(release);
 </script>
 
 <template>
-  <section id="order" class="order-section">
-    <div class="order-intro"><span class="eyebrow">Починається з вашої історії</span><h2>Створімо щось особисте</h2><p>Кілька деталей — і ваш подарунок стане по-справжньому вашим.</p><div class="order-assurance"><span>01 — Деталі</span><span>02 — Прев’ю</span><span>03 — Оплата</span></div><p class="form-notice">Демонстраційна форма: перевірте макет замовлення. Генерація й оплата ще не підключені. Дані залишаються у браузері.</p></div>
+  <BirthdayOrder v-if="data.product === 'birthday'" @choose-other="data.product = defaultProductId" allow-other />
+  <section v-else id="order" class="order-section">
+    <div class="order-intro"><span class="eyebrow">Починається з вашої історії</span><h2>Створімо щось особисте</h2><p>Кілька деталей — і ваш подарунок стане по-справжньому вашим.</p><div class="order-assurance"><span>01 — Деталі</span><span>02 — Перевірка</span><span>03 — Оплата</span></div><p class="form-notice">Тестовий режим. Після перевірки замовлення можна випробувати оплату через plata by mono без списання коштів. Ім’я, контакти й фото залишаються у вашому браузері.</p></div>
     <form ref="form" class="order-form" @submit.prevent="submit">
+      <p v-if="lastPayment" class="previous-payment"><a class="text-link" :href="'/oplata/#' + lastPayment">Перевірити останню тестову оплату</a></p>
       <ol class="form-progress" aria-label="Кроки замовлення"><li v-for="(label, i) in progress" :key="label" :class="{ complete: i < step }" :aria-current="i === step ? 'step' : undefined"><span>{{ i + 1 }}</span>{{ label }}</li></ol>
       <div class="sr-only" role="status" aria-live="polite">Крок {{ step + 1 }} з 4: {{ progress[step] }}</div>
       <fieldset v-if="step === 0"><legend tabindex="-1">Що подаруємо?</legend><label for="product">Привітання</label><select id="product" v-model="data.product"><option v-for="p in products.filter(p => p.price !== null)" :key="p.id" :value="p.id">{{ p.label }}</option></select>
@@ -67,8 +75,7 @@ onBeforeUnmount(release);
           <template v-else><label for="hero">Хто вітатиме?</label><select id="hero" v-model="data.hero"><option value="mykolay">Святий Миколай</option></select></template>
           <label for="children">Для кого?</label><select id="children" v-model="data.children"><option value="1">Для дитини чи дорослого — {{ prices.winter }} грн</option><option v-if="data.product === 'newyear'" value="2">Для двох дітей — {{ prices.winterTwo }} грн</option></select><p v-if="data.product === 'mykolay'" class="field-help">Для кількох дітей оформіть окреме замовлення для кожної дитини.</p>
         </template>
-        <template v-if="data.product === 'birthday'"><label for="variant">Варіант подарунка</label><select id="variant" v-model="data.variant"><option value="birthday">Фото + пісня — 549 грн</option><option value="photo">Оживлення фото — 199 грн</option><option value="song">Пісня — 399 грн</option></select></template>
-        <p class="field-help">Спершу перевірте короткий фрагмент. Оплата повної версії — лише після прев’ю.</p>
+
       </fieldset>
       <fieldset v-if="step === 1"><legend tabindex="-1">Кому подаруємо?</legend>
         <label for="name">Як звертатися *</label><input id="name" v-model="data.name" placeholder="Наприклад, Оленко" required maxlength="50" autocomplete="off" aria-describedby="name-help"><p id="name-help" class="field-help">Ім’я у кличному відмінку — саме так воно прозвучить.</p><button v-if="suggested" type="button" class="name-suggestion" @click="data.name = suggested">Використати «{{ suggested }}» ↗</button>
@@ -79,8 +86,9 @@ onBeforeUnmount(release);
         <template v-if="needsSong"><div class="field-row"><div><label for="genre">Жанр</label><select id="genre" v-model="data.genre"><option v-for="g in ['Поп', 'Рок', 'Фолк', 'Шансон', 'Акустика']" :key="g">{{ g }}</option></select></div><div><label for="mood">Настрій</label><select id="mood" v-model="data.mood"><option v-for="m in ['Теплий', 'Веселий', 'Зворушливий', 'Урочистий']" :key="m">{{ m }}</option></select></div></div><template v-for="n in 3" :key="n"><label :for="`fact${n}`">Факт про людину {{ n }} *</label><input :id="`fact${n}`" v-model="data[`fact${n}`]" required maxlength="150"></template><label for="story">Коротка історія</label><textarea id="story" v-model="data.story" maxlength="500" rows="3" placeholder="До 500 символів"></textarea></template>
       </fieldset>
       <fieldset v-if="step === 2"><legend tabindex="-1">Куди надіслати подарунок?</legend><label for="email">Ваш email *</label><input id="email" v-model="data.email" type="email" required autocomplete="email" placeholder="you@example.com" maxlength="254"><label for="contact">Телефон або Telegram <span class="optional">необов’язково</span></label><input id="contact" v-model="data.contact" maxlength="80" placeholder="+380… або @username"><label class="checkbox"><input v-model="data.consent" type="checkbox" required><span>Я ознайомився/-лася з <a href="/konfidentsiynist/" target="_blank" rel="noopener">правилами конфіденційності</a>.</span></label><p class="field-help">У цій демонстрації email не зберігається та листи не надсилаються.</p></fieldset>
-      <fieldset v-if="step === 3"><legend tabindex="-1">Перевірте ваше привітання</legend><dl class="order-summary"><div><dt>Подарунок</dt><dd>{{ product.label }}{{ data.product === 'birthday' ? ` · ${data.variant === 'birthday' ? 'Фото + пісня' : data.variant === 'song' ? 'Пісня' : 'Фото'}` : '' }}</dd></div><div><dt>Для кого</dt><dd>{{ data.name }}{{ twoChildren ? ` та ${data.name2}` : '' }}</dd></div><div v-if="winter"><dt>Герой</dt><dd>{{ { did: 'Дід Мороз', santa: 'Санта', mykolay: 'Святий Миколай' }[data.hero] }}</dd></div><div><dt>Email</dt><dd>{{ data.email }}</dd></div><div><dt>Вартість</dt><dd>{{ amount }} грн</dd></div></dl><div class="preview-layout"><span class="eyebrow">Макет · не згенероване відео</span><p class="preview-name">{{ data.name }}{{ twoChildren ? ` та ${data.name2}` : '' }},<br>це привітання для вас.</p><span class="watermark">PREVIEW</span></div><p class="field-help">Це макет персоналізації. Справжнє прев’ю з голосом і можливість оплатити з’являться після підключення генерації та платежів.</p><button type="button" class="button ghost" @click="restart">Створити інше привітання ↗</button></fieldset>
-      <p v-if="error" class="form-error" role="alert">{{ error }}</p><div class="form-controls"><button v-if="step > 0" type="button" class="text-button" @click="go(step - 1)">← Назад</button><span class="order-total">Вартість <strong>{{ amount }} грн</strong></span><button v-if="step < 3" type="submit" class="button primary">{{ step === 2 ? 'Перевірити макет' : 'Далі' }} <span aria-hidden="true">→</span></button></div>
+      <fieldset v-if="step === 3"><legend tabindex="-1">Перевірте ваше замовлення</legend><dl class="order-summary"><div><dt>Подарунок</dt><dd>{{ product.label }}</dd></div><div><dt>Для кого</dt><dd>{{ data.name }}{{ twoChildren ? ` та ${data.name2}` : '' }}</dd></div><div v-if="winter"><dt>Герой</dt><dd>{{ { did: 'Дід Мороз', santa: 'Санта', mykolay: 'Святий Миколай' }[data.hero] }}</dd></div><div><dt>Email</dt><dd>{{ data.email }}</dd></div><div><dt>Вартість</dt><dd>{{ amount }} грн</dd></div></dl><p class="field-help">Перевірте написання імені та адресу пошти. Тестовий платіж не запускає створення подарунка.</p><button type="button" class="button ghost" :disabled="paying" @click="restart">Створити інше привітання ↗</button></fieldset>
+      <p v-if="step === 3 && testAvailable !== true" class="field-help" role="status">{{ testAvailable === null ? 'Перевіряємо доступність тестової оплати…' : 'Тестова оплата через plata by mono поки недоступна.' }}</p>
+      <p v-if="error || paymentError" class="form-error" role="alert">{{ error || paymentError }}</p><div class="form-controls"><button v-if="step > 0" type="button" class="text-button" :disabled="paying" @click="go(step - 1)">← Назад</button><span class="order-total">Вартість <strong>{{ amount }} грн</strong></span><button v-if="step < 3" type="submit" class="button primary">{{ step === 2 ? 'Перевірити замовлення' : 'Далі' }} <span aria-hidden="true">→</span></button><button v-else-if="testAvailable" type="submit" class="button primary test-checkout" :disabled="paying">{{ paying ? 'Відкриваємо оплату…' : 'Тестова оплата через plata by mono' }}</button></div>
     </form>
   </section>
 </template>

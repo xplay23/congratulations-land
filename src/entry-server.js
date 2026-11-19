@@ -6,5 +6,5 @@ import { metadata, head } from './seo.mjs';
 export async function render(path, hasQuery = false) {
   const meta = metadata(path);
   const html = await renderToString(createSSRApp(App, { path }));
-  return { html, head: head(path, hasQuery), status: meta.status || 200 };
+  return { html, lang: meta.lang || 'uk', head: head(path, hasQuery), status: meta.status || 200 };
 }

@@ -50,8 +50,44 @@ legend{font-size:24px;font-weight:480;margin-bottom:24px;padding:0;line-height:1
 .order-summary>div{display:flex;gap:20px;justify-content:space-between;margin-bottom:12px;font-size:12px}
 .order-summary dt{color:var(--muted)}
 .order-summary dd{margin:0;text-align:right;overflow-wrap:anywhere;max-width:70%}
-.preview-layout{background:var(--control);position:relative;min-height:220px;padding:24px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;margin-top:24px;overflow:hidden}
-.preview-layout .eyebrow{font-size:8px}
-.preview-name{font-size:24px;line-height:1.3;overflow-wrap:anywhere}
-.preview-layout+.field-help{margin-block:20px}
 .order-form>fieldset>.button{white-space:normal}
+.form-controls:has(.test-checkout){flex-wrap:wrap}
+.form-controls .test-checkout{white-space:normal}
+.previous-payment{margin-bottom:24px}
+
+.birthday-order { scroll-margin-top: 100px; }
+.birthday-order h2 { margin-bottom: 28px; }
+.birthday-progress { display: flex; gap: clamp(6px,2vw,28px); list-style: none; padding: 0; margin: 0 0 24px; }
+.birthday-progress li { flex: 1; color: var(--muted); border-top: 2px solid var(--border); padding-top: 10px; font-size: clamp(.75rem,2vw,.95rem); }
+.birthday-progress li[aria-current], .birthday-progress li.complete { border-color: var(--accent); color: var(--text); }
+.birthday-progress li[aria-current] { font-weight: 600; }
+.birthday-form { border: 1px solid var(--border); }
+.birthday-fields { max-width: 640px; margin-inline: auto; }
+.gift-format-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.order-form label.gift-format { display: flex; flex-direction: column; margin: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: relative; background: var(--card); cursor: pointer; }
+.gift-format.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gift-format:focus-within { outline: 3px solid var(--accent); outline-offset: 3px; }
+.gift-format input { position: absolute; right: 14px; top: 14px; width: 21px; height: 21px; accent-color: var(--accent); }
+.format-art, .format-art picture { display: block; width: 100%; }
+.format-art img { width: 100%; height: auto; display: block; aspect-ratio: 2.6; object-fit: cover; }
+.format-copy { padding: 18px; display: flex; flex: 1; flex-direction: column; gap: 8px; }
+.format-copy strong { font-size: clamp(1.05rem,2vw,1.4rem); line-height: 1.2; }
+.format-copy>span { font-size: .92rem; line-height: 1.45; }
+.format-copy .format-price { font-size: 1.18rem; font-weight: 550; margin-top: auto; padding-top: 12px; }
+.format-copy small { color: var(--accent); font-size: .8rem; }
+.bundle-cost { font-size: .94rem; margin: 20px 0 8px; }
+.birthday-form .field-help { font-size: .875rem; }
+.birthday-form .previous-payment { display: inline-block; font-size: .9rem; margin: 20px 0 0; }
+.selected-files { padding-left: 22px; font-size: .9rem; overflow-wrap: anywhere; }
+.language-link { font-size: .9rem; text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 700px) {
+  .birthday-form { padding: 18px 14px; }
+  .gift-format-grid { grid-template-columns: 1fr; gap: 12px; }
+  .order-form label.gift-format { display: grid; grid-template-columns: 72px 1fr; }
+  .format-art picture, .format-art img { height: 100%; }
+  .format-copy { padding: 12px 32px 12px 12px; gap: 4px; }
+  .format-copy .format-price { padding-top: 3px; }
+  .gift-format input { right: 8px; top: 12px; width: 17px; height: 17px; }
+  .birthday-progress { gap: 6px; }
+  .birthday-progress li { font-size: .74rem; }
+}

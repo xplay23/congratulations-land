@@ -6,13 +6,19 @@ services:
     working_dir: /app
     user: node
     command: ["node", "server.mjs", "--production"]
+    env_file:
+      - path: ./.env.mono-test
+        required: false
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: "3000"
       TRUST_PROXY: "true"
+      MONO_SITE_ORIGIN: https://videovitannya.com.ua
+      MONO_TEST_DATA_DIR: /home/node/plata-test
     volumes:
       - ./releases/${RELEASE:-66152d2}:/app:ro
+      - plata_test_data:/home/node
     read_only: true
     tmpfs:
       - /tmp:size=16m,noexec,nosuid
@@ -44,3 +50,5 @@ services:
 networks:
   application:
     name: videovitannya_application
+volumes:
+  plata_test_data:

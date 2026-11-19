@@ -36,6 +36,8 @@ Traefik obtains a certificate using its existing HTTP challenge resolver. Verify
 
 ## Verification and rollback
 
+For sandbox checkout include `lib/plata-test.mjs` in the server release alongside `lib/serve-video.mjs` and the content modules including `src/birthday.mjs`. Set `MONO_TEST_TOKEN` to the sandbox token in `/opt/videovitannya/.env.mono-test` (mode 600), then recreate the web service. The root-level local secret files are excluded from release archives. Compose sets the HTTPS return origin and mounts a persistent volume for test invoice references. The web process stores the gift, price and bank invoice identifiers there. `GET /api/plata/config` reports whether a test token is configured. Confirm a sandbox checkout by returning from mono to `/oplata/` and checking the bank-confirmed status.
+
 Verify `/`, `/svyatyj-mykolaj/`, `/tsiny/`, `/robots.txt`, `/sitemap.xml` and byte-range responses for both MP4 sizes. All responses currently carry `X-Robots-Tag: noindex, nofollow`; rendered HTML also contains noindex. Sitemap has no URLs, and `/novyj-rik/` returns 404 while Santa is hidden.
 
 For a future release, upload to a new directory, verify the archive checksum, change `RELEASE`, then recreate only this Compose project's web service. Preserve the prior release so rollback only requires selecting the prior `RELEASE` value and running the same `up -d` command. Never run a host-wide Docker cleanup as part of deployment.

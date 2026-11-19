@@ -17,7 +17,7 @@ for (const path of [...allPaths(), '/404/']) {
   const pageHead = result.head + (orderChunk && result.html.includes('id="product"') ? `<link rel="modulepreload" href="/assets/${orderChunk}">` : '');
   const directory = path === '/404/' ? resolve('dist') : resolve('dist', '.' + path);
   await mkdir(directory, { recursive: true });
-  await writeFile(join(directory, path === '/404/' ? '404.html' : 'index.html'), template.replace('<!--page-head-->', pageHead).replace('<!--app-html-->', result.html));
+  await writeFile(join(directory, path === '/404/' ? '404.html' : 'index.html'), template.replace('<html lang="uk">', `<html lang="${result.lang}">`).replace('<!--page-head-->', pageHead).replace('<!--app-html-->', result.html));
 }
 await writeFile('dist/sitemap.xml', sitemap());
 await writeFile('dist/robots.txt', robots());

@@ -57,13 +57,30 @@ test('song order validates fields, preserves values and never transmits personal
   await page.locator('#fact1').fill('Любить гори'); await page.locator('#fact2').fill('Грає на гітарі'); await page.locator('#fact3').fill('Мріє про море');
   await page.getByRole('button', { name: 'Далі', exact: false }).click();
   await page.locator('#email').fill('test@example.com'); await page.locator('input[type=checkbox]').check();
-  await page.getByRole('button', { name: 'Перевірити макет' }).click();
-  await expect(page.locator('.preview-name')).toContainText('Олено');
+  await page.getByRole('button', { name: 'Перевірити замовлення' }).click();
+  await expect(page.locator('.order-summary')).toContainText('Олено');
   await expect(page.locator('.order-summary')).toContainText('399 грн');
-  await expect(page.getByText('Справжнє прев’ю з голосом', { exact: false })).toBeVisible();
+  await expect(page.getByText('Перевірте написання імені', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Назад', exact: false }).click();
   await expect(page.locator('#email')).toHaveValue('test@example.com');
   expect(submissions).toEqual([]);
+
+  let selection;
+  await page.route('**/api/plata/config', route => route.fulfill({ json: { testAvailable: true } }));
+  await page.route('**/api/plata/invoices', route => {
+    selection = route.request().postDataJSON();
+    return route.fulfill({ json: { pageUrl: 'https://pay.monobank.ua/browser-test' } });
+  });
+  await page.route('https://pay.monobank.ua/browser-test', route => route.fulfill({
+    status: 302, headers: { location: new URL('/oplata/#' + selection.orderId, page.url()).href }
+  }));
+  await page.route('**/api/plata/invoices/*', route => route.fulfill({
+    json: { status: 'success', label: 'Пісня з іменем', amount: 39900 }
+  }));
+  await page.getByRole('button', { name: 'Перевірити замовлення' }).click();
+  await page.getByRole('button', { name: 'Тестова оплата через plata by mono' }).click();
+  await expect(page.getByText('Тестова оплата успішна.')).toBeVisible();
+  expect(selection).toEqual({ product: 'song', orderId: expect.stringMatching(/^[a-f0-9-]{36}$/) });
 });
 
 test('Mykolay uses a separate order per recipient and requires a photo', async ({ page }) => {
