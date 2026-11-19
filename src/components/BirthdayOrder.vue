@@ -11,6 +11,7 @@ const t = (uk, ru) => props.lang === 'ru' ? ru : uk;
 const steps = ['Продукт', t('Привід', 'Повод'), t('Деталі', 'Детали'), t('Перевірка', 'Проверка'), t('Оплата', 'Оплата')];
 const art = { birthday: 'birthday-music', song: 'christmas-song', photo: 'christmas-photo' };
 const form = ref(null), step = ref(0), error = ref(''), files = ref([]);
+const ready = ref(false);
 const details = reactive({ name: '', wish: '', facts: ['', '', ''], mood: '', genre: '', email: '', photoRights: false, consent: false });
 const variant = ref('birthday'), occasion = ref('birthday');
 const needsPhoto = computed(() => variant.value !== 'song');
@@ -23,6 +24,7 @@ watch(details, resetOrder);
 onMounted(() => {
   const query = new URLSearchParams(location.search);
   if (Object.hasOwn(occasions, query.get('occasion'))) occasion.value = query.get('occasion');
+  ready.value = true;
 });
 function changeOccasion() {
   const url = new URL(window.location.href);
@@ -72,7 +74,7 @@ function submit() {
       <li v-for="(label, i) in steps" :key="label" :aria-current="i === step ? 'step' : undefined" :class="{ complete: i < step }">{{ label }}</li>
     </ol>
     <form ref="form" class="order-form birthday-form" @submit.prevent="submit">
-      <fieldset v-if="step === 0">
+      <fieldset v-if="step === 0" :disabled="!ready">
         <legend tabindex="-1" class="sr-only">{{ steps[0] }}</legend>
         <div class="gift-format-grid">
           <label v-for="item in giftFormats" :key="item.id" class="gift-format" :class="{ selected: variant === item.id }">
@@ -137,7 +139,7 @@ function submit() {
       <div class="form-controls">
         <button v-if="step" type="button" class="text-button" :disabled="paying" @click="go(step - 1)">Назад</button>
         <span class="order-total">{{ t('Вартість', 'Стоимость') }} <strong>{{ prices[variant] }} грн</strong></span>
-        <button v-if="step < 4" class="button primary" type="submit">{{ step === 3 ? t('До оплати', 'К оплате') : t('Далі', 'Далее') }}</button>
+        <button v-if="step < 4" class="button primary" type="submit" :disabled="!ready">{{ step === 3 ? t('До оплати', 'К оплате') : t('Далі', 'Далее') }}</button>
         <button v-else-if="available" class="button primary test-checkout" type="submit" :disabled="paying">{{ paying ? t('Відкриваємо оплату…', 'Открываем оплату…') : t('Тестова оплата через plata by mono', 'Тестовая оплата через plata by mono') }}</button>
       </div>
       <a v-if="lastPayment" class="text-link previous-payment" :href="'/oplata/#' + lastPayment">{{ t('Перевірити останню тестову оплату', 'Проверить последнюю тестовую оплату') }}</a>

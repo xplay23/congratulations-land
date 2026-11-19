@@ -35,7 +35,17 @@ test('birthday order keeps the chosen occasion and format through payment', asyn
 });
 
 test('Russian birthday order and its Ukrainian alternate open directly', async ({ page }) => {
-  await page.goto('/ru/den-rozhdeniya/?occasion=not-a-choice');
+  let resume;
+  const pending = new Promise(resolve => { resume = resolve; });
+  await page.route('**/assets/BirthdayOrder-*.js', async route => {
+    await pending;
+    await route.continue();
+  });
+  await page.goto('/ru/den-rozhdeniya/?occasion=not-a-choice', { waitUntil: 'domcontentloaded' });
+  try {
+    await expect(page.locator('#order input[value=song]')).toBeDisabled();
+    await expect(page.locator('#order button[type=submit]')).toBeDisabled();
+  } finally { resume(); }
   await expect(page.locator('html')).toHaveAttribute('lang', 'ru');
   await page.getByRole('button', { name: 'Только необходимые' }).click();
   await page.locator('#order input[value=song]').check();
