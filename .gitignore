@@ -1,0 +1,38 @@
+# Dependencies & Next.js build artifacts
+node_modules/
+.next/
+*.tsbuildinfo
+
+# Local runtime storage & SQLite database
+storage/
+
+# Secrets & Environment
+.env
+.env.*
+!.env.example
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Video pipeline temporary build caches & rendered outputs
+video-pipeline/build/
+video-pipeline/output/
+
+# Research repos & archived legacy files
+_research/
+
+# Archives
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.tgz
+*.bz2
+*.xz
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini

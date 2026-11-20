@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  --bg-deep: #0b1020;
+  --bg-card: #121a30;
+  --gold-accent: #e8b86d;
+  --gold-soft: #f5d8a8;
+  --text-main: #f4f1ea;
+  --text-muted: #9aa4bf;
+}
+
+body {
+  background: radial-gradient(circle at top center, #182344 0%, #0b1020 55%, #070a14 100%);
+  color: var(--text-main);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+.font-serif-book {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+button:not(:disabled),
+[role="button"],
+a[href] {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
