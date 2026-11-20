@@ -419,7 +419,7 @@ async function verifyAndRepairSceneImage(params: {
     costStep: params.costStep,
   });
 
-  const { client, config } = await getCmsOpenAIRuntime();
+  const { directorClient: client, config } = await getCmsOpenAIRuntime();
   if (!config.storybookVisionQaEnabled) {
     return;
   }
@@ -432,6 +432,7 @@ async function verifyAndRepairSceneImage(params: {
     const imgBuf = fs.readFileSync(params.outPath);
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
     const directorModel = config.storybookDirectorModel;
+    const directorEffort = config.storybookDirectorReasoningEffort;
     const qaPromptCustom = config.prompts["storybook-vision-qa"]?.trim();
     const qaChecklist =
       qaPromptCustom ||
@@ -442,7 +443,7 @@ async function verifyAndRepairSceneImage(params: {
 4) Format: split panels, collage borders, or visible text/letters inside the artwork.`;
     const qaRes = await withOpenAIRetry("vision_qa", () =>
       client.chat.completions.create({
-        ...buildChatModelParams(0.1, 450, directorModel),
+        ...buildChatModelParams(0.1, 450, directorModel, directorEffort),
         messages: [
           {
             role: "system",

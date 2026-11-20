@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@payloadcms/ui";
 import {
+  AudioLines,
+  BookOpen,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
   FileCode2,
+  Gauge,
   Globe2,
   Image as ImageIcon,
   LayoutDashboard,
@@ -17,6 +20,7 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { tAdmin, useAdminLang, type AdminLang } from "@engine/lib/admin-i18n";
 import "./nav.css";
 
 type NavMode = "main" | "settings";
@@ -32,36 +36,94 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const MAIN_MENU: Array<NavItem | NavGroup> = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Orders & Support", href: "/admin/orders", icon: ClipboardList },
-  { label: "Tariffs & Limits", href: "/admin/tariffs", icon: Sliders },
-  {
-    label: "Content",
-    items: [
-      { label: "Media", href: "/admin/collections/media", icon: ImageIcon },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { label: "Users", href: "/admin/collections/users", icon: Users },
-      { label: "Settings", href: "__settings__", icon: Settings },
-    ],
-  },
+const SETTINGS_PATHS = [
+  "/admin/globals/site-settings",
+  "/admin/globals/ai-settings",
+  "/admin/globals/storybook-ai-settings",
+  "/admin/globals/elevenlabs-settings",
+  "/admin/globals/ai-prompts",
+  "/admin/globals/platform-limits",
 ];
 
-const SETTINGS_MENU: NavItem[] = [
-  { label: "General", href: "/admin/globals/site-settings", icon: Globe2 },
-  {
-    label: "AI & ElevenLabs",
-    href: "/admin/globals/ai-settings",
-    icon: Sparkles,
-  },
-  { label: "AI Prompts", href: "/admin/globals/ai-prompts", icon: FileCode2 },
-];
+function getMainMenu(lang: AdminLang): Array<NavItem | NavGroup> {
+  return [
+    {
+      label: tAdmin(lang, "Дашборд", "Дашборд"),
+      href: "/admin",
+      icon: LayoutDashboard,
+    },
+    {
+      label: tAdmin(lang, "Заказы", "Замовлення"),
+      href: "/admin/orders",
+      icon: ClipboardList,
+    },
+    {
+      label: tAdmin(lang, "Тарифы", "Тарифи"),
+      href: "/admin/tariffs",
+      icon: Sliders,
+    },
+    {
+      label: tAdmin(lang, "Контент", "Контент"),
+      items: [
+        {
+          label: tAdmin(lang, "Медиа", "Медіа"),
+          href: "/admin/collections/media",
+          icon: ImageIcon,
+        },
+      ],
+    },
+    {
+      label: tAdmin(lang, "Система", "Система"),
+      items: [
+        {
+          label: tAdmin(lang, "Пользователи", "Користувачі"),
+          href: "/admin/collections/users",
+          icon: Users,
+        },
+        {
+          label: tAdmin(lang, "Настройки", "Налаштування"),
+          href: "__settings__",
+          icon: Settings,
+        },
+      ],
+    },
+  ];
+}
 
-const SETTINGS_PATHS = SETTINGS_MENU.map((i) => i.href);
+function getSettingsMenu(lang: AdminLang): NavItem[] {
+  return [
+    {
+      label: tAdmin(lang, "Общие", "Загальні"),
+      href: "/admin/globals/site-settings",
+      icon: Globe2,
+    },
+    {
+      label: tAdmin(lang, "ИИ (Контент)", "ШІ (Контент)"),
+      href: "/admin/globals/ai-settings",
+      icon: Sparkles,
+    },
+    {
+      label: tAdmin(lang, "ИИ-сказки", "ШІ-казки"),
+      href: "/admin/globals/storybook-ai-settings",
+      icon: BookOpen,
+    },
+    {
+      label: "ElevenLabs",
+      href: "/admin/globals/elevenlabs-settings",
+      icon: AudioLines,
+    },
+    {
+      label: tAdmin(lang, "Промпты", "Промпти"),
+      href: "/admin/globals/ai-prompts",
+      icon: FileCode2,
+    },
+    {
+      label: tAdmin(lang, "Лимиты", "Ліміти"),
+      href: "/admin/globals/platform-limits",
+      icon: Gauge,
+    },
+  ];
+}
 
 function getModeFromPathname(pathname: string): NavMode {
   if (SETTINGS_PATHS.some((p) => pathname.startsWith(p))) return "settings";
@@ -116,13 +178,20 @@ function ExpandableButton({
   );
 }
 
-function MainPanel({ onSettings }: { onSettings: () => void }) {
+function MainPanel({
+  lang,
+  onSettings,
+}: {
+  lang: AdminLang;
+  onSettings: () => void;
+}) {
   const pathname = usePathname();
   const settingsActive = SETTINGS_PATHS.some((p) => pathname.startsWith(p));
+  const menu = getMainMenu(lang);
 
   return (
     <>
-      {MAIN_MENU.map((item) => {
+      {menu.map((item) => {
         if (!isGroup(item)) {
           return <NavLink key={item.href} {...item} />;
         }
@@ -134,7 +203,7 @@ function MainPanel({ onSettings }: { onSettings: () => void }) {
                 return (
                   <ExpandableButton
                     key="settings"
-                    label="Settings"
+                    label={child.label}
                     icon={Settings}
                     isActive={settingsActive}
                     onClick={onSettings}
@@ -175,6 +244,7 @@ function SubPanel({
 
 export function AdminNav() {
   const { user } = useAuth();
+  const lang = useAdminLang();
   const pathname = usePathname();
   const [mode, setMode] = useState<NavMode>(() =>
     getModeFromPathname(pathname)
@@ -191,12 +261,12 @@ export function AdminNav() {
     <nav className="admin-nav">
       <div className={`admin-nav__scroll admin-nav__scroll--${mode}`}>
         {mode === "main" && (
-          <MainPanel onSettings={() => setMode("settings")} />
+          <MainPanel lang={lang} onSettings={() => setMode("settings")} />
         )}
         {mode === "settings" && (
           <SubPanel
-            title="Settings"
-            items={SETTINGS_MENU}
+            title={tAdmin(lang, "Настройки", "Налаштування")}
+            items={getSettingsMenu(lang)}
             onBack={() => setMode("main")}
           />
         )}

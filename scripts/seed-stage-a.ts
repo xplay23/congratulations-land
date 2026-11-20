@@ -1,5 +1,6 @@
 import { getPayload } from "@engine/lib/payload";
 import { ART_STYLE_META } from "@/lib/i18n";
+import { getPlatformLimits } from "@/lib/settings";
 
 interface SeedPromptItem {
   type: string;
@@ -257,6 +258,46 @@ STRICT DIRECTING RULES (apply universally across any story world):
   },
 ];
 
+function textToLexical(text: string) {
+  return {
+    root: {
+      type: "root",
+      format: "",
+      indent: 0,
+      version: 1,
+      direction: "ltr" as const,
+      children: [
+        {
+          type: "paragraph",
+          format: "",
+          indent: 0,
+          version: 1,
+          direction: "ltr" as const,
+          textFormat: 0,
+          textStyle: "",
+          children: [
+            {
+              type: "text",
+              detail: 0,
+              format: 0,
+              mode: "normal",
+              style: "",
+              text,
+              version: 1,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+function hasLexicalContent(val: unknown): boolean {
+  if (!val || typeof val !== "object" || !("root" in val)) return false;
+  const root = (val as { root?: { children?: unknown[] } }).root;
+  return Array.isArray(root?.children) && root.children.length > 0;
+}
+
 async function main() {
   const payload = await getPayload();
 
@@ -296,27 +337,44 @@ async function main() {
     overrideAccess: true,
   })) as unknown as Record<string, unknown>;
 
-  if (!siteUk.tagline || !siteUk.contactEmail || !siteUk.footerText) {
-    await payload.updateGlobal({
-      slug: "site-settings",
-      locale: "uk",
-      overrideAccess: true,
-      data: {
-        siteName: (siteUk.siteName as string) || "VideoVitannya",
-        tagline:
-          (siteUk.tagline as string) ||
-          "Персоналізовані відеопривітання та казки-книги PDF для дітей",
-        contactEmail:
-          (siteUk.contactEmail as string) || "hello@videovitannya.com.ua",
-        telegramBotUrl:
-          (siteUk.telegramBotUrl as string) ||
-          "https://t.me/skynet_forever_bot",
-        footerText:
-          (siteUk.footerText as string) ||
-          "VideoVitannya — теплі персоналізовані відеопривітання та ілюстровані казки PDF для дітей в Україні.",
-      },
-    });
-  }
+  const existingSocials = Array.isArray(siteUk.socialLinks)
+    ? siteUk.socialLinks
+    : [];
+
+  await payload.updateGlobal({
+    slug: "site-settings",
+    locale: "uk",
+    overrideAccess: true,
+    data: {
+      siteName: (siteUk.siteName as string) || "VideoVitannya",
+      tagline:
+        (siteUk.tagline as string) ||
+        "Персоналізовані відеопривітання та казки-книги PDF для дітей",
+      contactEmail:
+        (siteUk.contactEmail as string) || "hello@videovitannya.com.ua",
+      telegramBotUrl:
+        (siteUk.telegramBotUrl as string) ||
+        "https://t.me/skynet_forever_bot",
+      footerText: hasLexicalContent(siteUk.footerText)
+        ? siteUk.footerText
+        : textToLexical(
+            "VideoVitannya — теплі персоналізовані відеопривітання та ілюстровані казки PDF для дітей в Україні."
+          ),
+      copyrightText: hasLexicalContent(siteUk.copyrightText)
+        ? siteUk.copyrightText
+        : textToLexical("Усі права захищено."),
+      socialLinks:
+        existingSocials.length > 0
+          ? existingSocials
+          : [
+              {
+                platform: "telegram",
+                label: "Telegram-бот",
+                url: "https://t.me/skynet_forever_bot",
+              },
+            ],
+    },
+  });
 
   const siteRu = (await payload.findGlobal({
     slug: "site-settings",
@@ -324,25 +382,28 @@ async function main() {
     overrideAccess: true,
   })) as unknown as Record<string, unknown>;
 
-  if (!siteRu.tagline || !siteRu.footerText) {
-    await payload.updateGlobal({
-      slug: "site-settings",
-      locale: "ru",
-      overrideAccess: true,
-      data: {
-        siteName: (siteRu.siteName as string) || "VideoVitannya",
-        tagline:
-          (siteRu.tagline as string) ||
-          "Персонализированные видеопоздравления и сказки-книги PDF для детей",
-        footerText:
-          (siteRu.footerText as string) ||
-          "VideoVitannya — тёплые персонализированные видеопоздравления и иллюстрированные сказки PDF для детей в Украине.",
-      },
-    });
-  }
+  await payload.updateGlobal({
+    slug: "site-settings",
+    locale: "ru",
+    overrideAccess: true,
+    data: {
+      siteName: (siteRu.siteName as string) || "VideoVitannya",
+      tagline:
+        (siteRu.tagline as string) ||
+        "Персонализированные видеопоздравления и сказки-книги PDF для детей",
+      footerText: hasLexicalContent(siteRu.footerText)
+        ? siteRu.footerText
+        : textToLexical(
+            "VideoVitannya — тёплые персонализированные видеопоздравления и иллюстрированные сказки PDF для детей в Украине."
+          ),
+      copyrightText: hasLexicalContent(siteRu.copyrightText)
+        ? siteRu.copyrightText
+        : textToLexical("Все права защищены."),
+    },
+  });
   console.log("[seed-stage-a] SiteSettings (uk/ru) verified.");
 
-  // 3. Seed AISettings from .env.local non-destructively
+  // 3. Seed AISettings (Content / SEO / Translate / Assistant)
   const currentAi = (await payload.findGlobal({
     slug: "ai-settings",
     overrideAccess: true,
@@ -359,12 +420,14 @@ async function main() {
     overrideAccess: true,
     data: {
       enabled: typeof currentAi.enabled === "boolean" ? currentAi.enabled : true,
-      provider: (currentAi.provider as "openai" | "anthropic" | "google") || "openai",
+      provider:
+        (currentAi.provider as "openai" | "anthropic" | "google") || "openai",
       apiKey: (currentAi.apiKey as string) || envOpenAiKey || undefined,
       model:
         (currentAi.model as string) ||
         process.env.OPENAI_MODEL?.trim() ||
         "gpt-6.2-astra",
+      reasoningEffort: (currentAi.reasoningEffort as string) || "low",
       maxTokens:
         typeof currentAi.maxTokens === "number" ? currentAi.maxTokens : 2500,
       temperature:
@@ -377,48 +440,6 @@ async function main() {
         (currentAi.imageModel as string) ||
         process.env.OPENAI_IMAGE_MODEL?.trim() ||
         "gpt-image-2.5-sunburst-2026-09-08",
-      storybookWriterModel:
-        (currentAi.storybookWriterModel as string) ||
-        process.env.OPENAI_MODEL?.trim() ||
-        "gpt-6.2-astra",
-      storybookDirectorModel:
-        (currentAi.storybookDirectorModel as string) ||
-        process.env.OPENAI_DIRECTOR_MODEL?.trim() ||
-        "gpt-6.2-sol",
-      storybookImageModel:
-        (currentAi.storybookImageModel as string) ||
-        process.env.OPENAI_IMAGE_MODEL?.trim() ||
-        "gpt-image-2.5-sunburst-2026-09-08",
-      storybookImageQuality:
-        (currentAi.storybookImageQuality as "low" | "medium" | "high" | "auto") ||
-        ((process.env.OPENAI_IMAGE_QUALITY?.trim() as
-          | "low"
-          | "medium"
-          | "high"
-          | "auto") ||
-          "medium"),
-      storybookVisionQaEnabled:
-        typeof currentAi.storybookVisionQaEnabled === "boolean"
-          ? currentAi.storybookVisionQaEnabled
-          : process.env.OPENAI_VISION_QA !== "false",
-      elevenLabsApiKey:
-        (currentAi.elevenLabsApiKey as string) || envElevenKey || undefined,
-      elevenLabsModelId:
-        (currentAi.elevenLabsModelId as string) ||
-        process.env.ELEVENLABS_MODEL_ID?.trim() ||
-        "eleven_v4",
-      elevenLabsVoiceId:
-        (currentAi.elevenLabsVoiceId as string) ||
-        process.env.ELEVENLABS_VOICE_ID?.trim() ||
-        "NOpBlnGInO9m6vDvFkFC",
-      elevenLabsStability:
-        typeof currentAi.elevenLabsStability === "number"
-          ? currentAi.elevenLabsStability
-          : 0.5,
-      elevenLabsSimilarityBoost:
-        typeof currentAi.elevenLabsSimilarityBoost === "number"
-          ? currentAi.elevenLabsSimilarityBoost
-          : 0.78,
       siteDescription:
         (currentAi.siteDescription as string) ||
         "VideoVitannya — украинский сервис персонализированных видеопоздравлений (Святой Николай), иллюстрированных сказок-книг PDF с портретом ребёнка, оживления фото и персональных песен.",
@@ -428,6 +449,120 @@ async function main() {
     },
   });
   console.log("[seed-stage-a] AISettings verified/seeded.");
+
+  // 4. Seed StorybookAISettings (separate global)
+  const currentSb = (await payload.findGlobal({
+    slug: "storybook-ai-settings",
+    overrideAccess: true,
+  })) as unknown as Record<string, unknown>;
+
+  await payload.updateGlobal({
+    slug: "storybook-ai-settings",
+    overrideAccess: true,
+    data: {
+      writerProvider:
+        (currentSb.writerProvider as "openai" | "anthropic" | "google") ||
+        "openai",
+      writerApiKey: (currentSb.writerApiKey as string) || envOpenAiKey || undefined,
+      writerModel:
+        (currentSb.writerModel as string) ||
+        process.env.OPENAI_MODEL?.trim() ||
+        "gpt-6.2-astra",
+      writerReasoningEffort:
+        (currentSb.writerReasoningEffort as string) || "low",
+      directorProvider:
+        (currentSb.directorProvider as "openai" | "anthropic" | "google") ||
+        "openai",
+      directorApiKey:
+        (currentSb.directorApiKey as string) || envOpenAiKey || undefined,
+      directorModel:
+        (currentSb.directorModel as string) ||
+        process.env.OPENAI_DIRECTOR_MODEL?.trim() ||
+        "gpt-6.2-sol",
+      directorReasoningEffort:
+        (currentSb.directorReasoningEffort as string) || "low",
+      visionQaEnabled:
+        typeof currentSb.visionQaEnabled === "boolean"
+          ? currentSb.visionQaEnabled
+          : process.env.OPENAI_VISION_QA !== "false",
+      imageProvider:
+        (currentSb.imageProvider as "openai" | "google") || "openai",
+      imageApiKey: (currentSb.imageApiKey as string) || envOpenAiKey || undefined,
+      imageModel:
+        (currentSb.imageModel as string) ||
+        process.env.OPENAI_IMAGE_MODEL?.trim() ||
+        "gpt-image-2.5-sunburst-2026-09-08",
+      imageQuality:
+        (currentSb.imageQuality as "low" | "medium" | "high" | "auto") ||
+        ((process.env.OPENAI_IMAGE_QUALITY?.trim() as
+          | "low"
+          | "medium"
+          | "high"
+          | "auto") ||
+          "medium"),
+    },
+  });
+  console.log("[seed-stage-a] StorybookAISettings verified/seeded.");
+
+  // 5. Seed ElevenLabsSettings (separate global)
+  const currentEl = (await payload.findGlobal({
+    slug: "elevenlabs-settings",
+    overrideAccess: true,
+  })) as unknown as Record<string, unknown>;
+
+  await payload.updateGlobal({
+    slug: "elevenlabs-settings",
+    overrideAccess: true,
+    data: {
+      apiKey: (currentEl.apiKey as string) || envElevenKey || undefined,
+      modelId:
+        (currentEl.modelId as string) ||
+        process.env.ELEVENLABS_MODEL_ID?.trim() ||
+        "eleven_v4",
+      voiceId:
+        (currentEl.voiceId as string) ||
+        process.env.ELEVENLABS_VOICE_ID?.trim() ||
+        "NOpBlnGInO9m6vDvFkFC",
+      stability:
+        typeof currentEl.stability === "number" ? currentEl.stability : 0.5,
+      similarityBoost:
+        typeof currentEl.similarityBoost === "number"
+          ? currentEl.similarityBoost
+          : 0.78,
+    },
+  });
+  console.log("[seed-stage-a] ElevenLabsSettings verified/seeded.");
+
+  // 5b. Seed PlatformLimits global from SQLite defaults
+  const sqliteLimits = getPlatformLimits();
+  const currentLimits = (await payload.findGlobal({
+    slug: "platform-limits",
+    overrideAccess: true,
+  })) as unknown as Record<string, unknown>;
+
+  await payload.updateGlobal({
+    slug: "platform-limits",
+    overrideAccess: true,
+    data: {
+      maxPreviewOrdersPerSession:
+        typeof currentLimits.maxPreviewOrdersPerSession === "number"
+          ? currentLimits.maxPreviewOrdersPerSession
+          : sqliteLimits.maxPreviewOrdersPerSession,
+      maxAiEditsPerBook:
+        typeof currentLimits.maxAiEditsPerBook === "number"
+          ? currentLimits.maxAiEditsPerBook
+          : sqliteLimits.maxAiEditsPerBook,
+      maxAiEditsPerVideo:
+        typeof currentLimits.maxAiEditsPerVideo === "number"
+          ? currentLimits.maxAiEditsPerVideo
+          : sqliteLimits.maxAiEditsPerVideo,
+      orderRetentionDays:
+        typeof currentLimits.orderRetentionDays === "number"
+          ? currentLimits.orderRetentionDays
+          : sqliteLimits.orderRetentionDays,
+    },
+  });
+  console.log("[seed-stage-a] PlatformLimits verified/seeded.");
 
   // 4. Seed AIPrompts without overwriting existing custom templates
   const currentPromptsDoc = (await payload.findGlobal({

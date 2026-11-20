@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "@engine/lib/payload";
+import { getCmsAiConfig } from "@/lib/cms-ai-config";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,47 +13,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const aiSettings = (await payload.findGlobal({
-      slug: "ai-settings",
-    })) as unknown as {
-      enabled?: boolean | null;
-      apiKey?: string | null;
-      imageProvider?: string | null;
-      imageApiKey?: string | null;
-      imageModel?: string | null;
-      elevenLabsApiKey?: string | null;
-    };
-
-    const hasTextKey = Boolean(
-      aiSettings.apiKey?.trim() ||
-        process.env.OPENAI_API_KEY?.trim() ||
-        process.env.OPEN_AI_KEY?.trim()
+    const cfg = await getCmsAiConfig();
+    const enabled = Boolean(cfg.enabled && cfg.apiKey);
+    const imageEnabled = Boolean(
+      enabled && cfg.imageProvider && cfg.imageApiKey && cfg.imageModel
     );
-    const hasImageKey = Boolean(
-      aiSettings.imageApiKey?.trim() ||
-        aiSettings.apiKey?.trim() ||
-        process.env.OPENAI_API_KEY?.trim()
-    );
-    const hasElevenLabs = Boolean(
-      aiSettings.elevenLabsApiKey?.trim() ||
-        process.env.ELEVENLABS_API_KEY?.trim()
-    );
-
-    const enabled = Boolean(aiSettings.enabled ?? true) && hasTextKey;
-    const imageEnabled =
-      enabled &&
-      Boolean(aiSettings.imageProvider || "openai") &&
-      hasImageKey &&
-      Boolean(
-        aiSettings.imageModel ||
-          process.env.OPENAI_IMAGE_MODEL ||
-          "gpt-image-2.5-sunburst-2026-09-08"
-      );
+    const elevenLabsEnabled = Boolean(cfg.elevenLabsApiKey);
 
     return NextResponse.json({
       enabled,
       imageEnabled,
-      elevenLabsEnabled: hasElevenLabs,
+      elevenLabsEnabled,
     });
   } catch (err) {
     console.error("[api/ai/status] error:", err);

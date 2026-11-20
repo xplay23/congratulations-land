@@ -32,6 +32,15 @@
   cursor: not-allowed;
 }
 
+.aui-btn--icon {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  justify-content: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+
 /* variant: primary */
 .aui-btn--primary {
   color: color-mix(in srgb, var(--adm-color-blue) 55%, var(--adm-color-muted, #a1a1aa));

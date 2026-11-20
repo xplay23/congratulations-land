@@ -30,6 +30,7 @@ export function OrdersPageView(props: ExtendedServerProps) {
     };
   const req = initPageResult?.req;
   const permissions = initPageResult?.permissions ?? props.permissions;
+  const isUk = props.i18n?.language === "uk";
 
   return (
     <DefaultTemplate
@@ -45,17 +46,31 @@ export function OrdersPageView(props: ExtendedServerProps) {
       visibleEntities={visibleEntities}
     >
       <div className="adm-page">
-        <h1
-          style={{
-            marginBottom: "20px",
-            fontSize: "var(--adm-fs-page-h1)",
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
-            color: "var(--theme-text)",
-          }}
-        >
-          Замовлення і Підтримка
-        </h1>
+        <div style={{ marginBottom: "22px" }}>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "var(--adm-fs-page-h1)",
+              fontWeight: 600,
+              letterSpacing: "-0.02em",
+              color: "var(--theme-text)",
+            }}
+          >
+            {isUk ? "Замовлення" : "Заказы"}
+          </h1>
+          <p
+            style={{
+              margin: "6px 0 0",
+              fontSize: "var(--adm-fs-body)",
+              color: "var(--adm-color-muted)",
+            }}
+          >
+            {isUk
+              ? "Інспектор замовлень, статуси Plata by mono, відновлення генерації та підтримка"
+              : "Инспектор заказов, статусы Plata by mono, возобновление генерации и поддержка"}
+          </p>
+        </div>
+
         <AdminClientWrapper>
           <AdminOrdersTab />
         </AdminClientWrapper>

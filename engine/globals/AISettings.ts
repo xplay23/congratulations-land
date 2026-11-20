@@ -2,11 +2,62 @@ import type { GlobalConfig } from "payload";
 import { invalidateModelsCache } from "@/app/api/ai/models/route";
 import { invalidateCmsAiConfigCache } from "@/lib/cms-ai-config";
 
+const REASONING_EFFORT_OPTIONS = [
+  {
+    label: {
+      ru: "По умолчанию модели (auto)",
+      uk: "За замовчуванням моделі (auto)",
+      en: "Model default (auto)",
+    },
+    value: "auto",
+  },
+  {
+    label: {
+      ru: "Без размышлений (none)",
+      uk: "Без міркувань (none)",
+      en: "None",
+    },
+    value: "none",
+  },
+  {
+    label: {
+      ru: "Минимальный (minimal)",
+      uk: "Мінімальний (minimal)",
+      en: "Minimal",
+    },
+    value: "minimal",
+  },
+  {
+    label: {
+      ru: "Низкий — быстро (low)",
+      uk: "Низький — швидко (low)",
+      en: "Low (fast)",
+    },
+    value: "low",
+  },
+  {
+    label: {
+      ru: "Средний — баланс (medium)",
+      uk: "Середній — баланс (medium)",
+      en: "Medium (balanced)",
+    },
+    value: "medium",
+  },
+  {
+    label: {
+      ru: "Высокий — глубокий анализ (high)",
+      uk: "Високий — глибокий аналіз (high)",
+      en: "High (deep reasoning)",
+    },
+    value: "high",
+  },
+];
+
 export const AISettings: GlobalConfig = {
   slug: "ai-settings",
-  label: "AI & ElevenLabs",
+  label: { ru: "ИИ (Контент)", uk: "ШІ (Контент)", en: "AI (Content)" },
   admin: {
-    group: "Settings",
+    group: { ru: "Настройки", uk: "Налаштування", en: "Settings" },
   },
   hooks: {
     afterChange: [
@@ -20,11 +71,14 @@ export const AISettings: GlobalConfig = {
     {
       name: "enabled",
       type: "checkbox",
-      label: "AI Enabled",
+      label: { ru: "ИИ включён", uk: "ШІ увімкнено", en: "AI Enabled" },
       defaultValue: true,
       admin: {
-        description:
-          "Главный переключатель ИИ-генерации контента и перевода в админке.",
+        description: {
+          ru: "Главный переключатель ИИ-генерации контента и перевода в админке.",
+          uk: "Головний перемикач ШІ-генерації контенту та перекладу в адмінці.",
+          en: "Master toggle for AI content generation and translation in admin.",
+        },
       },
     },
     {
@@ -51,7 +105,7 @@ export const AISettings: GlobalConfig = {
     {
       name: "provider",
       type: "select",
-      label: "Provider",
+      label: { ru: "Провайдер", uk: "Провайдер", en: "Provider" },
       defaultValue: "openai",
       options: [
         { label: "OpenAI", value: "openai" },
@@ -75,7 +129,7 @@ export const AISettings: GlobalConfig = {
     {
       name: "model",
       type: "text",
-      label: "Model",
+      label: { ru: "Модель", uk: "Модель", en: "Model" },
       defaultValue: "gpt-6.2-astra",
       admin: {
         components: {
@@ -84,16 +138,43 @@ export const AISettings: GlobalConfig = {
       },
     },
     {
+      name: "reasoningEffort",
+      type: "select",
+      label: {
+        ru: "Уровень размышления (Reasoning Effort)",
+        uk: "Рівень міркувань (Reasoning Effort)",
+        en: "Reasoning Effort",
+      },
+      defaultValue: "low",
+      options: REASONING_EFFORT_OPTIONS,
+      admin: {
+        description: {
+          ru: "Применяется для reasoning-моделей (OpenAI gpt-5/gpt-6/o1/o3/o4, Anthropic Thinking, Gemini Thinking). Для обычных моделей игнорируется.",
+          uk: "Застосовується для reasoning-моделей (OpenAI gpt-5/gpt-6/o1/o3/o4, Anthropic Thinking, Gemini Thinking). Для звичайних моделей ігнорується.",
+          en: "Applied to reasoning-capable models (OpenAI gpt-5/gpt-6/o1/o3/o4, Anthropic Thinking, Gemini Thinking).",
+        },
+      },
+    },
+    {
       name: "maxTokens",
       type: "number",
-      label: "Max Tokens",
+      label: { ru: "Макс. токенов", uk: "Макс. токенів", en: "Max Tokens" },
       defaultValue: 2500,
     },
     {
       name: "temperature",
       type: "number",
-      label: "Temperature",
+      label: { ru: "Температура", uk: "Температура", en: "Temperature" },
       defaultValue: 0.7,
+      min: 0,
+      max: 2,
+      admin: {
+        description: {
+          ru: "Используется для не-reasoning моделей (0.0 — строго, 1.0+ — креативнее).",
+          uk: "Використовується для не-reasoning моделей (0.0 — суворо, 1.0+ — креативніше).",
+          en: "Used for non-reasoning models.",
+        },
+      },
     },
     // ── Image Generation (Admin Blog Covers & Promo) ──────────────────────────
     {
@@ -109,7 +190,11 @@ export const AISettings: GlobalConfig = {
     {
       name: "imageProvider",
       type: "select",
-      label: "Image Provider",
+      label: {
+        ru: "Провайдер изображений",
+        uk: "Провайдер зображень",
+        en: "Image Provider",
+      },
       defaultValue: "openai",
       options: [
         { label: "OpenAI", value: "openai" },
@@ -119,7 +204,11 @@ export const AISettings: GlobalConfig = {
     {
       name: "imageApiKey",
       type: "text",
-      label: "Image API Key",
+      label: {
+        ru: "API-ключ для изображений",
+        uk: "API-ключ для зображень",
+        en: "Image API Key",
+      },
       admin: {
         components: {
           Field: "engine/components/admin/SecretKeyField#ImageApiKeyField",
@@ -132,132 +221,17 @@ export const AISettings: GlobalConfig = {
     {
       name: "imageModel",
       type: "text",
-      label: "Image Model",
+      label: {
+        ru: "Модель изображений",
+        uk: "Модель зображень",
+        en: "Image Model",
+      },
       defaultValue: "gpt-image-2.5-sunburst-2026-09-08",
       admin: {
         components: {
           Field: "engine/components/admin/HiddenModelField/ImageModel",
         },
       },
-    },
-    // ── Storybook Pipeline (OpenAI) ───────────────────────────────────────────
-    {
-      type: "ui",
-      name: "storybookPipelineDivider",
-      admin: {
-        components: {
-          Field:
-            "engine/components/admin/SectionDivider#AiStorybookPipelineDivider",
-        },
-      },
-    },
-    {
-      name: "storybookWriterModel",
-      type: "text",
-      label: "Storybook Writer / Proofreader Model",
-      defaultValue: "gpt-6.2-astra",
-      admin: {
-        description:
-          "Модель для шагов story_beats, story_draft и корректуры RU/UA.",
-      },
-    },
-    {
-      name: "storybookDirectorModel",
-      type: "text",
-      label: "Storybook Director & Vision QA Model",
-      defaultValue: "gpt-6.2-sol",
-      admin: {
-        description:
-          "Модель для Vision-паспорта фото, визуальной режиссуры сцен и QA-проверки картинок.",
-      },
-    },
-    {
-      name: "storybookImageModel",
-      type: "text",
-      label: "Storybook Image Model",
-      defaultValue: "gpt-image-2.5-sunburst-2026-09-08",
-      admin: {
-        description: "Модель генерации якорей и иллюстраций сказок.",
-      },
-    },
-    {
-      name: "storybookImageQuality",
-      type: "select",
-      label: "Storybook Image Quality",
-      defaultValue: "medium",
-      options: [
-        { label: "Low", value: "low" },
-        { label: "Medium", value: "medium" },
-        { label: "High", value: "high" },
-        { label: "Auto", value: "auto" },
-      ],
-    },
-    {
-      name: "storybookVisionQaEnabled",
-      type: "checkbox",
-      label: "Vision QA Gate Enabled",
-      defaultValue: true,
-      admin: {
-        description:
-          "Автоматическая проверка иллюстраций через Vision и до 1 перегенерации при браке.",
-      },
-    },
-    // ── ElevenLabs Voice Pipeline ─────────────────────────────────────────────
-    {
-      type: "ui",
-      name: "elevenLabsPipelineDivider",
-      admin: {
-        components: {
-          Field:
-            "engine/components/admin/SectionDivider#AiElevenLabsPipelineDivider",
-        },
-      },
-    },
-    {
-      name: "elevenLabsApiKey",
-      type: "text",
-      label: "ElevenLabs API Key",
-      admin: {
-        components: {
-          Field:
-            "engine/components/admin/SecretKeyField#ElevenLabsApiKeyField",
-        },
-      },
-      access: {
-        read: ({ req: { user } }) => Boolean(user),
-      },
-    },
-    {
-      name: "elevenLabsModelId",
-      type: "text",
-      label: "ElevenLabs Model ID",
-      defaultValue: "eleven_v4",
-    },
-    {
-      name: "elevenLabsVoiceId",
-      type: "text",
-      label: "Default Voice ID",
-      defaultValue: "NOpBlnGInO9m6vDvFkFC",
-      admin: {
-        description:
-          "ID голоса по умолчанию для видеопоздравлений (например, Святой Николай).",
-      },
-    },
-    {
-      name: "elevenLabsStability",
-      type: "number",
-      label: "Voice Stability (0–1)",
-      defaultValue: 0.5,
-      min: 0,
-      max: 1,
-    },
-    {
-      name: "elevenLabsSimilarityBoost",
-      type: "number",
-      label: "Similarity Boost (0–1)",
-      defaultValue: 0.78,
-      min: 0,
-      max: 1,
     },
     // ── AI Persona ────────────────────────────────────────────────────────────
     {
@@ -272,20 +246,34 @@ export const AISettings: GlobalConfig = {
     {
       name: "siteDescription",
       type: "textarea",
-      label: "Site Description",
+      label: {
+        ru: "Описание сайта",
+        uk: "Опис сайту",
+        en: "Site Description",
+      },
       admin: {
-        description:
-          "Краткое описание платформы VideoVitannya. Передаётся как {{siteDescription}}.",
+        description: {
+          ru: "Краткое описание платформы VideoVitannya. Передаётся в промпты как {{siteDescription}}.",
+          uk: "Короткий опис платформи VideoVitannya. Передається у промпти як {{siteDescription}}.",
+          en: "Short summary of VideoVitannya passed as {{siteDescription}}.",
+        },
         rows: 3,
       },
     },
     {
       name: "aiPersona",
       type: "textarea",
-      label: "AI Writing Persona",
+      label: {
+        ru: "Редакционная персона ИИ",
+        uk: "Редакційна персона ШІ",
+        en: "AI Writing Persona",
+      },
       admin: {
-        description:
-          "Тон и редакционные правила для генерации статей, описаний услуг и SEO.",
+        description: {
+          ru: "Тон и редакционные правила для генерации статей, описаний услуг и SEO.",
+          uk: "Тон та редакційні правила для генерації статей, описів послуг і SEO.",
+          en: "Tone and editorial rules for generating articles, service descriptions, and SEO.",
+        },
         rows: 6,
       },
     },

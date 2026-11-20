@@ -22,7 +22,9 @@ type FieldDispatch = (action: {
 const DEFAULT_TRANSLATABLE_FIELDS = [
   "siteName",
   "tagline",
+  "address",
   "footerText",
+  "copyrightText",
   "title",
   "subheading",
   "h1",

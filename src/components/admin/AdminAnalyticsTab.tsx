@@ -1,17 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { RefreshCw, ShieldCheck } from "lucide-react";
 import {
-  BarChart3,
-  Coins,
-  Cpu,
-  Filter,
-  Loader2,
-  RefreshCw,
-  ShieldCheck,
-  TrendingUp,
-} from "lucide-react";
-import { useLanguage } from "@/components/LanguageContext";
+  Alert,
+  BarRow,
+  Button,
+  C,
+  Card,
+  SectionLabel,
+  Select,
+} from "@engine/components/admin/ui";
+import { tAdmin, useAdminLang } from "@engine/lib/admin-i18n";
+import { AdminSystemHealthCard } from "./AdminSystemHealthCard";
 import { ART_STYLE_META } from "@/lib/i18n";
 import type { ArtStyle, ProductType } from "@/lib/types";
 
@@ -73,7 +74,12 @@ interface AnalyticsResponse {
     conversionPct: number;
   }>;
   byAgeGroup: Array<{ key: string; count: number; paid: number }>;
-  byLang: Array<{ key: string; count: number; paid: number; conversionPct: number }>;
+  byLang: Array<{
+    key: string;
+    count: number;
+    paid: number;
+    conversionPct: number;
+  }>;
   byCompanionType: Array<{ key: string; count: number; paid: number }>;
   photoStats: {
     withChildPhoto: number;
@@ -98,8 +104,141 @@ function fmtUah(kopiykas: number): string {
   })} ₴`;
 }
 
+function KpiCard({
+  label,
+  value,
+  sub,
+  valueColor,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: React.ReactNode;
+  valueColor?: string;
+}) {
+  return (
+    <Card>
+      <div
+        className="adm-label"
+        style={{ color: C.muted, opacity: 0.7, marginBottom: "10px" }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "30px",
+          fontWeight: 800,
+          lineHeight: 1.12,
+          letterSpacing: "-0.02em",
+          color: valueColor || C.text,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div
+          className="adm-caption"
+          style={{ color: C.muted, opacity: 0.75, marginTop: "6px" }}
+        >
+          {sub}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number | string;
+  color?: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: "12px 14px",
+        borderRadius: "var(--adm-radius)",
+        background: C.surface,
+        border: `1px solid ${C.cardBorder}`,
+        textAlign: "center",
+      }}
+    >
+      <div
+        className="adm-badge"
+        style={{ color: C.muted, opacity: 0.75, marginBottom: "4px" }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: "20px",
+          fontWeight: 700,
+          color: color || C.text,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function MetricRow({
+  label,
+  value,
+  valueColor,
+}: {
+  label: string;
+  value: React.ReactNode;
+  valueColor?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "12px",
+        padding: "10px 12px",
+        borderRadius: "var(--adm-radius-sm)",
+        background: C.surface,
+        border: `1px solid ${C.cardBorder}`,
+      }}
+    >
+      <span className="adm-body" style={{ color: C.muted }}>
+        {label}
+      </span>
+      <span
+        className="adm-mono"
+        style={{
+          color: valueColor || C.text,
+          fontWeight: 600,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+const TH_STYLE: React.CSSProperties = {
+  padding: "12px 16px",
+  fontSize: "var(--adm-fs-label)",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  color: C.muted,
+  opacity: 0.65,
+  textAlign: "left",
+  whiteSpace: "nowrap",
+};
+
 export function AdminAnalyticsTab() {
-  const { lang } = useLanguage();
+  const lang = useAdminLang();
   const isUk = lang === "uk";
 
   const [period, setPeriod] = useState<"7d" | "30d" | "90d" | "all">("30d");
@@ -132,39 +271,61 @@ export function AdminAnalyticsTab() {
   }, [loadAnalytics]);
 
   const funnelLabels: Record<string, string> = {
-    created: isUk ? "Створено замовлень" : "Создано заказов",
-    preview_ready: isUk ? "Прев'ю готове" : "Превью готово",
-    checkout_started: isUk ? "Перехід до оплати Mono" : "Переход к оплате Mono",
-    paid: isUk ? "Успішно оплачено" : "Успешно оплачено",
+    created: tAdmin(lang, "Создано заказов", "Створено замовлень"),
+    preview_ready: tAdmin(lang, "Превью готово", "Прев'ю готове"),
+    checkout_started: tAdmin(
+      lang,
+      "Переход к оплате Mono",
+      "Перехід до оплати Mono"
+    ),
+    paid: tAdmin(lang, "Успешно оплачено", "Успішно оплачено"),
   };
 
   const productLabels: Record<string, string> = {
-    storybook_4_6: isUk ? "Казка PDF (4–6 стор.)" : "Сказка PDF (4–6 стр.)",
-    storybook_8: isUk ? "Казка PDF (8 стор.)" : "Сказка PDF (8 стр.)",
-    video: isUk ? "Відеопривітання HD" : "Видеопоздравление HD",
+    storybook_4_6: tAdmin(
+      lang,
+      "Сказка PDF (4–6 стр.)",
+      "Казка PDF (4–6 стор.)"
+    ),
+    storybook_8: tAdmin(lang, "Сказка PDF (8 стр.)", "Казка PDF (8 стор.)"),
+    video: tAdmin(lang, "Видеопоздравление HD", "Відеопривітання HD"),
   };
 
   const companionLabels: Record<string, string> = {
-    none: isUk ? "Без супутника" : "Без спутника",
-    pet: isUk ? "Улюбленець" : "Питомец",
-    family: isUk ? "Член родини" : "Член семьи",
-    friend: isUk ? "Друг / подруга" : "Друг / подруга",
+    none: tAdmin(lang, "Без спутника", "Без супутника"),
+    pet: tAdmin(lang, "Питомец", "Улюбленець"),
+    family: tAdmin(lang, "Член семьи", "Член родини"),
+    friend: tAdmin(lang, "Друг / подруга", "Друг / подруга"),
   };
+
+  const periodOptions: Array<{ value: "7d" | "30d" | "90d" | "all"; label: string }> = [
+    { value: "7d", label: tAdmin(lang, "7 дней", "7 днів") },
+    { value: "30d", label: tAdmin(lang, "30 дней", "30 днів") },
+    { value: "90d", label: tAdmin(lang, "90 дней", "90 днів") },
+    { value: "all", label: tAdmin(lang, "Всё время", "Увесь час") },
+  ];
 
   if (loading && !data) {
     return (
-      <div className="flex items-center justify-center py-20 text-slate-300">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin text-amber-300" />
-        {isUk ? "Рахуємо аналітику..." : "Считаем аналитику..."}
-      </div>
+      <Card
+        style={{
+          padding: "48px 24px",
+          textAlign: "center",
+          color: C.muted,
+        }}
+      >
+        <span className="adm-body">
+          {tAdmin(lang, "Загрузка аналитики…", "Завантаження аналітики…")}
+        </span>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 p-4 text-sm text-rose-200">
+      <Alert variant="error" title={tAdmin(lang, "Ошибка загрузки", "Помилка завантаження")}>
         {error}
-      </div>
+      </Alert>
     );
   }
 
@@ -177,248 +338,396 @@ export function AdminAnalyticsTab() {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Privacy Banner + Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#121a30]/90 p-4">
-        <div className="flex items-center gap-2 text-xs text-emerald-200">
-          <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
-          <span>
-            {isUk
-              ? "Знеособлена аналітика: без email, імен та фото."
-              : "Обезличенная аналитика: без email, имён и фото."}
+    <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+      {/* Filters & Privacy bar (Domainer PeriodTabs style) */}
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
+          <span
+            className="adm-label"
+            style={{ color: C.muted, opacity: 0.6 }}
+          >
+            {tAdmin(lang, "Период", "Період")}
           </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Filter className="h-3.5 w-3.5 text-slate-400" />
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as typeof period)}
-            className="rounded-lg border border-white/15 bg-[#0b1020] px-2.5 py-1.5 text-slate-200"
+          <div
+            style={{
+              display: "inline-flex",
+              gap: "2px",
+              padding: "3px",
+              borderRadius: "var(--adm-radius)",
+              border: `1px solid ${C.cardBorder}`,
+              background: C.card,
+            }}
           >
-            <option value="7d">{isUk ? "7 днів" : "7 дней"}</option>
-            <option value="30d">{isUk ? "30 днів" : "30 дней"}</option>
-            <option value="90d">{isUk ? "90 днів" : "90 дней"}</option>
-            <option value="all">{isUk ? "Увесь час" : "Всё время"}</option>
-          </select>
+            {periodOptions.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setPeriod(opt.value)}
+                className={`aui-period-tab${
+                  period === opt.value ? " aui-period-tab--active" : ""
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
-          <select
-            value={productType}
-            onChange={(e) => setProductType(e.target.value as typeof productType)}
-            className="rounded-lg border border-white/15 bg-[#0b1020] px-2.5 py-1.5 text-slate-200"
+          <div style={{ width: "170px" }}>
+            <Select
+              value={productType}
+              onChange={(v) => setProductType(v as typeof productType)}
+              options={[
+                { value: "all", label: tAdmin(lang, "Все услуги", "Усі послуги") },
+                { value: "storybook", label: tAdmin(lang, "Сказки PDF", "Казки PDF") },
+                { value: "video", label: tAdmin(lang, "Видео HD", "Відео HD") },
+              ]}
+            />
+          </div>
+
+          <div
+            style={{
+              display: "inline-flex",
+              gap: "2px",
+              padding: "3px",
+              borderRadius: "var(--adm-radius)",
+              border: `1px solid ${C.cardBorder}`,
+              background: C.card,
+            }}
           >
-            <option value="all">{isUk ? "Усі послуги" : "Все услуги"}</option>
-            <option value="storybook">{isUk ? "Казки PDF" : "Сказки PDF"}</option>
-            <option value="video">{isUk ? "Відео HD" : "Видео HD"}</option>
-          </select>
-
-          <div className="flex rounded-lg border border-white/15 bg-[#0b1020] p-0.5">
             {(["day", "week"] as const).map((g) => (
               <button
                 key={g}
                 type="button"
                 onClick={() => setGroupBy(g)}
-                className={`rounded-md px-2.5 py-1 transition ${
-                  groupBy === g
-                    ? "bg-amber-400 font-bold text-[#0b1020]"
-                    : "text-slate-300"
+                className={`aui-period-tab${
+                  groupBy === g ? " aui-period-tab--active" : ""
                 }`}
               >
                 {g === "day"
-                  ? isUk
-                    ? "Дні"
-                    : "Дни"
-                  : isUk
-                  ? "Тижні"
-                  : "Недели"}
+                  ? tAdmin(lang, "Дни", "Дні")
+                  : tAdmin(lang, "Недели", "Тижні")}
               </button>
             ))}
           </div>
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={() => void loadAnalytics()}
-            className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 text-slate-200 hover:bg-white/10"
+            disabled={loading}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          </button>
+            <RefreshCw size={14} />
+            {tAdmin(lang, "Обновить", "Оновити")}
+          </Button>
+        </div>
+
+        <div
+          className="adm-caption"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            color: C.muted,
+          }}
+        >
+          <ShieldCheck size={15} style={{ color: C.green, flexShrink: 0 }} />
+          <span>
+            {tAdmin(
+              lang,
+              "Обезличенная аналитика: без email, имён и фото",
+              "Знеособлена аналітика: без email, імен та фото"
+            )}
+          </span>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-1">
-          <div className="text-xs text-slate-400">
-            {isUk ? "Замовлень / Оплачено" : "Заказов / Оплачено"}
-          </div>
-          <div className="text-2xl font-bold text-white">
-            {s.totalOrders}{" "}
-            <span className="text-base font-semibold text-emerald-300">
-              / {s.paidOrders}
-            </span>
-          </div>
-          <div className="text-[11px] text-slate-400">
-            {isUk ? "Конверсія з прев'ю:" : "Конверсия из превью:"}{" "}
-            <strong className="text-amber-200">{s.previewToPaidPct}%</strong> ·{" "}
-            {isUk ? "загальна:" : "общая:"} {s.totalToPaidPct}%
-          </div>
-        </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: "16px",
+        }}
+      >
+        <KpiCard
+          label={tAdmin(lang, "Заказы / Оплачено", "Замовлення / Оплачено")}
+          value={
+            <>
+              {s.totalOrders}{" "}
+              <span style={{ fontSize: "20px", fontWeight: 600, color: C.green }}>
+                / {s.paidOrders}
+              </span>
+            </>
+          }
+          sub={
+            <>
+              {tAdmin(lang, "Из превью:", "З прев'ю:")}{" "}
+              <strong style={{ color: C.text }}>{s.previewToPaidPct}%</strong> ·{" "}
+              {tAdmin(lang, "общая:", "загальна:")} {s.totalToPaidPct}%
+            </>
+          }
+        />
 
-        <div className="rounded-2xl border border-emerald-400/20 bg-[#121a30]/95 p-5 space-y-1">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>{isUk ? "Виручка (оплачені)" : "Выручка (оплаченные)"}</span>
-            <Coins className="h-4 w-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-bold text-emerald-300">
-            {fmtUah(s.revenueKopiykas)}
-          </div>
-          <div className="text-[11px] text-slate-400">
-            {isUk ? "Середній чек:" : "Средний чек:"} {fmtUah(s.avgCheckKopiykas)}
-          </div>
-        </div>
+        <KpiCard
+          label={tAdmin(lang, "Выручка (оплаченные)", "Виручка (оплачені)")}
+          value={fmtUah(s.revenueKopiykas)}
+          valueColor={C.green}
+          sub={`${tAdmin(lang, "Средний чек:", "Середній чек:")} ${fmtUah(
+            s.avgCheckKopiykas
+          )}`}
+        />
 
-        <div className="rounded-2xl border border-sky-400/20 bg-[#121a30]/95 p-5 space-y-1">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>{isUk ? "Витрати на ШІ" : "Расходы на ИИ"}</span>
-            <Cpu className="h-4 w-4 text-sky-300" />
-          </div>
-          <div className="text-2xl font-bold text-sky-200">
-            {fmtUah(s.aiCostKopiykas)}
-          </div>
-          <div className="text-[11px] text-slate-400">
-            ${s.aiCostUsd.toFixed(2)} ·{" "}
-            {isUk
-              ? `замір у ${s.measuredCostOrders}/${s.totalOrders}`
-              : `замер в ${s.measuredCostOrders}/${s.totalOrders}`}
-          </div>
-        </div>
+        <KpiCard
+          label={tAdmin(lang, "Расходы на ИИ", "Витрати на ШІ")}
+          value={fmtUah(s.aiCostKopiykas)}
+          valueColor={C.blue}
+          sub={`$${s.aiCostUsd.toFixed(2)} · ${tAdmin(
+            lang,
+            `замер в ${s.measuredCostOrders}/${s.totalOrders}`,
+            `замір у ${s.measuredCostOrders}/${s.totalOrders}`
+          )}`}
+        />
 
-        <div className="rounded-2xl border border-amber-300/25 bg-[#121a30]/95 p-5 space-y-1">
-          <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>{isUk ? "Валова маржа" : "Валовая маржа"}</span>
-            <TrendingUp className="h-4 w-4 text-amber-300" />
-          </div>
-          <div
-            className={`text-2xl font-bold ${
-              s.grossMarginKopiykas >= 0 ? "text-amber-200" : "text-rose-300"
-            }`}
-          >
-            {fmtUah(s.grossMarginKopiykas)}
-          </div>
-          <div className="text-[11px] text-slate-400">
-            {s.grossMarginPct}% ·{" "}
-            {isUk
-              ? `Холди: ${s.heldOrders} · Помилки: ${s.failedOrders}`
-              : `Холды: ${s.heldOrders} · Ошибки: ${s.failedOrders}`}
-          </div>
-        </div>
+        <KpiCard
+          label={tAdmin(lang, "Валовая маржа", "Валова маржа")}
+          value={fmtUah(s.grossMarginKopiykas)}
+          valueColor={s.grossMarginKopiykas >= 0 ? C.text : C.red}
+          sub={`${s.grossMarginPct}% · ${tAdmin(
+            lang,
+            `Холды: ${s.heldOrders} · Ошибки: ${s.failedOrders}`,
+            `Холди: ${s.heldOrders} · Помилки: ${s.failedOrders}`
+          )}`}
+        />
       </div>
 
       {/* Funnel + Timeline */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Funnel */}
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-4">
-          <h3 className="flex items-center gap-2 text-sm font-bold text-amber-100">
-            <BarChart3 className="h-4 w-4 text-amber-300" />
-            {isUk ? "Воронка конверсії" : "Воронка конверсии"}
-          </h3>
-          <div className="space-y-3">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+          gap: "20px",
+        }}
+      >
+        <Card>
+          <SectionLabel>
+            {tAdmin(lang, "Воронка конверсии", "Воронка конверсії")}
+          </SectionLabel>
+          <div style={{ marginTop: "12px" }}>
             {data.funnel.map((f) => (
-              <div key={f.step} className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-200">{funnelLabels[f.step] || f.step}</span>
-                  <span className="font-mono text-amber-200">
-                    {f.count} ({f.pctOfTotal}%)
-                  </span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-300 to-emerald-400 transition-all"
-                    style={{ width: `${Math.max(f.count > 0 ? 4 : 0, f.pctOfTotal)}%` }}
-                  />
-                </div>
-              </div>
+              <BarRow
+                key={f.step}
+                label={funnelLabels[f.step] || f.step}
+                count={f.count}
+                pct={f.pctOfTotal}
+                color={C.blue}
+              />
             ))}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 border-t border-white/10 pt-3 text-center text-[11px]">
-            <div className="rounded-lg bg-white/5 p-2">
-              <div className="text-slate-400">{isUk ? "Генерація" : "Генерация"}</div>
-              <div className="font-bold text-amber-200">{s.generatingOrders}</div>
-            </div>
-            <div className="rounded-lg bg-white/5 p-2">
-              <div className="text-slate-400">{isUk ? "Помилки" : "Ошибки"}</div>
-              <div className="font-bold text-rose-300">{s.failedOrders}</div>
-            </div>
-            <div className="rounded-lg bg-white/5 p-2">
-              <div className="text-slate-400">{isUk ? "Повернення" : "Возвраты"}</div>
-              <div className="font-bold text-slate-200">{s.reversedOrders}</div>
-            </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "10px",
+              marginTop: "18px",
+              paddingTop: "16px",
+              borderTop: `1px solid ${C.cardBorder}`,
+            }}
+          >
+            <MiniStat
+              label={tAdmin(lang, "Генерация", "Генерація")}
+              value={s.generatingOrders}
+              color={C.amber}
+            />
+            <MiniStat
+              label={tAdmin(lang, "Ошибки", "Помилки")}
+              value={s.failedOrders}
+              color={C.red}
+            />
+            <MiniStat
+              label={tAdmin(lang, "Возвраты", "Повернення")}
+              value={s.reversedOrders}
+            />
           </div>
-        </div>
+        </Card>
 
-        {/* Timeline */}
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-amber-100">
-              {isUk ? "Динаміка виручки та витрат ШІ" : "Динамика выручки и расходов ИИ"}
-            </h3>
-            <div className="flex items-center gap-3 text-[11px] text-slate-400">
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                {isUk ? "Виручка" : "Выручка"}
+        <Card>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              marginBottom: "14px",
+            }}
+          >
+            <SectionLabel>
+              {tAdmin(
+                lang,
+                "Динамика выручки и расходов ИИ",
+                "Динаміка виручки та витрат ШІ"
+              )}
+            </SectionLabel>
+            <div
+              className="adm-badge"
+              style={{ display: "flex", alignItems: "center", gap: "12px", color: C.muted }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: C.green,
+                  }}
+                />
+                {tAdmin(lang, "Выручка", "Виручка")}
               </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-sky-400" />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: C.blue,
+                  }}
+                />
                 AI
               </span>
             </div>
           </div>
 
           {data.timeline.length === 0 ? (
-            <div className="py-12 text-center text-xs text-slate-400">
-              {isUk ? "Немає даних за обраний період" : "Нет данных за выбранный период"}
+            <div
+              className="adm-body"
+              style={{ padding: "40px 16px", textAlign: "center", color: C.muted, opacity: 0.6 }}
+            >
+              {tAdmin(
+                lang,
+                "Нет данных за выбранный период",
+                "Немає даних за обраний період"
+              )}
             </div>
           ) : (
-            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                maxHeight: "300px",
+                overflowY: "auto",
+              }}
+            >
               {data.timeline.map((row) => {
                 const revPct = Math.round((row.revenueKopiykas / maxTimelineRev) * 100);
                 const costPct = Math.round((row.aiCostKopiykas / maxTimelineRev) * 100);
                 return (
                   <div
                     key={row.bucket}
-                    className="rounded-xl border border-white/5 bg-white/[0.02] p-2.5 text-xs space-y-1.5"
+                    style={{
+                      padding: "12px 14px",
+                      borderRadius: "var(--adm-radius)",
+                      background: C.surface,
+                      border: `1px solid ${C.cardBorder}`,
+                    }}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-mono text-slate-200">{row.bucket}</span>
-                      <span className="text-[11px] text-slate-400">
-                        {row.created} {isUk ? "зам." : "зак."} ·{" "}
-                        <span className="text-emerald-300">{row.paid} опл.</span> ·{" "}
-                        <span className="text-amber-200">
-                          {isUk ? "Маржа" : "Маржа"}: {fmtUah(row.marginKopiykas)}
-                        </span>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <span className="adm-mono" style={{ fontWeight: 600, color: C.text }}>
+                        {row.bucket}
+                      </span>
+                      <span className="adm-caption" style={{ color: C.muted }}>
+                        {row.created} {tAdmin(lang, "зак.", "зам.")} ·{" "}
+                        <span style={{ color: C.green }}>
+                          {row.paid} {tAdmin(lang, "опл.", "опл.")}
+                        </span>{" "}
+                        · {tAdmin(lang, "Маржа", "Маржа")}:{" "}
+                        <strong style={{ color: C.text }}>
+                          {fmtUah(row.marginKopiykas)}
+                        </strong>
                       </span>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: "6px",
+                            borderRadius: "3px",
+                            background: "var(--theme-elevation-150)",
+                            overflow: "hidden",
+                          }}
+                        >
                           <div
-                            className="h-full rounded-full bg-emerald-400"
-                            style={{ width: `${Math.max(row.revenueKopiykas > 0 ? 2 : 0, revPct)}%` }}
+                            style={{
+                              height: "100%",
+                              width: `${Math.max(row.revenueKopiykas > 0 ? 2 : 0, revPct)}%`,
+                              background: C.green,
+                            }}
                           />
                         </div>
-                        <span className="w-16 text-right font-mono text-[11px] text-emerald-300">
+                        <span
+                          className="adm-caption"
+                          style={{
+                            width: "76px",
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                            color: C.green,
+                          }}
+                        >
                           {fmtUah(row.revenueKopiykas)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: "6px",
+                            borderRadius: "3px",
+                            background: "var(--theme-elevation-150)",
+                            overflow: "hidden",
+                          }}
+                        >
                           <div
-                            className="h-full rounded-full bg-sky-400"
-                            style={{ width: `${Math.max(row.aiCostKopiykas > 0 ? 2 : 0, costPct)}%` }}
+                            style={{
+                              height: "100%",
+                              width: `${Math.max(row.aiCostKopiykas > 0 ? 2 : 0, costPct)}%`,
+                              background: C.blue,
+                            }}
                           />
                         </div>
-                        <span className="w-16 text-right font-mono text-[11px] text-sky-300">
+                        <span
+                          className="adm-caption"
+                          style={{
+                            width: "76px",
+                            textAlign: "right",
+                            fontFamily: "monospace",
+                            color: C.blue,
+                          }}
+                        >
                           {fmtUah(row.aiCostKopiykas)}
                         </span>
                       </div>
@@ -428,51 +737,96 @@ export function AdminAnalyticsTab() {
               })}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
-      {/* Product & AI Resource Breakdown */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-3 lg:col-span-2">
-          <h3 className="text-sm font-bold text-amber-100">
-            {isUk ? "Маржинальність за послугами" : "Маржинальность по услугам"}
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 text-slate-400">
-                <tr>
-                  <th className="py-2 pr-3">{isUk ? "Продукт" : "Продукт"}</th>
-                  <th className="py-2 px-2">{isUk ? "Створено" : "Создано"}</th>
-                  <th className="py-2 px-2">{isUk ? "Оплачено" : "Оплачено"}</th>
-                  <th className="py-2 px-2">{isUk ? "Конв." : "Конв."}</th>
-                  <th className="py-2 px-2">{isUk ? "Виручка" : "Выручка"}</th>
-                  <th className="py-2 px-2">AI</th>
-                  <th className="py-2 pl-2">{isUk ? "Маржа" : "Маржа"}</th>
+      {/* Product Margins + AI Resource Consumption */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+          gap: "20px",
+        }}
+      >
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "18px 20px 10px" }}>
+            <SectionLabel>
+              {tAdmin(lang, "Маржинальность по услугам", "Маржинальність за послугами")}
+            </SectionLabel>
+          </div>
+          <div className="aui-scroll-x">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.cardBorder}` }}>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Продукт", "Продукт")}</th>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Создано", "Створено")}</th>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Оплачено", "Оплачено")}</th>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Конв.", "Конв.")}</th>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Выручка", "Виручка")}</th>
+                  <th style={TH_STYLE}>AI</th>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Маржа", "Маржа")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {data.byProduct.map((p) => (
-                  <tr key={p.key}>
-                    <td className="py-2.5 pr-3 font-medium text-white">
+              <tbody>
+                {data.byProduct.map((p, idx) => (
+                  <tr
+                    key={p.key}
+                    style={{
+                      borderBottom:
+                        idx < data.byProduct.length - 1
+                          ? `1px solid ${C.cardBorder}`
+                          : "none",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "12px 16px",
+                        fontSize: "var(--adm-fs-body)",
+                        fontWeight: 600,
+                        color: C.text,
+                      }}
+                    >
                       {productLabels[p.key] || p.key}
                     </td>
-                    <td className="py-2.5 px-2 text-slate-300">{p.count}</td>
-                    <td className="py-2.5 px-2 text-emerald-300">{p.paid}</td>
-                    <td className="py-2.5 px-2 text-amber-200">{p.conversionPct}%</td>
-                    <td className="py-2.5 px-2 font-mono text-slate-200">
+                    <td style={{ padding: "12px 16px", fontSize: "var(--adm-fs-body)", color: C.muted }}>
+                      {p.count}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "var(--adm-fs-body)", color: C.green, fontWeight: 600 }}>
+                      {p.paid}
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "var(--adm-fs-body)", color: C.text }}>
+                      {p.conversionPct}%
+                    </td>
+                    <td style={{ padding: "12px 16px", fontSize: "var(--adm-fs-body)", fontFamily: "monospace", color: C.text }}>
                       {fmtUah(p.revenueKopiykas)}
                     </td>
-                    <td className="py-2.5 px-2 font-mono text-sky-300">
+                    <td style={{ padding: "12px 16px", fontSize: "var(--adm-fs-body)", fontFamily: "monospace", color: C.blue }}>
                       {fmtUah(p.aiCostKopiykas)}
                     </td>
-                    <td className="py-2.5 pl-2 font-mono font-bold text-amber-200">
+                    <td
+                      style={{
+                        padding: "12px 16px",
+                        fontSize: "var(--adm-fs-body)",
+                        fontFamily: "monospace",
+                        fontWeight: 700,
+                        color: p.marginKopiykas >= 0 ? C.green : C.red,
+                      }}
+                    >
                       {fmtUah(p.marginKopiykas)}
                     </td>
                   </tr>
                 ))}
                 {data.byProduct.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-slate-400">
+                    <td
+                      colSpan={7}
+                      style={{
+                        padding: "24px",
+                        textAlign: "center",
+                        fontSize: "var(--adm-fs-body)",
+                        color: C.muted,
+                      }}
+                    >
                       —
                     </td>
                   </tr>
@@ -480,162 +834,185 @@ export function AdminAnalyticsTab() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-3">
-          <h3 className="text-sm font-bold text-amber-100">
-            {isUk ? "Споживання ресурсів ШІ" : "Потребление ресурсов ИИ"}
-          </h3>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
-              <span className="text-slate-400">Input / Output tokens</span>
-              <span className="font-mono text-slate-100">
-                {data.aiMetrics.totalInputTokens.toLocaleString()} /{" "}
-                {data.aiMetrics.totalOutputTokens.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
-              <span className="text-slate-400">
-                {isUk ? "Виклики gpt-image" : "Вызовы gpt-image"}
-              </span>
-              <span className="font-mono text-slate-100">
-                {data.aiMetrics.totalImageCalls}
-              </span>
-            </div>
-            <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
-              <span className="text-slate-400">Vision QA repairs</span>
-              <span className="font-mono text-amber-200">
-                {data.aiMetrics.totalVisionQaRetries}
-              </span>
-            </div>
-            <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
-              <span className="text-slate-400">ElevenLabs chars</span>
-              <span className="font-mono text-slate-100">
-                {data.aiMetrics.totalElevenLabsChars.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex justify-between rounded-lg bg-white/5 px-3 py-2">
-              <span className="text-slate-400">
-                {isUk ? "Середн. ШІ-витрати / замір" : "Сред. ИИ-расход / замер"}
-              </span>
-              <span className="font-mono text-sky-200">
-                {fmtUah(s.avgAiCostKopiykas)}
-              </span>
-            </div>
+        <Card>
+          <SectionLabel>
+            {tAdmin(lang, "Потребление ресурсов ИИ", "Споживання ресурсів ШІ")}
+          </SectionLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
+            <MetricRow
+              label="Input / Output tokens"
+              value={`${data.aiMetrics.totalInputTokens.toLocaleString()} / ${data.aiMetrics.totalOutputTokens.toLocaleString()}`}
+            />
+            <MetricRow
+              label={tAdmin(lang, "Вызовы gpt-image", "Виклики gpt-image")}
+              value={data.aiMetrics.totalImageCalls}
+            />
+            <MetricRow
+              label="Vision QA repairs"
+              value={data.aiMetrics.totalVisionQaRetries}
+              valueColor={C.amber}
+            />
+            <MetricRow
+              label="ElevenLabs chars"
+              value={data.aiMetrics.totalElevenLabsChars.toLocaleString()}
+            />
+            <MetricRow
+              label={tAdmin(
+                lang,
+                "Сред. ИИ-расход / замер",
+                "Середн. ШІ-витрати / замір"
+              )}
+              value={fmtUah(s.avgAiCostKopiykas)}
+              valueColor={C.blue}
+            />
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Styles, Layouts, Ages, Languages, Companions */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {/* Styles */}
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-3">
-          <h3 className="text-sm font-bold text-amber-100">
-            {isUk ? "Популярні стилі казок" : "Популярные стили сказок"}
-          </h3>
-          <div className="space-y-2 text-xs">
+      {/* Styles, Ages/Languages, Photos/Companions */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+          gap: "20px",
+        }}
+      >
+        <Card>
+          <SectionLabel>
+            {tAdmin(lang, "Популярные стили сказок", "Популярні стилі казок")}
+          </SectionLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
             {data.byArtStyle.map((st) => (
-              <div key={st.key} className="flex items-center justify-between gap-2">
-                <span className="truncate text-slate-200">
-                  {ART_STYLE_META[st.key]?.label[lang] || st.key}
+              <div
+                key={st.key}
+                className="adm-body"
+                style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}
+              >
+                <span style={{ color: C.text }}>
+                  {ART_STYLE_META[st.key]?.label[isUk ? "uk" : "ru"] || st.key}
                 </span>
-                <span className="shrink-0 font-mono text-slate-300">
-                  {st.count} ({st.paid} {isUk ? "опл." : "опл."} · {st.conversionPct}%)
+                <span style={{ fontFamily: "monospace", color: C.muted }}>
+                  {st.count} ({st.paid} опл. · {st.conversionPct}%)
                 </span>
               </div>
             ))}
             {data.byArtStyle.length === 0 && (
-              <div className="text-slate-400">—</div>
+              <div className="adm-body" style={{ color: C.muted, opacity: 0.6 }}>—</div>
             )}
           </div>
-        </div>
+        </Card>
 
-        {/* Ages & Languages */}
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-sm font-bold text-amber-100">
-              {isUk ? "Вікові групи" : "Возрастные группы"}
-            </h3>
-            <div className="space-y-1.5 text-xs">
-              {data.byAgeGroup.map((a) => (
-                <div key={a.key} className="flex justify-between">
-                  <span className="text-slate-300">{a.key}</span>
-                  <span className="font-mono text-slate-200">
-                    {a.count} ({a.paid} опл.)
-                  </span>
-                </div>
-              ))}
-              {data.byAgeGroup.length === 0 && (
-                <div className="text-slate-400">—</div>
-              )}
-            </div>
+        <Card>
+          <SectionLabel>
+            {tAdmin(lang, "Возрастные группы", "Вікові групи")}
+          </SectionLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px", marginBottom: "16px" }}>
+            {data.byAgeGroup.map((a) => (
+              <div
+                key={a.key}
+                className="adm-body"
+                style={{ display: "flex", justifyContent: "space-between" }}
+              >
+                <span style={{ color: C.text }}>{a.key}</span>
+                <span style={{ fontFamily: "monospace", color: C.muted }}>
+                  {a.count} ({a.paid} опл.)
+                </span>
+              </div>
+            ))}
+            {data.byAgeGroup.length === 0 && (
+              <div className="adm-body" style={{ color: C.muted, opacity: 0.6 }}>—</div>
+            )}
           </div>
 
-          <div className="border-t border-white/10 pt-3 space-y-2">
-            <h3 className="text-sm font-bold text-amber-100">
-              {isUk ? "Мови та верстка" : "Языки и вёрстка"}
-            </h3>
-            <div className="space-y-1 text-xs">
+          <div style={{ borderTop: `1px solid ${C.cardBorder}`, paddingTop: "14px" }}>
+            <SectionLabel>
+              {tAdmin(lang, "Языки и вёрстка", "Мови та верстка")}
+            </SectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
               {data.byLang.map((l) => (
-                <div key={l.key} className="flex justify-between">
-                  <span className="uppercase text-slate-300">{l.key}</span>
-                  <span className="font-mono text-slate-200">
+                <div
+                  key={l.key}
+                  className="adm-body"
+                  style={{ display: "flex", justifyContent: "space-between" }}
+                >
+                  <span style={{ textTransform: "uppercase", color: C.text }}>
+                    {l.key}
+                  </span>
+                  <span style={{ fontFamily: "monospace", color: C.muted }}>
                     {l.count} ({l.paid} опл. · {l.conversionPct}%)
                   </span>
                 </div>
               ))}
               {data.byLayoutMode.map((lm) => (
-                <div key={lm.key} className="flex justify-between">
-                  <span className="text-slate-300">layout:{lm.key}</span>
-                  <span className="font-mono text-slate-200">
+                <div
+                  key={lm.key}
+                  className="adm-body"
+                  style={{ display: "flex", justifyContent: "space-between" }}
+                >
+                  <span style={{ color: C.text }}>layout: {lm.key}</span>
+                  <span style={{ fontFamily: "monospace", color: C.muted }}>
                     {lm.count} ({lm.paid} опл.)
                   </span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Photo & Companion */}
-        <div className="rounded-2xl border border-white/10 bg-[#121a30]/95 p-5 space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-sm font-bold text-amber-100">
-              {isUk ? "Фото та супутники" : "Фото и спутники"}
-            </h3>
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between">
-                <span className="text-slate-300">
-                  {isUk ? "З фото дитини" : "С фото ребёнка"}
-                </span>
-                <span className="font-mono text-amber-200">
-                  {data.photoStats.withChildPhoto} ({data.photoStats.withChildPhotoPct}%)
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-300">
-                  {isUk ? "З фото супутника" : "С фото спутника"}
-                </span>
-                <span className="font-mono text-slate-200">
-                  {data.photoStats.withCompanionPhoto}
-                </span>
-              </div>
+        <Card>
+          <SectionLabel>
+            {tAdmin(lang, "Фото и спутники", "Фото та супутники")}
+          </SectionLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px", marginBottom: "16px" }}>
+            <div className="adm-body" style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: C.text }}>
+                {tAdmin(lang, "С фото ребёнка", "З фото дитини")}
+              </span>
+              <span style={{ fontFamily: "monospace", color: C.text, fontWeight: 600 }}>
+                {data.photoStats.withChildPhoto} ({data.photoStats.withChildPhotoPct}%)
+              </span>
+            </div>
+            <div className="adm-body" style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: C.text }}>
+                {tAdmin(lang, "С фото спутника", "З фото супутника")}
+              </span>
+              <span style={{ fontFamily: "monospace", color: C.muted }}>
+                {data.photoStats.withCompanionPhoto}
+              </span>
             </div>
           </div>
 
-          <div className="border-t border-white/10 pt-3 space-y-1.5 text-xs">
+          <div
+            style={{
+              borderTop: `1px solid ${C.cardBorder}`,
+              paddingTop: "14px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "8px",
+            }}
+          >
             {data.byCompanionType.map((c) => (
-              <div key={c.key} className="flex justify-between">
-                <span className="text-slate-300">
+              <div
+                key={c.key}
+                className="adm-body"
+                style={{ display: "flex", justifyContent: "space-between" }}
+              >
+                <span style={{ color: C.text }}>
                   {companionLabels[c.key] || c.key}
                 </span>
-                <span className="font-mono text-slate-200">
+                <span style={{ fontFamily: "monospace", color: C.muted }}>
                   {c.count} ({c.paid} опл.)
                 </span>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       </div>
+
+      {/* System Health (at bottom of Dashboard) */}
+      <AdminSystemHealthCard />
     </div>
   );
 }

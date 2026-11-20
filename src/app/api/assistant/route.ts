@@ -60,7 +60,12 @@ export async function POST(req: NextRequest) {
     const systemPrompt = promptTemplate.replace(/\{\{language\}\}/g, langLabel);
 
     const res = await client.chat.completions.create({
-      ...buildChatModelParams(0.7, 700, config.textModel),
+      ...buildChatModelParams(
+        0.7,
+        700,
+        config.textModel,
+        config.reasoningEffort
+      ),
       messages: [
         {
           role: "system",

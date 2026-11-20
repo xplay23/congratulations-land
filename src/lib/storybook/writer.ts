@@ -290,8 +290,10 @@ export async function generateThreeStepStory(
   visionPassports?: PhotoVisualPassports,
   costTracker?: AiCostTracker
 ): Promise<WrittenStoryDraft> {
-  const { client, config } = await getCmsOpenAIRuntime();
-  if (!client) {
+  const { writerClient, directorClient, config } = await getCmsOpenAIRuntime();
+  const client = writerClient;
+  const dirClient = directorClient ?? writerClient;
+  if (!client || !dirClient) {
     onProgress?.("story_beats", 15);
     onProgress?.("story_draft", 24);
     onProgress?.("story_proofread", 32);
@@ -300,7 +302,9 @@ export async function generateThreeStepStory(
   }
 
   const writerModel = config.storybookWriterModel;
+  const writerEffort = config.storybookWriterReasoningEffort;
   const directorModel = config.storybookDirectorModel;
+  const directorEffort = config.storybookDirectorReasoningEffort;
   const langName = payload.lang === "uk" ? "Ukrainian (Українська)" : "Russian (Русский)";
   const wordRange = getWordRangeByAge(payload.ageGroup);
   const toneLabel = TONE_LABELS[payload.tone][payload.lang];
@@ -332,7 +336,7 @@ export async function generateThreeStepStory(
   onProgress?.("story_beats", 12);
   const beatsRes = await withOpenAIRetry("story_beats", () =>
     client.chat.completions.create({
-      ...buildChatModelParams(0.8, 1400, writerModel),
+      ...buildChatModelParams(0.8, 1400, writerModel, writerEffort),
       messages: [
         {
           role: "system",
@@ -379,7 +383,7 @@ If layoutMode is "panorama", assign alternating "textZone": "left" or "right".`;
   onProgress?.("story_draft", 22);
   const draftRes = await withOpenAIRetry("story_draft", () =>
     client.chat.completions.create({
-      ...buildChatModelParams(0.8, 2600, writerModel),
+      ...buildChatModelParams(0.8, 2600, writerModel, writerEffort),
       messages: [
         {
           role: "system",
@@ -447,7 +451,7 @@ Check and fix:
   onProgress?.("story_proofread", 32);
   const proofRes = await withOpenAIRetry("story_proofread", () =>
     client.chat.completions.create({
-      ...buildChatModelParams(0.2, 2600, writerModel),
+      ...buildChatModelParams(0.2, 2600, writerModel, writerEffort),
       messages: [
         {
           role: "system",
@@ -514,8 +518,8 @@ STRICT DIRECTING RULES (apply universally across any story world):
   // Step 4: Visual Director & Continuity Supervisor (uses lighter director model gpt-6.2-sol on FINAL text)
   onProgress?.("story_director", 40);
   const directorRes = await withOpenAIRetry("story_director", () =>
-    client.chat.completions.create({
-      ...buildChatModelParams(0.4, 3400, directorModel),
+    dirClient.chat.completions.create({
+      ...buildChatModelParams(0.4, 3400, directorModel, directorEffort),
       messages: [
         {
           role: "system",
@@ -647,7 +651,7 @@ export async function rewriteSinglePageText(params: {
   instruction: string;
   costTracker?: AiCostTracker;
 }): Promise<{ heading: string; text: string }> {
-  const { client, config } = await getCmsOpenAIRuntime();
+  const { writerClient: client, config } = await getCmsOpenAIRuntime();
   if (!client) {
     return {
       heading: params.currentHeading,
@@ -656,12 +660,13 @@ export async function rewriteSinglePageText(params: {
   }
 
   const writerModel = config.storybookWriterModel;
+  const writerEffort = config.storybookWriterReasoningEffort;
   const langName = params.lang === "uk" ? "Ukrainian (Українська)" : "Russian (Русский)";
   const wordRange = getWordRangeByAge(params.ageGroup);
 
   const res = await withOpenAIRetry("rewrite_page", () =>
     client.chat.completions.create({
-      ...buildChatModelParams(0.6, 1000, writerModel),
+      ...buildChatModelParams(0.6, 1000, writerModel, writerEffort),
       messages: [
         {
           role: "system",

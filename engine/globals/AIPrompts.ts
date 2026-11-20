@@ -3,11 +3,14 @@ import { invalidateCmsAiConfigCache } from "@/lib/cms-ai-config";
 
 export const AIPrompts: GlobalConfig = {
   slug: "ai-prompts",
-  label: "AI Prompts",
+  label: { ru: "Промпты", uk: "Промпти", en: "AI Prompts" },
   admin: {
-    group: "Settings",
-    description:
-      "Редактируемые шаблоны промптов для контента, перевода, сказок PDF, видео-реплик и ИИ-помощника. Поддерживают {{переменные}}.",
+    group: { ru: "Настройки", uk: "Налаштування", en: "Settings" },
+    description: {
+      ru: "Редактируемые шаблоны промптов для контента, перевода, сказок PDF, видео-реплик и ИИ-помощника. Поддерживают {{переменные}}.",
+      uk: "Редаговані шаблони промптів для контенту, перекладу, казок PDF, відео-реплік та ШІ-помічника. Підтримують {{змінні}}.",
+      en: "Editable prompt templates for content, translation, PDF storybooks, video TTS scripts, and website assistant.",
+    },
   },
   hooks: {
     afterChange: [
@@ -20,7 +23,7 @@ export const AIPrompts: GlobalConfig = {
     {
       name: "prompts",
       type: "array",
-      label: "Prompt Templates",
+      label: { ru: "Шаблоны промптов", uk: "Шаблони промптів", en: "Prompt Templates" },
       admin: {
         initCollapsed: true,
         components: {
@@ -32,36 +35,66 @@ export const AIPrompts: GlobalConfig = {
           name: "type",
           type: "text",
           required: true,
-          label: "Type Slug",
+          label: { ru: "Ключ (Slug)", uk: "Ключ (Slug)", en: "Type Slug" },
           admin: {
-            description:
-              "Уникальный ключ промпта, например post-content, translate-ru-uk, storybook-writer-system, style-folk_storybook.",
+            description: {
+              ru: "Уникальный ключ промпта, например post-content, translate-ru-uk, storybook-draft-system, style-folk_storybook.",
+              uk: "Унікальний ключ промпта, наприклад post-content, translate-ru-uk, storybook-draft-system, style-folk_storybook.",
+              en: "Unique prompt slug.",
+            },
           },
         },
         {
           name: "label",
           type: "text",
           required: true,
-          label: "Label",
+          label: { ru: "Название", uk: "Назва", en: "Label" },
         },
         {
           name: "category",
           type: "select",
-          label: "Category",
+          label: { ru: "Категория", uk: "Категорія", en: "Category" },
           defaultValue: "content_seo",
           options: [
-            { label: "Контент и SEO", value: "content_seo" },
-            { label: "Перевод RU ↔ UA", value: "translation" },
-            { label: "Пайплайн сказок PDF", value: "storybook_pipeline" },
-            { label: "Пайплайн видео (озвучка)", value: "video_pipeline" },
-            { label: "ИИ-помощник на сайте", value: "assistant" },
+            {
+              label: { ru: "Контент и SEO", uk: "Контент і SEO", en: "Content & SEO" },
+              value: "content_seo",
+            },
+            {
+              label: { ru: "Перевод RU ↔ UA", uk: "Переклад RU ↔ UA", en: "Translation RU ↔ UA" },
+              value: "translation",
+            },
+            {
+              label: {
+                ru: "Пайплайн сказок PDF",
+                uk: "Пайплайн казок PDF",
+                en: "Storybook PDF Pipeline",
+              },
+              value: "storybook_pipeline",
+            },
+            {
+              label: {
+                ru: "Пайплайн видео (озвучка)",
+                uk: "Пайплайн відео (озвучка)",
+                en: "Video TTS Pipeline",
+              },
+              value: "video_pipeline",
+            },
+            {
+              label: {
+                ru: "ИИ-помощник на сайте",
+                uk: "ШІ-помічник на сайті",
+                en: "Website AI Assistant",
+              },
+              value: "assistant",
+            },
           ],
         },
         {
           name: "template",
           type: "textarea",
           required: true,
-          label: "Prompt Template",
+          label: { ru: "Шаблон промпта", uk: "Шаблон промпта", en: "Prompt Template" },
           admin: {
             rows: 6,
           },
@@ -69,12 +102,16 @@ export const AIPrompts: GlobalConfig = {
         {
           name: "maxTokens",
           type: "number",
-          label: "Max Tokens Override",
+          label: {
+            ru: "Лимит токенов (override)",
+            uk: "Ліміт токенів (override)",
+            en: "Max Tokens Override",
+          },
         },
         {
           name: "notes",
           type: "textarea",
-          label: "Notes",
+          label: { ru: "Заметки", uk: "Нотатки", en: "Notes" },
           admin: {
             rows: 2,
           },

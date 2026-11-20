@@ -46,10 +46,11 @@ export async function extractPhotoVisualPassports(
   payload: StorybookOrderPayload,
   costTracker?: AiCostTracker
 ): Promise<PhotoVisualPassports> {
-  const { client, config } = await getCmsOpenAIRuntime();
+  const { directorClient: client, config } = await getCmsOpenAIRuntime();
   if (!client) return {};
 
   const directorModel = config.storybookDirectorModel;
+  const directorEffort = config.storybookDirectorReasoningEffort;
   const result: PhotoVisualPassports = {};
 
   const childPhotoPath = resolveUploadPath(payload.photoUploadId);
@@ -67,7 +68,7 @@ export async function extractPhotoVisualPassports(
         const dataUrl = fileToDataUrl(childPhotoPath);
         const res = await withOpenAIRetry("vision_child", () =>
           client.chat.completions.create({
-            ...buildChatModelParams(0.2, 700, directorModel),
+            ...buildChatModelParams(0.2, 700, directorModel, directorEffort),
             messages: [
               {
                 role: "system",
@@ -108,7 +109,7 @@ Return ONLY valid JSON: { "visualPassport": "..." }`,
 
         const res = await withOpenAIRetry("vision_companion", () =>
           client.chat.completions.create({
-            ...buildChatModelParams(0.2, 700, directorModel),
+            ...buildChatModelParams(0.2, 700, directorModel, directorEffort),
             messages: [
               {
                 role: "system",

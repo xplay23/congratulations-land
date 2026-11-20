@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { tAdmin, useAdminLang } from "@engine/lib/admin-i18n";
 
 export default function AdminHeaderLink() {
+  const lang = useAdminLang();
   const [siteUrl, setSiteUrl] = useState("/");
 
   useEffect(() => {
@@ -49,7 +51,9 @@ export default function AdminHeaderLink() {
         <polyline points="15 3 21 3 21 9" />
         <line x1="10" y1="14" x2="21" y2="3" />
       </svg>
-      <span className="admin-header-action-link__label">Відкрити сайт</span>
+      <span className="admin-header-action-link__label">
+        {tAdmin(lang, "Открыть сайт", "Відкрити сайт")}
+      </span>
     </a>
   );
 }

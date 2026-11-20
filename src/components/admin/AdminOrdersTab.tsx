@@ -12,13 +12,21 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
-  Search,
   Trash2,
   Undo2,
   Video,
   X,
 } from "lucide-react";
-import { useLanguage } from "@/components/LanguageContext";
+import {
+  Alert,
+  Button,
+  C,
+  Card,
+  Input,
+  SectionLabel,
+  Select,
+} from "@engine/components/admin/ui";
+import { tAdmin, useAdminLang } from "@engine/lib/admin-i18n";
 import type { Lang, OrderAiCost, OrderStatus, ProductType } from "@/lib/types";
 
 interface AdminOrderItem {
@@ -72,8 +80,61 @@ function fmtUah(kopiykas: number): string {
   })} ₴`;
 }
 
+function OrderStatusPill({ o }: { o: AdminOrderItem }) {
+  let color: string = C.blue;
+  let text: string = o.status;
+  let icon: React.ReactNode = null;
+
+  if (o.status === "paid") {
+    color = C.green;
+    text = "paid";
+    icon = <CheckCircle2 size={13} />;
+  } else if (o.status === "failed") {
+    color = C.red;
+    text = o.monoStatus === "reversed" ? "reversed" : "failed";
+    icon = <AlertTriangle size={13} />;
+  } else if (o.status === "generating") {
+    color = C.amber;
+    text = `${o.progressPercent}%`;
+    icon = <Loader2 size={13} />;
+  }
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        padding: "3px 10px",
+        borderRadius: "var(--adm-radius-pill)",
+        fontSize: "var(--adm-fs-badge)",
+        fontWeight: 600,
+        color,
+        background: `color-mix(in srgb, ${color} 14%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 28%, transparent)`,
+        whiteSpace: "nowrap",
+      }}
+    >
+      {icon}
+      {text}
+    </span>
+  );
+}
+
+const TH_STYLE: React.CSSProperties = {
+  padding: "12px 16px",
+  fontSize: "var(--adm-fs-label)",
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  color: C.muted,
+  opacity: 0.65,
+  textAlign: "left",
+  whiteSpace: "nowrap",
+};
+
 export function AdminOrdersTab() {
-  const { lang } = useLanguage();
+  const lang = useAdminLang();
   const isUk = lang === "uk";
 
   const [orders, setOrders] = useState<AdminOrderItem[]>([]);
@@ -86,7 +147,9 @@ export function AdminOrdersTab() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<AdminOrderItem | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(
+    null
+  );
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -108,7 +171,9 @@ export function AdminOrdersTab() {
       const list = (data.orders || []) as AdminOrderItem[];
       setOrders(list);
       setTotal(data.total || 0);
-      setSelected((prev) => (prev ? list.find((o) => o.id === prev.id) || prev : null));
+      setSelected((prev) =>
+        prev ? list.find((o) => o.id === prev.id) || prev : null
+      );
     } catch (err) {
       setFeedback({
         ok: false,
@@ -129,9 +194,11 @@ export function AdminOrdersTab() {
   ) => {
     if (action === "refund") {
       const confirmed = window.confirm(
-        isUk
-          ? `Підтвердити скасування холду / повернення коштів для ${orderId}?`
-          : `Подтвердить отмену холда / возврат средств для ${orderId}?`
+        tAdmin(
+          lang,
+          `Подтвердить отмену холда / возврат средств для ${orderId}?`,
+          `Підтвердити скасування холду / повернення коштів для ${orderId}?`
+        )
       );
       if (!confirmed) return;
     }
@@ -167,9 +234,11 @@ export function AdminOrdersTab() {
       if (!res.ok) throw new Error(data.error || "Cleanup failed");
       setFeedback({
         ok: true,
-        text: isUk
-          ? `Очищено: замовлень=${data.expiredOrdersCleaned}, тимчасових фото=${data.expiredUploadsCleaned}`
-          : `Очищено: заказов=${data.expiredOrdersCleaned}, временных фото=${data.expiredUploadsCleaned}`,
+        text: tAdmin(
+          lang,
+          `Очищено: заказов=${data.expiredOrdersCleaned}, временных фото=${data.expiredUploadsCleaned}`,
+          `Очищено: замовлень=${data.expiredOrdersCleaned}, тимчасових фото=${data.expiredUploadsCleaned}`
+        ),
       });
       await loadOrders();
     } catch (err) {
@@ -182,217 +251,292 @@ export function AdminOrdersTab() {
     }
   };
 
-  const statusBadge = (o: AdminOrderItem) => {
-    if (o.status === "paid") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300">
-          <CheckCircle2 className="h-3 w-3" /> paid
-        </span>
-      );
-    }
-    if (o.status === "failed") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-rose-300">
-          <AlertTriangle className="h-3 w-3" />{" "}
-          {o.monoStatus === "reversed" ? "reversed" : "failed"}
-        </span>
-      );
-    }
-    if (o.status === "generating") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-200">
-          <Loader2 className="h-3 w-3 animate-spin" /> {o.progressPercent}%
-        </span>
-      );
-    }
-    return (
-      <span className="rounded-full bg-sky-400/15 px-2.5 py-0.5 text-[11px] font-semibold text-sky-200">
-        {o.status}
-      </span>
-    );
-  };
-
   return (
-    <div className="space-y-5">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#121a30]/90 p-4">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[260px]">
-          <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={
-                isUk
-                  ? "ID, email, invoiceId або ім'я..."
-                  : "ID, email, invoiceId или имя..."
-              }
-              className="h-9 w-full rounded-lg border border-white/15 bg-[#0b1020] pl-9 pr-3 text-xs text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none"
-            />
+      <Card style={{ padding: "14px 16px" }}>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "10px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "8px",
+              flex: 1,
+              minWidth: "260px",
+            }}
+          >
+            <div style={{ flex: "1 1 220px", maxWidth: "280px" }}>
+              <Input
+                type="search"
+                value={search}
+                onChange={setSearch}
+                placeholder={tAdmin(
+                  lang,
+                  "Поиск: ID, email, invoiceId или имя…",
+                  "Пошук: ID, email, invoiceId або ім'я…"
+                )}
+              />
+            </div>
+
+            <div style={{ width: "145px" }}>
+              <Select
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: "all", label: tAdmin(lang, "Все статусы", "Усі статуси") },
+                  { value: "paid", label: "paid" },
+                  { value: "preview_ready", label: "preview_ready" },
+                  { value: "generating", label: "generating" },
+                  { value: "failed", label: "failed" },
+                ]}
+              />
+            </div>
+
+            <div style={{ width: "135px" }}>
+              <Select
+                value={productType}
+                onChange={setProductType}
+                options={[
+                  { value: "all", label: tAdmin(lang, "Все услуги", "Усі послуги") },
+                  { value: "storybook", label: tAdmin(lang, "Сказки", "Казки") },
+                  { value: "video", label: tAdmin(lang, "Видео", "Відео") },
+                ]}
+              />
+            </div>
+
+            <div style={{ width: "105px" }}>
+              <Select
+                value={orderLang}
+                onChange={setOrderLang}
+                options={[
+                  { value: "all", label: "UA + RU" },
+                  { value: "uk", label: "UA" },
+                  { value: "ru", label: "RU" },
+                ]}
+              />
+            </div>
+
+            <div style={{ width: "120px" }}>
+              <Select
+                value={period}
+                onChange={setPeriod}
+                options={[
+                  { value: "7d", label: tAdmin(lang, "7 дней", "7 днів") },
+                  { value: "30d", label: tAdmin(lang, "30 дней", "30 днів") },
+                  { value: "90d", label: tAdmin(lang, "90 дней", "90 днів") },
+                  { value: "all", label: tAdmin(lang, "Всё время", "Увесь час") },
+                ]}
+              />
+            </div>
           </div>
 
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="h-9 rounded-lg border border-white/15 bg-[#0b1020] px-2.5 text-xs text-slate-200"
-          >
-            <option value="all">{isUk ? "Усі статуси" : "Все статусы"}</option>
-            <option value="paid">paid</option>
-            <option value="preview_ready">preview_ready</option>
-            <option value="generating">generating</option>
-            <option value="failed">failed</option>
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button
+              variant="ghost"
+              disabled={busyAction !== null}
+              onClick={() => void handleMaintenanceCleanup()}
+            >
+              <Trash2 size={14} />
+              {tAdmin(lang, "Очистить TTL", "Очистити TTL")}
+            </Button>
 
-          <select
-            value={productType}
-            onChange={(e) => setProductType(e.target.value)}
-            className="h-9 rounded-lg border border-white/15 bg-[#0b1020] px-2.5 text-xs text-slate-200"
-          >
-            <option value="all">{isUk ? "Усі послуги" : "Все услуги"}</option>
-            <option value="storybook">{isUk ? "Казки" : "Сказки"}</option>
-            <option value="video">{isUk ? "Відео" : "Видео"}</option>
-          </select>
-
-          <select
-            value={orderLang}
-            onChange={(e) => setOrderLang(e.target.value)}
-            className="h-9 rounded-lg border border-white/15 bg-[#0b1020] px-2.5 text-xs text-slate-200"
-          >
-            <option value="all">UA + RU</option>
-            <option value="uk">UA</option>
-            <option value="ru">RU</option>
-          </select>
-
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="h-9 rounded-lg border border-white/15 bg-[#0b1020] px-2.5 text-xs text-slate-200"
-          >
-            <option value="7d">{isUk ? "7 днів" : "7 дней"}</option>
-            <option value="30d">{isUk ? "30 днів" : "30 дней"}</option>
-            <option value="90d">{isUk ? "90 днів" : "90 дней"}</option>
-            <option value="all">{isUk ? "Усі" : "Все"}</option>
-          </select>
+            <Button
+              variant="primary"
+              onClick={() => void loadOrders()}
+              disabled={loading}
+            >
+              <RefreshCw size={14} />
+              {tAdmin(lang, `Обновить (${total})`, `Оновити (${total})`)}
+            </Button>
+          </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={busyAction !== null}
-            onClick={() => void handleMaintenanceCleanup()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 text-xs font-semibold text-slate-300 hover:bg-white/10 disabled:opacity-50"
-          >
-            <Trash2 className="h-3.5 w-3.5 text-amber-300" />
-            {isUk ? "Очистити TTL" : "Очистить TTL"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => void loadOrders()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-amber-300/35 bg-amber-400/10 px-3 text-xs font-semibold text-amber-200 hover:bg-amber-400/20"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-            {total}
-          </button>
-        </div>
-      </div>
+      </Card>
 
       {feedback && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-xs ${
-            feedback.ok
-              ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
-              : "border-rose-400/40 bg-rose-500/10 text-rose-200"
-          }`}
+        <Alert
+          variant={feedback.ok ? "success" : "error"}
+          onDismiss={() => setFeedback(null)}
         >
           {feedback.text}
-        </div>
+        </Alert>
       )}
 
       {/* Table + Inspector */}
-      <div className={`grid gap-6 ${selected ? "lg:grid-cols-[1fr_400px]" : ""}`}>
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#121a30]/95 shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-white/10 bg-white/[0.02] text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">{isUk ? "Замовлення" : "Заказ"}</th>
-                  <th className="px-3 py-3">{isUk ? "Послуга" : "Услуга"}</th>
-                  <th className="px-3 py-3">{isUk ? "Статус" : "Статус"}</th>
-                  <th className="px-3 py-3">Mono</th>
-                  <th className="px-3 py-3">{isUk ? "Ціна / AI / Маржа" : "Цена / AI / Маржа"}</th>
-                  <th className="px-4 py-3 text-right">{isUk ? "Дії" : "Действия"}</th>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: selected ? "minmax(0, 1fr) 410px" : "1fr",
+          gap: "20px",
+          alignItems: "start",
+        }}
+      >
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div className="aui-scroll-x">
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.cardBorder}` }}>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Заказ", "Замовлення")}</th>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Услуга", "Послуга")}</th>
+                  <th style={TH_STYLE}>{tAdmin(lang, "Статус", "Статус")}</th>
+                  <th style={TH_STYLE}>Mono</th>
+                  <th style={TH_STYLE}>
+                    {tAdmin(lang, "Цена / AI / Маржа", "Ціна / AI / Маржа")}
+                  </th>
+                  <th style={{ ...TH_STYLE, textAlign: "right" }}>
+                    {tAdmin(lang, "Действия", "Дії")}
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {orders.map((o) => {
+              <tbody>
+                {orders.map((o, idx) => {
                   const isSelected = selected?.id === o.id;
                   return (
                     <tr
                       key={o.id}
                       onClick={() => setSelected(o)}
-                      className={`cursor-pointer transition hover:bg-white/[0.04] ${
-                        isSelected ? "bg-amber-400/10" : ""
-                      }`}
+                      style={{
+                        cursor: "pointer",
+                        borderBottom:
+                          idx < orders.length - 1
+                            ? `1px solid ${C.cardBorder}`
+                            : "none",
+                        background: isSelected
+                          ? `color-mix(in srgb, ${C.blue} 10%, transparent)`
+                          : "transparent",
+                        transition: "background 0.12s",
+                      }}
                     >
-                      <td className="px-4 py-3">
-                        <div className="font-mono text-[11px] text-amber-200">{o.id}</div>
-                        <div className="mt-0.5 text-[11px] text-slate-400">
-                          {new Date(o.createdAt).toLocaleString(isUk ? "uk-UA" : "ru-RU", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                      <td style={{ padding: "12px 16px" }}>
+                        <div
+                          className="adm-mono"
+                          style={{
+                            fontSize: "var(--adm-fs-caption)",
+                            fontWeight: 600,
+                            color: C.text,
+                          }}
+                        >
+                          {o.id}
+                        </div>
+                        <div
+                          className="adm-caption"
+                          style={{ color: C.muted, marginTop: "2px" }}
+                        >
+                          {new Date(o.createdAt).toLocaleString(
+                            isUk ? "uk-UA" : "ru-RU",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
                           {o.customerEmail ? ` · ${o.customerEmail}` : ""}
                         </div>
                       </td>
 
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-1.5 font-medium text-white">
+                      <td style={{ padding: "12px 16px" }}>
+                        <div
+                          className="adm-body"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "7px",
+                            fontWeight: 600,
+                            color: C.text,
+                          }}
+                        >
                           {o.productType === "storybook" ? (
-                            <BookOpen className="h-3.5 w-3.5 text-amber-300 shrink-0" />
+                            <BookOpen size={15} style={{ color: C.amber, flexShrink: 0 }} />
                           ) : (
-                            <Video className="h-3.5 w-3.5 text-sky-300 shrink-0" />
+                            <Video size={15} style={{ color: C.blue, flexShrink: 0 }} />
                           )}
-                          <span className="uppercase text-[10px] text-slate-400">
+                          <span
+                            className="adm-badge"
+                            style={{
+                              textTransform: "uppercase",
+                              color: C.muted,
+                            }}
+                          >
                             {o.lang}
                           </span>
-                          <span className="truncate max-w-[140px]">{o.childName}</span>
+                          <span>{o.childName}</span>
                         </div>
-                        <div className="mt-0.5 text-[11px] text-slate-400">
+                        <div
+                          className="adm-caption"
+                          style={{ color: C.muted, marginTop: "2px" }}
+                        >
                           {o.productType === "storybook"
                             ? `${o.metaSummary.pageCount}p · ${o.metaSummary.artStyle} · ${o.metaSummary.layoutMode}`
                             : "HD Video 720p"}
                         </div>
                       </td>
 
-                      <td className="px-3 py-3">
-                        {statusBadge(o)}
-                        <div className="mt-1 text-[10px] text-slate-400">
+                      <td style={{ padding: "12px 16px" }}>
+                        <OrderStatusPill o={o} />
+                        <div
+                          className="adm-badge"
+                          style={{ color: C.muted, marginTop: "4px", opacity: 0.8 }}
+                        >
                           {o.progressStep}
                         </div>
                       </td>
 
-                      <td className="px-3 py-3 font-mono text-[11px] text-slate-300">
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          fontFamily: "monospace",
+                          fontSize: "var(--adm-fs-caption)",
+                          color: C.text,
+                        }}
+                      >
                         <div>{o.monoStatus || "—"}</div>
                         {o.monoInvoiceId && (
-                          <div className="max-w-[110px] truncate text-[10px] text-slate-500">
+                          <div
+                            style={{
+                              maxWidth: "120px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              fontSize: "var(--adm-fs-badge)",
+                              color: C.muted,
+                            }}
+                          >
                             {o.monoInvoiceId}
                           </div>
                         )}
                       </td>
 
-                      <td className="px-3 py-3 font-mono text-[11px]">
-                        <div className="text-slate-100">{fmtUah(o.priceKopiykas)}</div>
-                        <div className="text-sky-300">
-                          AI: {o.aiCostKopiykas !== null ? fmtUah(o.aiCostKopiykas) : "—"}
+                      <td
+                        style={{
+                          padding: "12px 16px",
+                          fontFamily: "monospace",
+                          fontSize: "var(--adm-fs-caption)",
+                        }}
+                      >
+                        <div style={{ color: C.text, fontWeight: 600 }}>
+                          {fmtUah(o.priceKopiykas)}
+                        </div>
+                        <div style={{ color: C.blue }}>
+                          AI:{" "}
+                          {o.aiCostKopiykas !== null
+                            ? fmtUah(o.aiCostKopiykas)
+                            : "—"}
                         </div>
                         {o.marginKopiykas !== null && o.status === "paid" && (
                           <div
-                            className={
-                              o.marginKopiykas >= 0 ? "text-emerald-300" : "text-rose-300"
-                            }
+                            style={{
+                              color:
+                                o.marginKopiykas >= 0 ? C.green : C.red,
+                            }}
                           >
                             M: {fmtUah(o.marginKopiykas)}
                           </div>
@@ -400,30 +544,39 @@ export function AdminOrdersTab() {
                       </td>
 
                       <td
-                        className="px-4 py-3 text-right"
+                        style={{ padding: "12px 16px", textAlign: "right" }}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="inline-flex items-center gap-1.5">
-                          {(o.monoStatus === "hold" || o.monoStatus === "success") &&
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          {(o.monoStatus === "hold" ||
+                            o.monoStatus === "success") &&
                             o.status !== "paid" &&
                             o.productType === "storybook" && (
-                              <button
-                                type="button"
+                              <Button
+                                variant="primary"
                                 disabled={busyAction !== null}
                                 onClick={() => void runOrderAction(o.id, "resume")}
-                                title="Resume finalization"
-                                className="rounded-lg bg-amber-400/20 px-2.5 py-1 text-[11px] font-semibold text-amber-200 hover:bg-amber-400/30"
                               >
                                 Resume
-                              </button>
+                              </Button>
                             )}
                           <Link
                             href={o.orderUrl}
                             target="_blank"
-                            className="rounded-lg border border-white/15 bg-white/5 p-1.5 text-slate-300 hover:text-white"
-                            title="Open order page"
+                            className="aui-btn aui-btn--ghost aui-btn--icon"
+                            title={tAdmin(
+                              lang,
+                              "Открыть страницу клиента",
+                              "Відкрити сторінку клієнта"
+                            )}
                           >
-                            <ExternalLink className="h-3.5 w-3.5" />
+                            <ExternalLink size={15} />
                           </Link>
                         </div>
                       </td>
@@ -432,182 +585,310 @@ export function AdminOrdersTab() {
                 })}
                 {orders.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
-                      {isUk ? "Замовлень не знайдено" : "Заказов не найдено"}
+                    <td
+                      colSpan={6}
+                      style={{
+                        padding: "40px 16px",
+                        textAlign: "center",
+                        fontSize: "var(--adm-fs-body)",
+                        color: C.muted,
+                      }}
+                    >
+                      {tAdmin(lang, "Заказов не найдено", "Замовлень не знайдено")}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
 
-        {/* Order Inspector Drawer */}
+        {/* Inspector Drawer */}
         {selected && (
-          <div className="rounded-2xl border border-amber-300/25 bg-[#121a30]/95 p-5 shadow-2xl space-y-4 self-start sticky top-20">
-            <div className="flex items-start justify-between gap-2 border-b border-white/10 pb-3">
+          <Card style={{ position: "sticky", top: "20px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "12px",
+                paddingBottom: "14px",
+                borderBottom: `1px solid ${C.cardBorder}`,
+                marginBottom: "16px",
+              }}
+            >
               <div>
-                <div className="font-mono text-xs text-amber-300">{selected.id}</div>
-                <h3 className="font-serif-book text-lg font-bold text-white">
+                <div
+                  className="adm-mono"
+                  style={{ fontSize: "var(--adm-fs-caption)", color: C.blue }}
+                >
+                  {selected.id}
+                </div>
+                <h3
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: "var(--adm-fs-heading)",
+                    fontWeight: 700,
+                    color: C.text,
+                  }}
+                >
                   {selected.title}
                 </h3>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                className="aui-btn--icon"
                 onClick={() => setSelected(null)}
-                className="rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white"
               >
-                <X className="h-4 w-4" />
-              </button>
+                <X size={15} />
+              </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg bg-white/5 p-2.5">
-                <div className="text-[10px] text-slate-400">Status</div>
-                <div className="mt-0.5 font-semibold text-white">
-                  {selected.status} ({selected.progressPercent}%)
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "10px",
+                marginBottom: "14px",
+              }}
+            >
+              {[
+                {
+                  k: tAdmin(lang, "Статус", "Статус"),
+                  v: `${selected.status} (${selected.progressPercent}%)`,
+                },
+                { k: "Mono", v: selected.monoStatus || "none" },
+                { k: "Email", v: selected.customerEmail || "—" },
+                {
+                  k: tAdmin(lang, "AI-правки", "AI-правки"),
+                  v: `${selected.aiEditsUsed} / ${selected.aiEditsLimit}`,
+                },
+              ].map((cell) => (
+                <div
+                  key={cell.k}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: "var(--adm-radius-sm)",
+                    background: C.surface,
+                    border: `1px solid ${C.cardBorder}`,
+                  }}
+                >
+                  <div className="adm-label" style={{ color: C.muted, opacity: 0.7 }}>
+                    {cell.k}
+                  </div>
+                  <div
+                    className="adm-body"
+                    style={{
+                      marginTop: "4px",
+                      fontWeight: 600,
+                      color: C.text,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {cell.v}
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-lg bg-white/5 p-2.5">
-                <div className="text-[10px] text-slate-400">Mono</div>
-                <div className="mt-0.5 font-semibold text-white">
-                  {selected.monoStatus || "none"}
-                </div>
-              </div>
-              <div className="rounded-lg bg-white/5 p-2.5">
-                <div className="text-[10px] text-slate-400">Email</div>
-                <div className="mt-0.5 truncate text-slate-200">
-                  {selected.customerEmail || "—"}
-                </div>
-              </div>
-              <div className="rounded-lg bg-white/5 p-2.5">
-                <div className="text-[10px] text-slate-400">AI Edits</div>
-                <div className="mt-0.5 font-mono text-slate-200">
-                  {selected.aiEditsUsed} / {selected.aiEditsLimit}
-                </div>
-              </div>
+              ))}
             </div>
 
             {selected.productType === "storybook" && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-slate-300 space-y-1">
+              <div
+                className="adm-caption"
+                style={{
+                  padding: "12px",
+                  borderRadius: "var(--adm-radius)",
+                  background: C.surface,
+                  border: `1px solid ${C.cardBorder}`,
+                  color: C.muted,
+                  marginBottom: "14px",
+                  lineHeight: 1.6,
+                }}
+              >
                 <div>
                   Stage:{" "}
-                  <strong className="text-amber-200">
+                  <strong style={{ color: C.text }}>
                     {selected.metaSummary.generationStage || "—"}
                   </strong>{" "}
                   ({selected.metaSummary.pagesIllustrated}/
-                  {selected.metaSummary.totalPages} {isUk ? "ілюстр." : "иллюстр."})
+                  {selected.metaSummary.totalPages}{" "}
+                  {tAdmin(lang, "иллюстр.", "ілюстр.")})
                 </div>
                 <div>
                   Style: {selected.metaSummary.artStyle} · Layout:{" "}
-                  {selected.metaSummary.layoutMode} · Age: {selected.metaSummary.ageGroup}
+                  {selected.metaSummary.layoutMode} · Age:{" "}
+                  {selected.metaSummary.ageGroup}
                 </div>
               </div>
             )}
 
             {selected.errorMessage && (
-              <div className="rounded-xl border border-rose-400/35 bg-rose-500/10 p-3 text-xs text-rose-200">
-                <div className="font-bold">Error:</div>
-                <div className="mt-1 break-words font-mono text-[11px]">
+              <Alert variant="error" title="Error">
+                <span style={{ fontFamily: "monospace", wordBreak: "break-word" }}>
                   {selected.errorMessage}
-                </div>
-              </div>
+                </span>
+              </Alert>
             )}
 
             {/* AI Cost Breakdown */}
-            <div className="rounded-xl border border-sky-400/20 bg-sky-500/5 p-3 space-y-2 text-xs">
-              <div className="flex items-center justify-between font-bold text-sky-200">
-                <span>{isUk ? "Витрати ШІ" : "Расходы ИИ"}</span>
-                <span className="font-mono">
+            <div
+              style={{
+                padding: "12px 14px",
+                borderRadius: "var(--adm-radius)",
+                background: C.surface,
+                border: `1px solid ${C.cardBorder}`,
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: selected.aiCost ? "10px" : 0,
+                }}
+              >
+                <SectionLabel>
+                  {tAdmin(lang, "Расходы ИИ", "Витрати ШІ")}
+                </SectionLabel>
+                <span
+                  className="adm-mono"
+                  style={{
+                    fontSize: "var(--adm-fs-caption)",
+                    fontWeight: 600,
+                    color: C.blue,
+                  }}
+                >
                   {selected.aiCost
                     ? `$${selected.aiCost.totalUsd.toFixed(4)} (${fmtUah(
                         selected.aiCost.totalUahKopiykas
                       )})`
-                    : isUk
-                    ? "не виміряно"
-                    : "не измерено"}
+                    : tAdmin(lang, "не измерено", "не виміряно")}
                 </span>
               </div>
               {selected.aiCost && (
-                <div className="max-h-36 overflow-y-auto space-y-1 text-[11px] text-slate-300">
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "6px",
+                    maxHeight: "150px",
+                    overflowY: "auto",
+                  }}
+                >
                   {selected.aiCost.breakdown.map((b, idx) => (
-                    <div key={idx} className="flex justify-between gap-2">
-                      <span className="truncate">
+                    <div
+                      key={idx}
+                      className="adm-caption"
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: "8px",
+                        color: C.muted,
+                      }}
+                    >
+                      <span
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
                         {b.step} ({b.calls}x {b.model})
                       </span>
-                      <span className="font-mono shrink-0">${b.costUsd.toFixed(4)}</span>
+                      <span style={{ fontFamily: "monospace", flexShrink: 0, color: C.text }}>
+                        ${b.costUsd.toFixed(4)}
+                      </span>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-2 pt-2 border-t border-white/10">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={busyAction !== null || selected.productType !== "storybook"}
+            {/* Actions */}
+            <div
+              style={{
+                paddingTop: "14px",
+                borderTop: `1px solid ${C.cardBorder}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+              }}
+            >
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "8px",
+                }}
+              >
+                <Button
+                  variant="primary"
+                  disabled={
+                    busyAction !== null || selected.productType !== "storybook"
+                  }
                   onClick={() => void runOrderAction(selected.id, "resume")}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-3 py-2 text-xs font-bold text-[#0b1020] hover:bg-amber-300 disabled:opacity-40"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
+                  <RotateCcw size={14} />
                   Resume
-                </button>
+                </Button>
 
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   disabled={busyAction !== null || !selected.monoInvoiceId}
                   onClick={() => void runOrderAction(selected.id, "sync_mono")}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-40"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw size={14} />
                   Sync Mono
-                </button>
+                </Button>
 
-                <button
-                  type="button"
+                <Button
+                  variant="danger"
                   disabled={
                     busyAction !== null ||
-                    (selected.monoStatus !== "hold" && selected.monoStatus !== "success")
+                    (selected.monoStatus !== "hold" &&
+                      selected.monoStatus !== "success")
                   }
                   onClick={() => void runOrderAction(selected.id, "refund")}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-400/35 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-200 hover:bg-rose-500/25 disabled:opacity-40"
                 >
-                  <Undo2 className="h-3.5 w-3.5" />
-                  {isUk ? "Зняти холд / Поверн." : "Снять холд / Возврат"}
-                </button>
+                  <Undo2 size={14} />
+                  {tAdmin(lang, "Возврат / Холд", "Повернення / Холд")}
+                </Button>
 
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
                   disabled={busyAction !== null}
-                  onClick={() => void runOrderAction(selected.id, "grant_ai_edit")}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-white/10 disabled:opacity-40"
+                  onClick={() =>
+                    void runOrderAction(selected.id, "grant_ai_edit")
+                  }
                 >
-                  <Plus className="h-3.5 w-3.5" />
+                  <Plus size={14} />
                   +1 AI-правка
-                </button>
+                </Button>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {selected.status === "paid" && selected.customerEmail && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
                     disabled={busyAction !== null}
-                    onClick={() => void runOrderAction(selected.id, "resend_email")}
-                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-sky-400/35 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-200 hover:bg-sky-500/20"
+                    onClick={() =>
+                      void runOrderAction(selected.id, "resend_email")
+                    }
                   >
-                    <Mail className="h-3.5 w-3.5" />
-                    {isUk ? "Надіслати лист" : "Повторить письмо"}
-                  </button>
+                    <Mail size={14} />
+                    {tAdmin(lang, "Повторить письмо", "Надіслати лист")}
+                  </Button>
                 )}
                 <Link
                   href={selected.orderUrl}
                   target="_blank"
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-400/20"
+                  className="aui-btn aui-btn--ghost"
+                  style={{ flex: 1, justifyContent: "center" }}
                 >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  {isUk ? "Сторінка клієнта" : "Страница клиента"}
+                  <ExternalLink size={14} />
+                  {tAdmin(lang, "Страница клиента", "Сторінка клієнта")}
                 </Link>
               </div>
 
@@ -616,13 +897,22 @@ export function AdminOrdersTab() {
                   href={selected.receiptUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="block text-center text-[11px] text-emerald-300 underline"
+                  className="adm-caption"
+                  style={{
+                    textAlign: "center",
+                    color: C.green,
+                    marginTop: "4px",
+                  }}
                 >
-                  {isUk ? "Відкрити чек Plata / ПРРО" : "Открыть чек Plata / ПРРО"}
+                  {tAdmin(
+                    lang,
+                    "Открыть чек Plata / ПРРО ↗",
+                    "Відкрити чек Plata / ПРРО ↗"
+                  )}
                 </a>
               )}
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

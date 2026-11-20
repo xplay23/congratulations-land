@@ -7,6 +7,7 @@ import {
   TextInput,
   useField,
 } from "@payloadcms/ui";
+import { tAdmin, useAdminLang } from "@engine/lib/admin-i18n";
 
 function maskKey(key: string): string {
   if (key.length <= 8) return "••••••••";
@@ -16,10 +17,10 @@ function maskKey(key: string): string {
 function btnStyle(isHovered = false): React.CSSProperties {
   return {
     padding: "8px 16px",
-    fontSize: "13px",
+    fontSize: "var(--adm-fs-caption, 13px)",
     fontWeight: 600,
     cursor: "pointer",
-    borderRadius: "6px",
+    borderRadius: "var(--adm-radius-sm, 6px)",
     borderWidth: "1px",
     borderStyle: "solid",
     borderColor: isHovered
@@ -51,6 +52,7 @@ export function SecretKeyField({
   description,
   required,
 }: SecretKeyFieldProps) {
+  const lang = useAdminLang();
   const { value, setValue } = useField<string>({ path });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -72,6 +74,12 @@ export function SecretKeyField({
 
   function commitDraft() {
     if (draft.trim()) setValue(draft.trim());
+    setEditing(false);
+    setDraft("");
+  }
+
+  function clearValue() {
+    setValue("");
     setEditing(false);
     setDraft("");
   }
@@ -101,7 +109,20 @@ export function SecretKeyField({
             onMouseLeave={() => setHovered(null)}
             onClick={startEditing}
           >
-            Change
+            {tAdmin(lang, "Изменить", "Змінити")}
+          </button>
+          <button
+            type="button"
+            style={{
+              ...btnStyle(hovered === "clear"),
+              color: "var(--adm-color-muted)",
+            }}
+            onMouseEnter={() => setHovered("clear")}
+            onMouseLeave={() => setHovered(null)}
+            onClick={clearValue}
+            title={tAdmin(lang, "Очистить ключ", "Очистити ключ")}
+          >
+            {tAdmin(lang, "Очистить", "Очистити")}
           </button>
         </div>
         {description && <FieldDescription description={description} path={path} />}
@@ -121,7 +142,7 @@ export function SecretKeyField({
             ref={inputRef}
             autoFocus
             value={draft}
-            placeholder="Paste new key…"
+            placeholder={tAdmin(lang, "Вставьте новый API-ключ…", "Вставте новий API-ключ…")}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -140,7 +161,7 @@ export function SecretKeyField({
             onMouseLeave={() => setHovered(null)}
             onClick={commitDraft}
           >
-            ✓ Save
+            ✓ {tAdmin(lang, "Применить", "Застосувати")}
           </button>
           <button
             type="button"
@@ -149,7 +170,7 @@ export function SecretKeyField({
             onMouseLeave={() => setHovered(null)}
             onClick={cancelEditing}
           >
-            Cancel
+            {tAdmin(lang, "Отмена", "Скасувати")}
           </button>
         </div>
         {description && <FieldDescription description={description} path={path} />}
@@ -164,7 +185,7 @@ export function SecretKeyField({
       required={required}
       description={description}
       value={draft}
-      placeholder="Paste API key…"
+      placeholder={tAdmin(lang, "Вставьте API-ключ…", "Вставте API-ключ…")}
       onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
         setDraft(e.target.value);
         setValue(e.target.value);
@@ -174,31 +195,91 @@ export function SecretKeyField({
 }
 
 export function ApiKeyField() {
+  const lang = useAdminLang();
   return (
     <SecretKeyField
       path="apiKey"
       label="API Key"
-      description="Stored in DB (falls back to OPENAI_API_KEY env if empty)."
+      description={tAdmin(
+        lang,
+        "Хранится в БД. Если пусто — берётся OPENAI_API_KEY из .env.local.",
+        "Зберігається в БД. Якщо порожньо — береться OPENAI_API_KEY із .env.local."
+      )}
     />
   );
 }
 
 export function ImageApiKeyField() {
+  const lang = useAdminLang();
   return (
     <SecretKeyField
       path="imageApiKey"
-      label="Image API Key"
-      description="Stored in DB (falls back to Text API Key or OPENAI_API_KEY env if empty)."
+      label={tAdmin(lang, "API-ключ для изображений", "API-ключ для зображень")}
+      description={tAdmin(
+        lang,
+        "Хранится в БД. Если пусто — используется основной текстовый API Key или .env.local.",
+        "Зберігається в БД. Якщо порожньо — використовується основний текстовий API Key або .env.local."
+      )}
+    />
+  );
+}
+
+export function StorybookWriterApiKeyField() {
+  const lang = useAdminLang();
+  return (
+    <SecretKeyField
+      path="writerApiKey"
+      label={tAdmin(lang, "API-ключ (Текст сказки)", "API-ключ (Текст казки)")}
+      description={tAdmin(
+        lang,
+        "Отдельный ключ для писателя и корректора сказок. Если пусто — берётся ключ из общих настроек ИИ или .env.local.",
+        "Окремий ключ для письменника та коректора казок. Якщо порожньо — береться ключ із загальних налаштувань ШІ або .env.local."
+      )}
+    />
+  );
+}
+
+export function StorybookDirectorApiKeyField() {
+  const lang = useAdminLang();
+  return (
+    <SecretKeyField
+      path="directorApiKey"
+      label={tAdmin(lang, "API-ключ (Режиссёр и Vision QA)", "API-ключ (Режисер та Vision QA)")}
+      description={tAdmin(
+        lang,
+        "Отдельный ключ для Vision-паспорта, визуальной режиссуры и QA. Если пусто — наследуется ключ текста сказки или общих настроек ИИ.",
+        "Окремий ключ для Vision-паспорта, візуальної режисури та QA. Якщо порожньо — успадковується ключ тексту казки або загальних налаштувань ШІ."
+      )}
+    />
+  );
+}
+
+export function StorybookImageApiKeyField() {
+  const lang = useAdminLang();
+  return (
+    <SecretKeyField
+      path="imageApiKey"
+      label={tAdmin(lang, "API-ключ (Иллюстрации сказок)", "API-ключ (Ілюстрації казок)")}
+      description={tAdmin(
+        lang,
+        "Отдельный ключ для генерации якорей и страниц книги. Если пусто — наследуется ключ изображений из общих настроек ИИ или .env.local.",
+        "Окремий ключ для генерації якорів та сторінок книги. Якщо порожньо — успадковується ключ зображень із загальних налаштувань ШІ або .env.local."
+      )}
     />
   );
 }
 
 export function ElevenLabsApiKeyField() {
+  const lang = useAdminLang();
   return (
     <SecretKeyField
-      path="elevenLabsApiKey"
+      path="apiKey"
       label="ElevenLabs API Key"
-      description="Stored in DB (falls back to ELEVENLABS_API_KEY env if empty)."
+      description={tAdmin(
+        lang,
+        "Хранится в БД. Если пусто — используется ELEVENLABS_API_KEY из .env.local.",
+        "Зберігається в БД. Якщо порожньо — використовується ELEVENLABS_API_KEY із .env.local."
+      )}
     />
   );
 }

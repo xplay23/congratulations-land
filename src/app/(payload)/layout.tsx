@@ -4,7 +4,7 @@ import "../../../engine/styles/admin-base.css";
 import "../../../engine/styles/admin-layout.css";
 import "../../../engine/styles/admin-payload.css";
 import "../../../engine/styles/admin-custom-pages.css";
-import "../../../engine/styles/admin-tailwind.css";
+import "../../../engine/components/admin/ui/admin-ui.css";
 import { Inter } from "next/font/google";
 import { RootLayout, handleServerFunctions } from "@payloadcms/next/layouts";
 import type { ServerFunctionClient } from "payload";

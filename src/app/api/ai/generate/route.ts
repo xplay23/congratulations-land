@@ -6,6 +6,11 @@ import {
   PostCategorizationSchema,
   SeoSchema,
 } from "@engine/lib/ai/schemas";
+import { getCmsAiConfig } from "@/lib/cms-ai-config";
+import {
+  buildVercelReasoningOptions,
+  isOpenAIReasoningModel,
+} from "@/lib/openai-client";
 
 export const maxDuration = 60;
 
@@ -67,34 +72,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const aiSettings = (await payload.findGlobal({
-    slug: "ai-settings",
-  })) as unknown as {
-    enabled?: boolean | null;
-    provider?: string | null;
-    model?: string | null;
-    apiKey?: string | null;
-    maxTokens?: number | null;
-    temperature?: number | null;
-    aiPersona?: string | null;
-    siteDescription?: string | null;
-  };
-
-  if (aiSettings.enabled === false) {
+  const cfg = await getCmsAiConfig();
+  if (!cfg.enabled) {
     return NextResponse.json(
       { error: "AI is disabled. Enable it in AI Settings." },
       { status: 400 }
     );
   }
 
-  const provider = aiSettings.provider || "openai";
-  const model =
-    aiSettings.model || process.env.OPENAI_MODEL?.trim() || "gpt-6.2-astra";
-  const apiKey =
-    aiSettings.apiKey?.trim() ||
-    process.env.OPENAI_API_KEY?.trim() ||
-    process.env.OPEN_AI_KEY?.trim() ||
-    "";
+  const provider = cfg.provider;
+  const model = cfg.textModel;
+  const apiKey = cfg.apiKey || "";
 
   if (!apiKey) {
     return NextResponse.json(
@@ -147,13 +135,18 @@ export async function POST(req: NextRequest) {
     ...context,
     locale: localeCode,
     language: languageLabel,
-    aiPersona: context.aiPersona ?? aiSettings.aiPersona ?? "",
+    aiPersona: context.aiPersona ?? cfg.aiPersona ?? "",
     siteName: context.siteName ?? siteSettings.siteName ?? "VideoVitannya",
-    siteDescription: context.siteDescription ?? aiSettings.siteDescription ?? "",
+    siteDescription: context.siteDescription ?? cfg.siteDescription ?? "",
   };
 
   const prompt = interpolate(promptEntry.template, enrichedContext);
   const aiProvider = initAIProvider(provider, apiKey);
+  const providerOptions = buildVercelReasoningOptions(
+    provider,
+    model,
+    cfg.reasoningEffort
+  );
 
   const isStructured =
     type.endsWith("-seo") || type === "post-categorization";
@@ -166,6 +159,7 @@ export async function POST(req: NextRequest) {
         model: aiProvider(model),
         schema,
         prompt,
+        ...(providerOptions ? { providerOptions: providerOptions as never } : {}),
       });
 
       if (result.finishReason === "length") {
@@ -181,17 +175,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ result: result.object });
     }
 
-    const effectiveMaxTokens =
-      promptEntry.maxTokens ?? aiSettings.maxTokens ?? 2500;
-    const isReasoningModel = /^(gpt-5|gpt-6|o1|o3|o4)/i.test(model);
+    const effectiveMaxTokens = promptEntry.maxTokens ?? cfg.maxTokens ?? 2500;
+    const isReasoningModel =
+      provider === "openai" && isOpenAIReasoningModel(model);
 
     const result = await generateText({
       model: aiProvider(model),
       prompt,
       maxOutputTokens: effectiveMaxTokens,
-      ...(isReasoningModel
-        ? {}
-        : { temperature: aiSettings.temperature ?? 0.7 }),
+      ...(isReasoningModel ? {} : { temperature: cfg.temperature ?? 0.7 }),
+      ...(providerOptions ? { providerOptions: providerOptions as never } : {}),
     });
 
     if (result.finishReason === "length") {

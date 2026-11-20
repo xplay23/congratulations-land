@@ -3,6 +3,8 @@ import { generateObject } from "ai";
 import { getPayload } from "@engine/lib/payload";
 import { initAIProvider } from "@engine/lib/ai/providers";
 import { TranslationResultSchema } from "@engine/lib/ai/schemas";
+import { getCmsAiConfig } from "@/lib/cms-ai-config";
+import { buildVercelReasoningOptions } from "@/lib/openai-client";
 
 export const maxDuration = 60;
 
@@ -41,30 +43,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const aiSettings = (await payload.findGlobal({
-    slug: "ai-settings",
-  })) as unknown as {
-    enabled?: boolean | null;
-    provider?: string | null;
-    model?: string | null;
-    apiKey?: string | null;
-  };
-
-  if (aiSettings.enabled === false) {
+  const cfg = await getCmsAiConfig();
+  if (!cfg.enabled) {
     return NextResponse.json(
       { error: "AI is disabled in AI Settings" },
       { status: 400 }
     );
   }
 
-  const provider = aiSettings.provider || "openai";
-  const model =
-    aiSettings.model || process.env.OPENAI_MODEL?.trim() || "gpt-6.2-astra";
-  const apiKey =
-    aiSettings.apiKey?.trim() ||
-    process.env.OPENAI_API_KEY?.trim() ||
-    process.env.OPEN_AI_KEY?.trim() ||
-    "";
+  const provider = cfg.provider;
+  const model = cfg.textModel;
+  const apiKey = cfg.apiKey || "";
 
   if (!apiKey) {
     return NextResponse.json(
@@ -73,15 +62,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const aiPrompts = (await payload.findGlobal({
-    slug: "ai-prompts",
-  })) as unknown as {
-    prompts?: Array<{ type: string; template: string }>;
-  };
-
-  const customRule =
-    (aiPrompts.prompts ?? []).find((p) => p.type === "translate-ru-uk")?.template ||
-    "";
+  const customRule = cfg.prompts["translate-ru-uk"] || "";
 
   const sourceLabel =
     sourceLang === "ru" ? "Russian (Русский)" : "Ukrainian (Українська)";
@@ -104,15 +85,26 @@ ${JSON.stringify(fields, null, 2)}`;
 
   try {
     const aiProvider = initAIProvider(provider, apiKey);
+    const providerOptions = buildVercelReasoningOptions(
+      provider,
+      model,
+      cfg.reasoningEffort
+    );
+
     const result = await generateObject({
       model: aiProvider(model),
       schema: TranslationResultSchema,
       prompt,
+      ...(providerOptions ? { providerOptions: providerOptions as never } : {}),
     });
 
     return NextResponse.json({ translated: result.object.translated });
   } catch (err) {
-    console.error("[api/ai/translate] error:", { sourceLang, targetLang, model }, err);
+    console.error(
+      "[api/ai/translate] error:",
+      { sourceLang, targetLang, model },
+      err
+    );
     const message = err instanceof Error ? err.message : "Translation failed";
     return NextResponse.json({ error: message }, { status: 502 });
   }

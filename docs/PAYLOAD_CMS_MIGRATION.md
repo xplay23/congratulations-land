@@ -1,6 +1,6 @@
 # Payload CMS 3.84 — Архитектура и дорожная карта (Этапы А, Б, В)
 
-> **Статус на 2026-11-20:** **Этап А выполнен и проверен.** Этапы **Б** и **В** предназначены для реализации в отдельных новых чатах поверх готового фундамента Этапа А (в текущем чате продолжаем только точечные доработки Этапа А).
+> **Статус на 2026-11-20:** **Этап А полностью завершён и отполирован.** Интерфейс админки русифицирован по умолчанию с переключателем `RU | UA`, все кастомные страницы переведены на единую дизайн-систему `domainer-platform` / Payload, настройки разделены на отдельные страницы (`Общие`, `ИИ (Контент)`, `ИИ-сказки`, `ElevenLabs`, `Промпты`, `Лимиты`). **Этапы Б и В** готовы к реализации в новых чатах поверх фундамента Этапа А.
 
 ---
 
@@ -11,39 +11,44 @@
 
 1. **Контур CMS и настроек ИИ — `Payload CMS 3.84.1` + `PostgreSQL 16`:**
    - Контейнер `videovitannya-db` (`postgres:16-alpine`, локальный проброс `127.0.0.1:5556 -> 5432`) в [docker-compose.dev.yml](file:///g:/WwW/work/gifts-project/docker-compose.dev.yml). Под хостинг на Hostinger VPS через Docker Manager используется штатный `DATABASE_URL`.
-   - Главный конфиг: [payload.config.ts](file:///g:/WwW/work/gifts-project/payload.config.ts) (`Next.js 16.2.6`, `React 19.2.4`, `@payloadcms/db-postgres`, `@payloadcms/richtext-lexical`, `@payloadcms/plugin-seo`, `withPayload` в [next.config.ts](file:///g:/WwW/work/gifts-project/next.config.ts)).
+   - Главный конфиг: [payload.config.ts](file:///g:/WwW/work/gifts-project/payload.config.ts) (`Next.js 16.2.6`, `React 19.2.4`, `@payloadcms/db-postgres`, `@payloadcms/richtext-lexical`, `@payloadcms/plugin-seo`, `withPayload` в [next.config.ts](file:///g:/WwW/work/gifts-project/next.config.ts), `i18n` админки `ru`/`uk`/`en` с `fallbackLanguage: "ru"`).
    - Коллекции и глобалы:
      - [engine/collections/Users.ts](file:///g:/WwW/work/gifts-project/engine/collections/Users.ts) (`users`, 30-дневная сессия);
      - [engine/collections/Media.ts](file:///g:/WwW/work/gifts-project/engine/collections/Media.ts) (`media`, загрузка в `public/media`);
-     - [engine/globals/SiteSettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/SiteSettings.ts) (`site-settings`, локализуемые название, слоган, футер и общие контакты);
-     - [engine/globals/AISettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/AISettings.ts) (`ai-settings`, управление моделями/ключами OpenAI и ElevenLabs);
-     - [engine/globals/AIPrompts.ts](file:///g:/WwW/work/gifts-project/engine/globals/AIPrompts.ts) (`ai-prompts`, редактируемые шаблоны с `{{переменными}}`).
+     - [engine/globals/SiteSettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/SiteSettings.ts) (`site-settings`, «Общие»: логотип, слоган, контакты, `footerText` и `copyrightText` на визуальном редакторе Lexical RichText, гибкий массив соцсетей `socialLinks` с `SocialLinkRowLabel`, кнопка двунаправленного перевода `RU ↔ UA`);
+     - [engine/globals/AISettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/AISettings.ts) (`ai-settings`, «ИИ (Контент)»: провайдер/ключ/модель/`reasoningEffort` для блога, SEO, перевода и чат-помощника; отдельный провайдер/ключ/модель для обложек; персона бренда);
+     - [engine/globals/StorybookAISettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/StorybookAISettings.ts) (`storybook-ai-settings`, «ИИ-сказки»: три независимые секции с выбором провайдера, ключа, динамического `<select>` модели и `reasoningEffort` — *Текст сказки*, *Режиссура и Vision QA*, *Иллюстрации сказок* + качество);
+     - [engine/globals/ElevenLabsSettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/ElevenLabsSettings.ts) (`elevenlabs-settings`, «ElevenLabs»: ключ, `<select>` TTS-модели с fallback-списком при отсутствии `models_read`, выбор голоса из живого `/api/ai/elevenlabs-voices` + ручной Voice ID, слайдеры с числовым вводом `RangeNumberField` для `stability` и `similarityBoost`);
+     - [engine/globals/AIPrompts.ts](file:///g:/WwW/work/gifts-project/engine/globals/AIPrompts.ts) (`ai-prompts`, «Промпты»: 26 редактируемых шаблонов с `{{переменными}}`);
+     - [engine/globals/PlatformLimits.ts](file:///g:/WwW/work/gifts-project/engine/globals/PlatformLimits.ts) (`platform-limits`, «Лимиты»: вертикальная страница настроек лимитов превью, AI-правок и TTL хранения с мгновенной синхронизацией в SQLite через `afterChange`).
 
 2. **Операционный контур заказов и оплаты — `node:sqlite` (`storage/platform.sqlite`):**
    - Заказы видео и сказок, `Plata by mono` холды/финализация/webhook, OTP + magic links (`/my-orders`), 30-дневное хранение готовых файлов (`storage/`), очистка EXIF-фото, расчёт маржи `ai_cost_json` и обезличенная аналитика остаются в [src/lib/db.ts](file:///g:/WwW/work/gifts-project/src/lib/db.ts) и [src/lib/settings.ts](file:///g:/WwW/work/gifts-project/src/lib/settings.ts).
-   - Существующие кастомные вкладки админки ([AdminAnalyticsTab.tsx](file:///g:/WwW/work/gifts-project/src/components/admin/AdminAnalyticsTab.tsx), [AdminOrdersTab.tsx](file:///g:/WwW/work/gifts-project/src/components/admin/AdminOrdersTab.tsx), [AdminSettingsTab.tsx](file:///g:/WwW/work/gifts-project/src/components/admin/AdminSettingsTab.tsx)) встроены в единую админку Payload `/admin` через [AdminClientWrapper.tsx](file:///g:/WwW/work/gifts-project/engine/views/AdminClientWrapper.tsx) как Custom Views:
-     - `/admin` → [Dashboard](file:///g:/WwW/work/gifts-project/engine/views/Dashboard/index.tsx) (аналитика);
-     - `/admin/orders` → [Orders](file:///g:/WwW/work/gifts-project/engine/views/Orders/index.tsx) (инспектор заказов);
-     - `/admin/tariffs` → [Tariffs](file:///g:/WwW/work/gifts-project/engine/views/Tariffs/index.tsx) (динамические тарифы, лимиты, курсы ИИ).
+   - Кастомные страницы админки полностью переписаны на единую дизайн-систему `domainer-platform` / Payload (`@engine/components/admin/ui`: `Card`, `Button`, `Input`, `Select`, `Checkbox`, `BarRow`, `Alert`, `SectionLabel`, `C`) и встроены как Custom Views:
+     - `/admin` → [Dashboard](file:///g:/WwW/work/gifts-project/engine/views/Dashboard/index.tsx) (аналитика + [AdminSystemHealthCard.tsx](file:///g:/WwW/work/gifts-project/src/components/admin/AdminSystemHealthCard.tsx) «Состояние интеграций» внизу страницы);
+     - `/admin/orders` → [Orders](file:///g:/WwW/work/gifts-project/engine/views/Orders/index.tsx) (инспектор заказов, Resume, Sync Mono, возврат/холд, `+1 AI-правка`);
+     - `/admin/tariffs` → [Tariffs](file:///g:/WwW/work/gifts-project/engine/views/Tariffs/index.tsx) (тарифы, видимость, тексты услуг и курсы расчёта маржи ИИ).
+   - Однословная навигация в [Nav/index.tsx](file:///g:/WwW/work/gifts-project/engine/components/admin/Nav/index.tsx): `Дашборд`, `Заказы`, `Тарифы`, `Контент → Медиа`, `Система → Пользователи / Настройки` (`Общие`, `ИИ (Контент)`, `ИИ-сказки`, `ElevenLabs`, `Промпты`, `Лимиты`).
    - Авторизация в [src/lib/admin-auth.ts](file:///g:/WwW/work/gifts-project/src/lib/admin-auth.ts) принимает активную сессию Payload наравне с существующими методами входа (`ADMIN_PASSWORD` / `ADMIN_EMAILS`).
 
-### Маршрутизация, стили и двунаправленный перевод
+### Маршрутизация, стили, i18n и двунаправленный перевод
 - **Route Groups:** витрина и формы заказа изолированы в `src/app/(site)/` (`/` для UA и `/ru/...` для RU), а админка и API Payload — в `src/app/(payload)/`. В [src/lib/locale.ts](file:///g:/WwW/work/gifts-project/src/lib/locale.ts) и [src/middleware.ts](file:///g:/WwW/work/gifts-project/src/middleware.ts) `/media` добавлен в нелокализуемые пути наряду с `/admin`, `/api`, `/assets`, `/samples`.
-- **Изоляция стилей админки:** дизайн-система админки взята из `domainer-platform` (`engine/styles/admin-*.css`), а для старых Tailwind-компонентов аналитики/заказов/тарифов подключён [admin-tailwind.css](file:///g:/WwW/work/gifts-project/engine/styles/admin-tailwind.css) (`tailwindcss/theme.css` + `tailwindcss/utilities.css` со `source("../../src/components/admin")` без глобального Preflight, класс `.vv-admin-tw`).
-- **Нативная локализация + перевод `RU ↔ UA`:**
-  - Локали в Payload: `uk` (`Українська (UA)`, default) и `ru` (`Русский (RU)`), `fallback: true`.
-  - Компонент [TranslateLocaleButton](file:///g:/WwW/work/gifts-project/engine/components/admin/TranslateLocaleButton/index.tsx) + эндпоинт [src/app/api/ai/translate/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/ai/translate/route.ts) работают **в обе стороны (`🇷🇺 → 🇺🇦` и `🇺🇦 → 🇷🇺`)** из любой вкладки локали (удобно, когда контент пишется на русском и переводится на украинский). Поддерживается преобразование `Lexical JSON <-> HTML` через [htmlToLexical.ts](file:///g:/WwW/work/gifts-project/engine/components/admin/PostAiButtons/htmlToLexical.ts).
+- **Единый дизайн админки:** используются только стили и UI-примитивы `domainer-platform` + Payload (`engine/styles/admin-base.css`, `admin-layout.css`, `admin-payload.css`, `admin-custom-pages.css`, `engine/components/admin/ui/admin-ui.css`) с поддержкой тёмной/светлой тем и единой типографикой (`14px` body, `13px` controls, `16–18px` headings, `30px` KPI, `32px` H1).
+- **Язык админки и локализация контента (`RU ↔ UA`):**
+  - Интерфейс админки по умолчанию на **русском (`ru`)**, в шапке установлен переключатель **`RU | UA`** ([AdminLangSwitcher](file:///g:/WwW/work/gifts-project/engine/views/AdminLangSwitcher/index.tsx)) на базе `useTranslation().switchLanguage` + хелпер [admin-i18n.ts](file:///g:/WwW/work/gifts-project/engine/lib/admin-i18n.ts).
+  - Локали контента в Payload: `uk` (`Українська (UA)`, default) и `ru` (`Русский (RU)`), `fallback: true`.
+  - Компонент [TranslateLocaleButton](file:///g:/WwW/work/gifts-project/engine/components/admin/TranslateLocaleButton/index.tsx) + [src/app/api/ai/translate/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/ai/translate/route.ts) работают **в обе стороны (`🇷🇺 → 🇺🇦` и `🇺🇦 → 🇷🇺`)** из любой вкладки локали (включая RichText Lexical `footerText`/`copyrightText` через [htmlToLexical.ts](file:///g:/WwW/work/gifts-project/engine/components/admin/PostAiButtons/htmlToLexical.ts)).
 
 ### Runtime-конфиг AI и ElevenLabs + Python-воркер
-- Резолвер [src/lib/cms-ai-config.ts](file:///g:/WwW/work/gifts-project/src/lib/cms-ai-config.ts) (`getCmsAiConfig()`, кэш 30 с + мгновенная инвалидация через `afterChange`-хуки `ai-settings` и `ai-prompts`) объединяет настройки из PostgreSQL с fallback на `.env.local`.
-- Все генераторы переведены на `getCmsOpenAIRuntime()` / `getCmsAiConfig()`:
-  - [src/lib/openai-client.ts](file:///g:/WwW/work/gifts-project/src/lib/openai-client.ts);
-  - [src/lib/storybook/vision.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/vision.ts) (`storybookDirectorModel`);
-  - [src/lib/storybook/writer.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/writer.ts) (`storybookWriterModel`, `storybookDirectorModel`, `style-*`, `storybook-*-system` с жёсткой защитой JSON-структуры в коде);
-  - [src/lib/storybook/illustrator.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/illustrator.ts) (`storybookImageModel`, `storybookImageQuality`, `storybookDirectorModel`, `storybookVisionQaEnabled`, `storybook-vision-qa`);
-  - [src/app/api/assistant/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/assistant/route.ts) (`assistant-system`);
+- Резолвер [src/lib/cms-ai-config.ts](file:///g:/WwW/work/gifts-project/src/lib/cms-ai-config.ts) (`getCmsAiConfig()`, кэш 30 с + мгновенная инвалидация через `afterChange`-хуки `ai-settings`, `storybook-ai-settings`, `elevenlabs-settings`, `ai-prompts`) объединяет настройки из всех глобалов PostgreSQL с fallback-цепочкой на общие ключи и `.env.local`.
+- Все генераторы переведены на `getCmsOpenAIRuntime()` / `getCmsAiConfig()` с поддержкой `reasoningEffort` (`buildChatModelParams` + `buildVercelReasoningOptions`):
+  - [src/lib/openai-client.ts](file:///g:/WwW/work/gifts-project/src/lib/openai-client.ts) (`client`, `writerClient`, `directorClient`, `imageClient`);
+  - [src/lib/storybook/vision.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/vision.ts) (`directorClient`, `storybookDirectorModel`, `storybookDirectorReasoningEffort`);
+  - [src/lib/storybook/writer.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/writer.ts) (`writerClient`, `directorClient`, `storybookWriterModel`, `storybookDirectorModel`, `reasoningEffort`, `style-*`, `storybook-*-system` с жёсткой защитой JSON-структуры в коде);
+  - [src/lib/storybook/illustrator.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/illustrator.ts) (`imageClient`, `directorClient`, `storybookImageModel`, `storybookImageQuality`, `storybookVisionQaEnabled`, `storybook-vision-qa`);
+  - [src/app/api/ai/generate/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/ai/generate/route.ts), [src/app/api/ai/translate/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/ai/translate/route.ts), [src/app/api/assistant/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/assistant/route.ts);
   - [src/lib/video/pipeline.ts](file:///g:/WwW/work/gifts-project/src/lib/video/pipeline.ts) — **принципиально важное архитектурное решение:** Python-скрипт [video-pipeline/scripts/assemble_pilot.py](file:///g:/WwW/work/gifts-project/video-pipeline/scripts/assemble_pilot.py) остаётся чистым локальным FFmpeg/Pillow-воркером без доступа к БД и ключам. Вся логика ElevenLabs (`elevenLabsApiKey`, `elevenLabsModelId`, `elevenLabsVoiceId`, `elevenLabsStability`, `elevenLabsSimilarityBoost` и шаблоны реплик `video-line-*`) читается из БД на стороне Next.js, реплики синтезируются в `.mp3` и передаются в Python через `--custom-audio`.
-- Начальный сидер: [scripts/seed-stage-a.ts](file:///g:/WwW/work/gifts-project/scripts/seed-stage-a.ts) идемпотентно создаёт первого администратора, заполняет `site-settings` (`uk`/`ru`), переносит ключи и модели из `.env.local` в `ai-settings` и добавляет 26 шаблонов промптов в `ai-prompts`.
+- Начальный сидер: [scripts/seed-stage-a.ts](file:///g:/WwW/work/gifts-project/scripts/seed-stage-a.ts) идемпотентно создаёт первого администратора и сидит `site-settings` (`uk`/`ru`, Lexical RichText + `socialLinks`), `ai-settings`, `storybook-ai-settings`, `elevenlabs-settings`, `platform-limits` и 26 шаблонов промптов в `ai-prompts`.
 
 ### Базовые команды Этапа А
 - `npm run db` — запуск `postgres:16-alpine` в Docker (`npm run db:stop` — остановка);
