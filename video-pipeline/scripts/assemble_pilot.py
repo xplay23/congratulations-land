@@ -35,15 +35,25 @@ def probe_duration(path: Path) -> float:
 
 def detect_speech_end(path: Path) -> float:
     res = subprocess.run([
-        "ffmpeg", "-i", str(path), "-af", "silencedetect=noise=-42dB:d=0.10", "-f", "null", "-"
+        "ffmpeg", "-i", str(path), "-af", "silencedetect=noise=-40dB:d=0.06", "-f", "null", "-"
     ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
     total = probe_duration(path)
-    last_start = None
+    cur_start = None
+    last_closed = None
     for line in res.stdout.splitlines():
         if "silence_start:" in line:
-            last_start = float(line.split("silence_start:")[1].strip().split()[0])
-    if last_start is not None and total - last_start < 1.2 and last_start > 0.5:
-        return last_start + 0.04
+            cur_start = float(line.split("silence_start:")[1].strip().split()[0])
+        elif "silence_end:" in line and cur_start is not None:
+            end_t = float(line.split("silence_end:")[1].strip().split()[0])
+            last_closed = (cur_start, end_t)
+            cur_start = None
+    trail_start = None
+    if cur_start is not None:
+        trail_start = cur_start
+    elif last_closed is not None and total - last_closed[1] < 0.05:
+        trail_start = last_closed[0]
+    if trail_start is not None and total - trail_start < 1.2 and trail_start > 0.5:
+        return trail_start + 0.04
     return total
 
 
@@ -280,21 +290,25 @@ def _build_pilot_impl(work: Path, lang: str, tag: str, display_name: str, out_vi
         trim_audio(pick_audio("line_01.mp3", adir), proc_audio / "v01.wav", 0.0, 3.80)
         line03_src = pick_audio("line_03.mp3", adir)
         if custom_audio_dir is not None and line03_src.parent == custom_audio_dir:
-            pauses, sp_end, _ = find_pauses_and_end(line03_src)
-            mid_pauses = [p for p in pauses if 0.8 <= p[0] <= 3.0 and p[1] < sp_end - 1.0]
-            if mid_pauses:
-                p_st, p_en = mid_pauses[0]
-                t1_end = min(p_st + 0.03, p_en)
-                t2_start = max(p_st + 0.03, p_en - 0.04)
-                raw_dur = t1_end + (sp_end - t2_start)
-                tempo2 = max(1.06, min(1.16, raw_dur / 6.35))
-                concat_audio_parts([
-                    (line03_src, 0.0, t1_end, 1.06),
-                    (line03_src, t2_start, sp_end, tempo2),
-                ], proc_audio / "v03.wav")
+            raw_03_end = detect_speech_end(line03_src)
+            if raw_03_end <= 6.5:
+                trim_audio(line03_src, proc_audio / "v03.wav", 0.0, raw_03_end, atempo=1.08)
             else:
-                tempo = max(1.04, min(1.16, sp_end / 6.35))
-                trim_audio(line03_src, proc_audio / "v03.wav", 0.0, sp_end, atempo=tempo)
+                pauses, sp_end, _ = find_pauses_and_end(line03_src)
+                mid_pauses = [p for p in pauses if 0.8 <= p[0] <= 3.0 and p[1] < sp_end - 1.0]
+                if mid_pauses:
+                    p_st, p_en = mid_pauses[0]
+                    t1_end = min(p_st + 0.03, p_en)
+                    t2_start = max(p_st + 0.03, p_en - 0.04)
+                    raw_dur = t1_end + (sp_end - t2_start)
+                    tempo2 = max(1.06, min(1.16, raw_dur / 6.35))
+                    concat_audio_parts([
+                        (line03_src, 0.0, t1_end, 1.06),
+                        (line03_src, t2_start, sp_end, tempo2),
+                    ], proc_audio / "v03.wav")
+                else:
+                    tempo = max(1.04, min(1.16, sp_end / 6.35))
+                    trim_audio(line03_src, proc_audio / "v03.wav", 0.0, sp_end, atempo=tempo)
         else:
             # UA line_03: 0..1.45 (pause 1.45..1.94 -> shorten slightly) + 1.90..7.93 @ 1.15x -> ~6.30s
             concat_audio_parts([
@@ -367,7 +381,7 @@ def _build_pilot_impl(work: Path, lang: str, tag: str, display_name: str, out_vi
         return dst, probe_duration(dst)
 
     s03_speech_offset = 0.44
-    s03_dur = min(7.25, max(5.20, s03_speech_offset + v03_dur + 0.25))
+    s03_dur = min(7.25, max(2.20, s03_speech_offset + v03_dur - 0.14))
 
     c01, d01 = cut_video("Snow_falling_on_alpine_chalet_620ffea8.mp4", "01.mkv", 0.00, 3.65, extra_vf="fade=t=in:st=0:d=0.4")
     c02, d02 = cut_video("Elderly_man_reading_book_at_afc79866.mp4", "02.mkv", 0.50, 4.10, keep_audio_vol=0.55)
@@ -438,7 +452,7 @@ def _build_pilot_impl(work: Path, lang: str, tag: str, display_name: str, out_vi
     transitions = [
         ("fade", 0.55, True),
         ("fade", 0.16, False),
-        ("fade", 0.16, False),
+        ("fade", 0.20, False),
         ("fade", 0.40, True),
         ("fade", 0.35, True),
         ("fade", 0.16, False),
@@ -497,7 +511,7 @@ def _build_pilot_impl(work: Path, lang: str, tag: str, display_name: str, out_vi
     voice_events = [
         (proc_audio / "v01.wav", starts["01"] + 0.15),
         (v03_wav, starts["03"] + s03_speech_offset),
-        (proc_audio / "v04a.wav", starts["04a"] + 0.25),
+        (proc_audio / "v04a.wav", starts["04a"] + 0.38),
         (v04b_wav, starts["04b"] + s04b_speech_offset),
         (proc_audio / "v04c.wav", starts["04c"] + 0.65),
         (proc_audio / "v05b_1.wav", starts["05b"] + 0.15),
