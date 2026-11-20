@@ -6,9 +6,14 @@ import { useLanguage } from "@/components/LanguageContext";
 import { usePricing } from "@/components/PricingContext";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FaqSection } from "@/components/FaqSection";
-import { PRICE_FAQ, SERVICE_CATALOG } from "@/lib/site-content";
+import { PRICE_FAQ } from "@/lib/site-content";
+import type { CmsServiceItem } from "@/lib/cms-content";
 
-export function PricingPageView() {
+export function PricingPageView({
+  services,
+}: {
+  services: CmsServiceItem[];
+}) {
   const { lang, l } = useLanguage();
   const { pricing, getStorybookPrice, getServicePrice } = usePricing();
   const isUk = lang === "uk";
@@ -16,7 +21,11 @@ export function PricingPageView() {
   const sbBasePrice = getStorybookPrice(6);
   const sbLongPrice = getStorybookPrice(8);
 
-  const pricedServices = SERVICE_CATALOG.filter((item) => Boolean(item.serviceId));
+  const pricedServices = services.filter(
+    (item) =>
+      item.status !== "hidden" &&
+      (item.serviceKey !== "custom" || item.basePriceUah > 0)
+  );
 
   return (
     <div className="space-y-12 pb-12">
@@ -50,18 +59,20 @@ export function PricingPageView() {
 
         <div className="divide-y divide-white/10">
           {pricedServices.map((item) => {
-            const svc = item.serviceId ? pricing.services[item.serviceId] : undefined;
+            const svcKey =
+              item.serviceKey !== "custom" ? item.serviceKey : undefined;
+            const svc = svcKey ? pricing.services[svcKey] : undefined;
             const isOrderable = Boolean(
-              item.constructorHref &&
-                (svc?.enabled ?? true) &&
-                !(svc?.comingSoon ?? false)
+              item.ctaOrderUrl &&
+                item.status === "active" &&
+                (svc ? svc.enabled && !svc.comingSoon : true)
             );
-            const priceUah = item.serviceId
+            const priceUah = svcKey
               ? getServicePrice(
-                  item.serviceId,
-                  item.serviceId === "storybook" ? { pageCount: 6 } : undefined
+                  svcKey,
+                  svcKey === "storybook" ? { pageCount: 6 } : undefined
                 )
-              : 0;
+              : item.basePriceUah;
 
             return (
               <div
@@ -73,19 +84,19 @@ export function PricingPageView() {
                     href={l(`/${item.slug}`)}
                     className="font-serif-book text-lg font-bold text-white transition hover:text-amber-200"
                   >
-                    {svc?.title?.[lang] || item.label[lang]}
+                    {item.title}
                   </Link>
                   <p className="text-xs leading-relaxed text-slate-300">
-                    {item.serviceId === "storybook"
+                    {svcKey === "storybook"
                       ? isUk
                         ? `4–6 сторінок — ${sbBasePrice} ₴ · 8 сторінок — ${sbLongPrice} ₴`
                         : `4–6 страниц — ${sbBasePrice} ₴ · 8 страниц — ${sbLongPrice} ₴`
-                      : item.short[lang]}
+                      : item.shortDescription}
                   </p>
                 </div>
 
                 <div className="text-xl font-bold text-amber-200">
-                  {item.serviceId === "storybook"
+                  {svcKey === "storybook"
                     ? isUk
                       ? `від ${sbBasePrice} ₴`
                       : `от ${sbBasePrice} ₴`
@@ -99,9 +110,9 @@ export function PricingPageView() {
                   >
                     {isUk ? "Детальніше" : "Подробнее"}
                   </Link>
-                  {isOrderable && item.constructorHref ? (
+                  {isOrderable && item.ctaOrderUrl ? (
                     <Link
-                      href={l(item.constructorHref)}
+                      href={l(item.ctaOrderUrl)}
                       className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                     >
                       {isUk ? "Замовити" : "Заказать"}
@@ -135,9 +146,15 @@ export function PricingPageView() {
 
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            isUk ? "Повна версія без водяного знака" : "Полная версия без водяного знака",
-            isUk ? "Зручна доставка на Email і в Telegram" : "Удобная доставка на Email и в Telegram",
-            isUk ? "Зберігання файлів у кабінеті 30 днів" : "Хранение файлов в кабинете 30 дней",
+            isUk
+              ? "Повна версія без водяного знака"
+              : "Полная версия без водяного знака",
+            isUk
+              ? "Зручна доставка на Email і в Telegram"
+              : "Удобная доставка на Email и в Telegram",
+            isUk
+              ? "Зберігання файлів у кабінеті 30 днів"
+              : "Хранение файлов в кабинете 30 дней",
           ].map((bullet) => (
             <div
               key={bullet}

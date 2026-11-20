@@ -1,4 +1,4 @@
-import { LegalDocumentView } from "@/components/LegalDocumentView";
+import { CmsPageBySlug } from "@/components/CmsPageBySlug";
 import { makeLegalMetadata } from "@/lib/page-helpers";
 
 export async function generateMetadata() {
@@ -6,5 +6,5 @@ export async function generateMetadata() {
 }
 
 export default function KonfidentsiynistPage() {
-  return <LegalDocumentView pageKey="konfidentsiynist" />;
+  return <CmsPageBySlug slug="konfidentsiynist" />;
 }

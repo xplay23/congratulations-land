@@ -9,21 +9,32 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Coins,
   FileCode2,
+  FileText,
+  FolderTree,
   Gauge,
+  Gift,
   Globe2,
+  Home,
   Image as ImageIcon,
+  Layers,
   LayoutDashboard,
+  LayoutTemplate,
+  MessageSquareQuote,
+  Navigation,
+  PanelBottom,
+  PlaySquare,
   Settings,
-  Sliders,
   Sparkles,
+  UserPen,
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { tAdmin, useAdminLang, type AdminLang } from "@engine/lib/admin-i18n";
 import "./nav.css";
 
-type NavMode = "main" | "settings";
+type NavMode = "main" | "settings" | "templates";
 
 interface NavItem {
   label: string;
@@ -38,12 +49,17 @@ interface NavGroup {
 
 const SETTINGS_PATHS = [
   "/admin/globals/site-settings",
+  "/admin/globals/header-nav",
+  "/admin/globals/footer-nav",
   "/admin/globals/ai-settings",
   "/admin/globals/storybook-ai-settings",
   "/admin/globals/elevenlabs-settings",
   "/admin/globals/ai-prompts",
   "/admin/globals/platform-limits",
+  "/admin/globals/ai-economics",
 ];
+
+const TEMPLATES_PATHS = ["/admin/globals/home-template"];
 
 function getMainMenu(lang: AdminLang): Array<NavItem | NavGroup> {
   return [
@@ -58,13 +74,58 @@ function getMainMenu(lang: AdminLang): Array<NavItem | NavGroup> {
       icon: ClipboardList,
     },
     {
-      label: tAdmin(lang, "Тарифы", "Тарифи"),
-      href: "/admin/tariffs",
-      icon: Sliders,
+      label: tAdmin(lang, "Каталог", "Каталог"),
+      items: [
+        {
+          label: tAdmin(lang, "Услуги", "Послуги"),
+          href: "/admin/collections/services",
+          icon: Gift,
+        },
+        {
+          label: tAdmin(lang, "Вариации", "Варіації"),
+          href: "/admin/collections/service-variations",
+          icon: Layers,
+        },
+        {
+          label: tAdmin(lang, "Примеры", "Приклади"),
+          href: "/admin/collections/showcases",
+          icon: PlaySquare,
+        },
+        {
+          label: tAdmin(lang, "Отзывы", "Відгуки"),
+          href: "/admin/collections/reviews",
+          icon: MessageSquareQuote,
+        },
+      ],
     },
     {
       label: tAdmin(lang, "Контент", "Контент"),
       items: [
+        {
+          label: tAdmin(lang, "Страницы", "Сторінки"),
+          href: "/admin/collections/pages",
+          icon: FileText,
+        },
+        {
+          label: tAdmin(lang, "Шаблоны", "Шаблони"),
+          href: "__templates__",
+          icon: LayoutTemplate,
+        },
+        {
+          label: tAdmin(lang, "Статьи", "Статті"),
+          href: "/admin/collections/posts",
+          icon: BookOpen,
+        },
+        {
+          label: tAdmin(lang, "Рубрики", "Рубрики"),
+          href: "/admin/collections/post-categories",
+          icon: FolderTree,
+        },
+        {
+          label: tAdmin(lang, "Авторы", "Автори"),
+          href: "/admin/collections/authors",
+          icon: UserPen,
+        },
         {
           label: tAdmin(lang, "Медиа", "Медіа"),
           href: "/admin/collections/media",
@@ -90,12 +151,32 @@ function getMainMenu(lang: AdminLang): Array<NavItem | NavGroup> {
   ];
 }
 
+function getTemplatesMenu(lang: AdminLang): NavItem[] {
+  return [
+    {
+      label: tAdmin(lang, "Главная страница", "Головна сторінка"),
+      href: "/admin/globals/home-template",
+      icon: Home,
+    },
+  ];
+}
+
 function getSettingsMenu(lang: AdminLang): NavItem[] {
   return [
     {
       label: tAdmin(lang, "Общие", "Загальні"),
       href: "/admin/globals/site-settings",
       icon: Globe2,
+    },
+    {
+      label: tAdmin(lang, "Меню шапки", "Меню шапки"),
+      href: "/admin/globals/header-nav",
+      icon: Navigation,
+    },
+    {
+      label: tAdmin(lang, "Меню футера", "Меню футера"),
+      href: "/admin/globals/footer-nav",
+      icon: PanelBottom,
     },
     {
       label: tAdmin(lang, "ИИ (Контент)", "ШІ (Контент)"),
@@ -122,11 +203,17 @@ function getSettingsMenu(lang: AdminLang): NavItem[] {
       href: "/admin/globals/platform-limits",
       icon: Gauge,
     },
+    {
+      label: tAdmin(lang, "Курсы и маржа", "Курси та маржа"),
+      href: "/admin/globals/ai-economics",
+      icon: Coins,
+    },
   ];
 }
 
 function getModeFromPathname(pathname: string): NavMode {
   if (SETTINGS_PATHS.some((p) => pathname.startsWith(p))) return "settings";
+  if (TEMPLATES_PATHS.some((p) => pathname.startsWith(p))) return "templates";
   return "main";
 }
 
@@ -181,12 +268,15 @@ function ExpandableButton({
 function MainPanel({
   lang,
   onSettings,
+  onTemplates,
 }: {
   lang: AdminLang;
   onSettings: () => void;
+  onTemplates: () => void;
 }) {
   const pathname = usePathname();
   const settingsActive = SETTINGS_PATHS.some((p) => pathname.startsWith(p));
+  const templatesActive = TEMPLATES_PATHS.some((p) => pathname.startsWith(p));
   const menu = getMainMenu(lang);
 
   return (
@@ -207,6 +297,17 @@ function MainPanel({
                     icon={Settings}
                     isActive={settingsActive}
                     onClick={onSettings}
+                  />
+                );
+              }
+              if (child.href === "__templates__") {
+                return (
+                  <ExpandableButton
+                    key="templates"
+                    label={child.label}
+                    icon={LayoutTemplate}
+                    isActive={templatesActive}
+                    onClick={onTemplates}
                   />
                 );
               }
@@ -261,7 +362,18 @@ export function AdminNav() {
     <nav className="admin-nav">
       <div className={`admin-nav__scroll admin-nav__scroll--${mode}`}>
         {mode === "main" && (
-          <MainPanel lang={lang} onSettings={() => setMode("settings")} />
+          <MainPanel
+            lang={lang}
+            onSettings={() => setMode("settings")}
+            onTemplates={() => setMode("templates")}
+          />
+        )}
+        {mode === "templates" && (
+          <SubPanel
+            title={tAdmin(lang, "Шаблоны", "Шаблони")}
+            items={getTemplatesMenu(lang)}
+            onBack={() => setMode("main")}
+          />
         )}
         {mode === "settings" && (
           <SubPanel

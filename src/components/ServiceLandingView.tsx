@@ -6,39 +6,60 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  Layers,
   Sparkles,
   Video,
 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageContext";
 import { usePricing } from "@/components/PricingContext";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { FaqSection } from "@/components/FaqSection";
 import { ArticleCards } from "@/components/ArticleCards";
+import { RenderBlocks } from "@/components/RenderBlocks";
 import { StorybookShowcaseReader } from "@/components/StorybookShowcaseReader";
 import { VideoShowcasePlayer } from "@/components/VideoShowcasePlayer";
-import {
-  BLOG_ARTICLES,
-  getServiceLandingBySlug,
-  type ServiceLandingItem,
-} from "@/lib/site-content";
+import type {
+  CmsBlogPostItem,
+  CmsServiceItem,
+  CmsServiceVariationItem,
+  CmsShowcasesBundle,
+} from "@/lib/cms-content";
 
-export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
+export function ServiceLandingView({
+  item,
+  allServices = [],
+  variations = [],
+  showcases,
+  relatedItems = [],
+  articles = [],
+}: {
+  item: CmsServiceItem;
+  allServices?: CmsServiceItem[];
+  variations?: CmsServiceVariationItem[];
+  showcases?: CmsShowcasesBundle;
+  relatedItems?: CmsServiceItem[];
+  articles?: CmsBlogPostItem[];
+}) {
   const { lang, l } = useLanguage();
   const { pricing, getStorybookPrice, getServicePrice } = usePricing();
   const isUk = lang === "uk";
 
-  const svcConfig = item.serviceId ? pricing.services[item.serviceId] : undefined;
+  const svcKey = item.serviceKey !== "custom" ? item.serviceKey : undefined;
+  const svcConfig = svcKey ? pricing.services[svcKey] : undefined;
   const isLiveOrderable = Boolean(
-    item.constructorHref && (svcConfig?.enabled ?? true) && !(svcConfig?.comingSoon ?? false)
+    item.ctaOrderUrl &&
+      item.status === "active" &&
+      (svcConfig ? svcConfig.enabled && !svcConfig.comingSoon : true)
   );
-  const priceUah = item.serviceId
-    ? getServicePrice(item.serviceId, item.serviceId === "storybook" ? { pageCount: 6 } : undefined)
-    : item.fallbackPriceUah ?? null;
+  const priceUah =
+    svcKey
+      ? getServicePrice(
+          svcKey,
+          svcKey === "storybook" ? { pageCount: 6 } : undefined
+        )
+      : item.basePriceUah > 0
+        ? item.basePriceUah
+        : null;
   const sbLongPrice = getStorybookPrice(8);
-
-  const relatedItems = item.relatedSlugs
-    .map((slug) => getServiceLandingBySlug(slug))
-    .filter((entry): entry is ServiceLandingItem => Boolean(entry));
 
   return (
     <div className="space-y-14 pb-12">
@@ -50,13 +71,15 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
           <div className="grid gap-8 lg:grid-cols-[1.25fr_1fr] lg:items-center">
             <div className="space-y-5">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-400/10 px-3.5 py-1 text-xs font-semibold text-amber-200">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {svcConfig?.badgeLabel?.[lang] || item.tag[lang]}
-                </span>
-                {priceUah !== null && (
+                {item.badge && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-400/10 px-3.5 py-1 text-xs font-semibold text-amber-200">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {item.badge}
+                  </span>
+                )}
+                {priceUah !== null && priceUah > 0 && (
                   <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3.5 py-1 text-xs font-bold text-emerald-200">
-                    {item.serviceId === "storybook"
+                    {svcKey === "storybook"
                       ? isUk
                         ? `від ${priceUah} ₴ (8 стор. — ${sbLongPrice} ₴)`
                         : `от ${priceUah} ₴ (8 стр. — ${sbLongPrice} ₴)`
@@ -66,21 +89,21 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
               </div>
 
               <h1 className="font-serif-book text-3xl font-bold leading-tight text-amber-50 sm:text-4xl lg:text-5xl">
-                {item.h1[lang]}
+                {item.h1}
               </h1>
 
               <p className="text-sm leading-relaxed text-slate-300 sm:text-base">
-                {item.intro[lang]}
+                {item.intro}
               </p>
 
               <div className="flex flex-wrap gap-3 pt-1">
-                {isLiveOrderable && item.constructorHref ? (
+                {isLiveOrderable && item.ctaOrderUrl ? (
                   <>
                     <Link
-                      href={l(item.constructorHref)}
+                      href={l(item.ctaOrderUrl)}
                       className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-3.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
                     >
-                      {item.serviceId === "storybook" ? (
+                      {svcKey === "storybook" ? (
                         <BookOpen className="h-4 w-4" />
                       ) : (
                         <Video className="h-4 w-4" />
@@ -88,7 +111,7 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
                       {isUk ? "Замовити зараз" : "Заказать сейчас"}
                       <ArrowRight className="h-4 w-4" />
                     </Link>
-                    {item.showcaseKind && (
+                    {item.showcaseKind !== "none" && (
                       <a
                         href="#demo"
                         className="inline-flex items-center gap-2 rounded-xl border border-amber-200/30 bg-white/5 px-5 py-3.5 text-sm font-semibold text-amber-100 transition hover:bg-white/10"
@@ -106,7 +129,11 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
                         : "Формат готовится к запуску"}
                     </span>
                     <Link
-                      href={l(item.slug === "multfilm-pro-dytynu" ? "/create/storybook" : "/create/video")}
+                      href={l(
+                        item.slug === "multfilm-pro-dytynu"
+                          ? "/create/storybook"
+                          : "/create/video"
+                      )}
                       className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                     >
                       {item.slug === "multfilm-pro-dytynu"
@@ -122,13 +149,15 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
                 )}
               </div>
 
-              <p className="text-xs text-slate-400">{item.heroFootnote[lang]}</p>
+              {item.heroFootnote && (
+                <p className="text-xs text-slate-400">{item.heroFootnote}</p>
+              )}
             </div>
 
             <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#0b1020] shadow-xl">
               <img
-                src={item.previewImage}
-                alt={item.label[lang]}
+                src={item.coverImageUrl}
+                alt={item.label}
                 className="aspect-[4/3] w-full object-cover object-center"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0b1020]/90 via-transparent to-transparent" />
@@ -142,7 +171,7 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
                       ? "Приклад готового результату"
                       : "Пример готового результата"}
                 </span>
-                {svcConfig?.features?.[lang]?.[0] && (
+                {item.features.length > 0 && (
                   <span className="hidden rounded-lg bg-emerald-500/20 px-2.5 py-1 text-[11px] font-semibold text-emerald-200 backdrop-blur-xs sm:inline">
                     <CheckCircle2 className="mr-1 inline h-3 w-3" />
                     {isUk ? "Прев’ю до оплати" : "Превью до оплаты"}
@@ -154,30 +183,96 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
         </section>
       </div>
 
+      {/* Service Variations Picker (shown when > 1 enabled variations exist) */}
+      {variations.length > 1 && item.ctaOrderUrl && (
+        <section className="space-y-5">
+          <div className="space-y-1.5">
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-300">
+              <Layers className="h-3.5 w-3.5" />
+              {isUk ? "Варіації сюжету" : "Вариации сюжета"}
+            </span>
+            <h2 className="font-serif-book text-2xl font-bold text-amber-50 sm:text-3xl">
+              {isUk
+                ? "Оберіть атмосферу та локацію ролика"
+                : "Выберите атмосферу и локацию ролика"}
+            </h2>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {variations.map((v) => {
+              const vPrice = v.priceOverrideUah ?? priceUah;
+              return (
+                <div
+                  key={v.variationSlug}
+                  className="flex flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-[#121a30]/85 shadow-xl"
+                >
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={v.posterUrl}
+                      alt={v.title}
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#121a30] via-transparent to-transparent" />
+                    {v.shortBadge && (
+                      <span className="absolute left-3 top-3 rounded-full border border-amber-300/35 bg-[#0b1020]/80 px-2.5 py-1 text-[11px] font-semibold text-amber-200">
+                        {v.shortBadge}
+                      </span>
+                    )}
+                    {vPrice !== null && vPrice > 0 && (
+                      <span className="absolute bottom-2.5 right-3 rounded-lg bg-[#0b1020]/85 px-2.5 py-1 text-xs font-bold text-amber-200">
+                        {vPrice} ₴
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col justify-between space-y-4 p-5">
+                    <div className="space-y-1.5">
+                      <h3 className="font-serif-book text-lg font-bold text-white">
+                        {v.title}
+                      </h3>
+                      {v.description && (
+                        <p className="text-xs leading-relaxed text-slate-300">
+                          {v.description}
+                        </p>
+                      )}
+                    </div>
+                    <Link
+                      href={l(`${item.ctaOrderUrl}?variation=${encodeURIComponent(v.variationSlug)}`)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                    >
+                      {isUk ? "Обрати цей сюжет" : "Выбрать этот сюжет"}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* Live Demo Showcase */}
       {item.showcaseKind === "storybook" && (
         <section id="demo" className="scroll-mt-24">
-          <StorybookShowcaseReader />
+          <StorybookShowcaseReader storybooks={showcases?.storybooks} />
         </section>
       )}
       {item.showcaseKind === "video" && (
         <section id="demo" className="scroll-mt-24">
-          <VideoShowcasePlayer />
+          <VideoShowcasePlayer videos={showcases?.videos} />
         </section>
       )}
 
       {/* Detailed Content Sections */}
       <div className="space-y-8">
         {item.sections.map((section) => {
-          if (section.steps) {
-            const stepsList = section.steps[lang];
+          if (section.steps && section.steps.length > 0) {
             return (
-              <section key={section.title.uk} className="space-y-4">
+              <section key={section.title} className="space-y-4">
                 <h2 className="font-serif-book text-2xl font-bold text-amber-50 sm:text-3xl">
-                  {section.title[lang]}
+                  {section.title}
                 </h2>
                 <div className="grid gap-4 md:grid-cols-3">
-                  {stepsList.map((stepText, idx) => (
+                  {section.steps.map((stepText, idx) => (
                     <div
                       key={idx}
                       className="rounded-2xl border border-white/10 bg-[#121a30]/80 p-5 space-y-2"
@@ -197,19 +292,19 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
 
           return (
             <section
-              key={section.title.uk}
+              key={section.title}
               className="rounded-2xl border border-white/10 bg-[#121a30]/75 p-6 sm:p-8 space-y-3"
             >
               <h2 className="font-serif-book text-xl font-bold text-amber-50 sm:text-2xl">
-                {section.title[lang]}
+                {section.title}
               </h2>
               <p className="text-sm leading-relaxed text-slate-300 sm:text-base">
-                {section.includePriceNote && priceUah !== null && (
+                {section.includePriceNote && priceUah !== null && priceUah > 0 && (
                   <strong className="mr-1.5 text-amber-200">
                     {isUk ? `Від ${priceUah} грн.` : `От ${priceUah} грн.`}
                   </strong>
                 )}
-                {section.text?.[lang]}
+                {section.text}
               </p>
               {section.priceLink && (
                 <Link
@@ -225,15 +320,24 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
         })}
       </div>
 
-      {/* Service FAQ */}
-      <FaqSection items={item.faq} />
+      {/* Free Visual Builder Area (FAQ, Reviews, CTA, custom blocks) */}
+      {item.extraBlocks.length > 0 && (
+        <RenderBlocks
+          blocks={item.extraBlocks}
+          services={allServices}
+          showcases={showcases}
+          articles={articles}
+        />
+      )}
 
       {/* Related Services */}
       {relatedItems.length > 0 && (
         <section className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-serif-book text-2xl font-bold text-amber-50">
-              {isUk ? "Інші привітання та подарунки" : "Другие поздравления и подарки"}
+              {isUk
+                ? "Інші привітання та подарунки"
+                : "Другие поздравления и подарки"}
             </h2>
             <Link
               href={l("/tsiny")}
@@ -246,16 +350,18 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
 
           <div className="grid gap-5 md:grid-cols-3">
             {relatedItems.map((rel) => {
-              const relSvc = rel.serviceId
-                ? pricing.services[rel.serviceId]
-                : undefined;
-              const relPrice = rel.serviceId
-                ? getServicePrice(rel.serviceId)
-                : rel.fallbackPriceUah ?? null;
+              const relKey =
+                rel.serviceKey !== "custom" ? rel.serviceKey : undefined;
+              const relSvc = relKey ? pricing.services[relKey] : undefined;
+              const relPrice = relKey
+                ? getServicePrice(relKey)
+                : rel.basePriceUah > 0
+                  ? rel.basePriceUah
+                  : null;
               const relOrderable = Boolean(
-                rel.constructorHref &&
-                  (relSvc?.enabled ?? true) &&
-                  !(relSvc?.comingSoon ?? false)
+                rel.ctaOrderUrl &&
+                  rel.status === "active" &&
+                  (relSvc ? relSvc.enabled && !relSvc.comingSoon : true)
               );
 
               return (
@@ -265,12 +371,12 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
                 >
                   <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
                     <img
-                      src={rel.previewImage}
-                      alt={rel.label[lang]}
+                      src={rel.coverImageUrl}
+                      alt={rel.label}
                       className="h-full w-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#121a30] via-transparent to-transparent" />
-                    {relPrice !== null && (
+                    {relPrice !== null && relPrice > 0 && (
                       <span className="absolute bottom-2.5 right-3 rounded-lg bg-[#0b1020]/85 px-2.5 py-1 text-xs font-bold text-amber-200">
                         {isUk ? `від ${relPrice} ₴` : `от ${relPrice} ₴`}
                       </span>
@@ -280,10 +386,10 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
                   <div className="flex flex-1 flex-col justify-between space-y-4 p-5">
                     <div className="space-y-1.5">
                       <h3 className="font-serif-book text-lg font-bold text-white">
-                        {rel.label[lang]}
+                        {rel.label}
                       </h3>
                       <p className="text-xs leading-relaxed text-slate-300">
-                        {rel.short[lang]}
+                        {rel.shortDescription}
                       </p>
                     </div>
 
@@ -294,9 +400,9 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
                       >
                         {isUk ? "Детальніше" : "Подробнее"}
                       </Link>
-                      {relOrderable && rel.constructorHref ? (
+                      {relOrderable && rel.ctaOrderUrl ? (
                         <Link
-                          href={l(rel.constructorHref)}
+                          href={l(rel.ctaOrderUrl)}
                           className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                         >
                           {isUk ? "Замовити" : "Заказать"}
@@ -317,21 +423,25 @@ export function ServiceLandingView({ item }: { item: ServiceLandingItem }) {
       )}
 
       {/* Blog Articles */}
-      <section className="space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-serif-book text-2xl font-bold text-amber-50">
-            {isUk ? "Ідеї для вашого привітання" : "Идеи для вашего поздравления"}
-          </h2>
-          <Link
-            href={l("/blog")}
-            className="inline-flex items-center gap-1 text-sm font-semibold text-amber-300 hover:text-amber-200"
-          >
-            {isUk ? "Усі статті" : "Все статьи"}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-        <ArticleCards articles={BLOG_ARTICLES} />
-      </section>
+      {articles.length > 0 && (
+        <section className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-serif-book text-2xl font-bold text-amber-50">
+              {isUk
+                ? "Ідеї для вашого привітання"
+                : "Идеи для вашего поздравления"}
+            </h2>
+            <Link
+              href={l("/blog")}
+              className="inline-flex items-center gap-1 text-sm font-semibold text-amber-300 hover:text-amber-200"
+            >
+              {isUk ? "Усі статті" : "Все статьи"}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <ArticleCards articles={articles} />
+        </section>
+      )}
     </div>
   );
 }

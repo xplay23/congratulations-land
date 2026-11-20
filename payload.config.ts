@@ -11,12 +11,25 @@ import { en } from "@payloadcms/translations/languages/en";
 
 import { Users } from "./engine/collections/Users";
 import { Media } from "./engine/collections/Media";
+import { Pages } from "./engine/collections/Pages";
+import { Services } from "./engine/collections/Services";
+import { ServiceVariations } from "./engine/collections/ServiceVariations";
+import { Showcases } from "./engine/collections/Showcases";
+import { Reviews } from "./engine/collections/Reviews";
+import { PostCategories } from "./engine/collections/PostCategories";
+import { Authors } from "./engine/collections/Authors";
+import { Posts } from "./engine/collections/Posts";
+
+import { HomeTemplate } from "./engine/globals/HomeTemplate";
 import { SiteSettings } from "./engine/globals/SiteSettings";
+import { HeaderNav } from "./engine/globals/HeaderNav";
+import { FooterNav } from "./engine/globals/FooterNav";
 import { AISettings } from "./engine/globals/AISettings";
 import { StorybookAISettings } from "./engine/globals/StorybookAISettings";
 import { ElevenLabsSettings } from "./engine/globals/ElevenLabsSettings";
 import { AIPrompts } from "./engine/globals/AIPrompts";
 import { PlatformLimits } from "./engine/globals/PlatformLimits";
+import { AiEconomics } from "./engine/globals/AiEconomics";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -61,10 +74,6 @@ export default buildConfig({
           Component: "engine/views/Orders/index#OrdersPageView",
           path: "/orders",
         },
-        Tariffs: {
-          Component: "engine/views/Tariffs/index#TariffsPageView",
-          path: "/tariffs",
-        },
       },
       graphics: {
         Logo: "engine/views/AdminLogo/index",
@@ -73,14 +82,29 @@ export default buildConfig({
     },
   },
   editor: lexicalEditor(),
-  collections: [Users, Media],
+  collections: [
+    Pages,
+    Services,
+    ServiceVariations,
+    Showcases,
+    Reviews,
+    Posts,
+    PostCategories,
+    Authors,
+    Media,
+    Users,
+  ],
   globals: [
+    HomeTemplate,
     SiteSettings,
+    HeaderNav,
+    FooterNav,
     AISettings,
     StorybookAISettings,
     ElevenLabsSettings,
     AIPrompts,
     PlatformLimits,
+    AiEconomics,
   ],
   db: postgresAdapter({
     pool: {
@@ -88,7 +112,26 @@ export default buildConfig({
     },
     push: process.env.PAYLOAD_DB_PUSH !== "false",
   }),
-  plugins: [seoPlugin({})],
+  plugins: [
+    seoPlugin({
+      collections: ["pages", "services", "posts"],
+      globals: ["home-template"],
+      uploadsCollection: "media",
+      tabbedUI: true,
+      fields: ({ defaultFields }) => [
+        {
+          name: "aiSeoGenerate",
+          type: "ui",
+          admin: {
+            components: {
+              Field: "engine/components/admin/PageSeoButton",
+            },
+          },
+        },
+        ...defaultFields,
+      ],
+    }),
+  ],
   typescript: {
     outputFile: path.resolve(dirname, "engine", "types", "payload.ts"),
   },

@@ -1,11 +1,12 @@
 import type { MetadataRoute } from "next";
 import { localizeHref } from "@/lib/locale";
 import {
-  BLOG_ARTICLES,
-  BLOG_HUBS,
-  LEGAL_PAGES,
-  SERVICE_CATALOG,
-} from "@/lib/site-content";
+  getCmsBlogCategories,
+  getCmsPages,
+  getCmsPosts,
+  getCmsServices,
+} from "@/lib/cms-content";
+import { LEGAL_PAGES } from "@/lib/site-content";
 
 function getSiteUrl(): string {
   return (
@@ -14,20 +15,33 @@ function getSiteUrl(): string {
   );
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = getSiteUrl();
-  const routes = [
+  const [services, pages, categories, posts] = await Promise.all([
+    getCmsServices("uk"),
+    getCmsPages("uk"),
+    getCmsBlogCategories("uk"),
+    getCmsPosts("uk"),
+  ]);
+
+  const pageRoutes =
+    pages.length > 0
+      ? pages.map((p) => `/${p.slug}`)
+      : ["/tsiny", ...Object.keys(LEGAL_PAGES).map((slug) => `/${slug}`)];
+
+  const routeSet = new Set<string>([
     "/",
-    "/tsiny",
-    ...SERVICE_CATALOG.map((item) => `/${item.slug}`),
-    ...Object.keys(LEGAL_PAGES).map((slug) => `/${slug}`),
+    ...pageRoutes,
+    ...services
+      .filter((s) => s.status !== "hidden")
+      .map((item) => `/${item.slug}`),
     "/blog",
-    ...BLOG_HUBS.map((hub) => `/blog/${hub.slug}`),
-    ...BLOG_ARTICLES.map((article) => `/blog/${article.hub}/${article.slug}`),
-  ];
+    ...categories.map((hub) => `/blog/${hub.slug}`),
+    ...posts.map((article) => `/blog/${article.hubSlug}/${article.slug}`),
+  ]);
 
   const entries: MetadataRoute.Sitemap = [];
-  for (const route of routes) {
+  for (const route of routeSet) {
     const ukUrl = `${siteUrl}${localizeHref(route, "uk")}`;
     const ruUrl = `${siteUrl}${localizeHref(route, "ru")}`;
     const languages = {

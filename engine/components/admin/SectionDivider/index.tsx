@@ -331,3 +331,21 @@ export function PostSidebarCategoriesTagsDivider() {
     />
   );
 }
+
+export function AiEconomicsDivider() {
+  const lang = useAdminLang();
+  return (
+    <SectionDivider
+      label={tAdmin(
+        lang,
+        "Курсы валют и себестоимость ИИ",
+        "Курси валют та собівартість ШІ"
+      )}
+      description={tAdmin(
+        lang,
+        "Используется на Дашборде для расчёта себестоимости генерации и чистой маржи заказов (OpenAI, изображения, ElevenLabs).",
+        "Використовується на Дашборді для розрахунку собівартості генерації та чистої маржі замовлень (OpenAI, зображення, ElevenLabs)."
+      )}
+    />
+  );
+}

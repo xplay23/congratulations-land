@@ -1,24 +1,51 @@
-'use client'
+"use client";
 
-import { useRowLabel } from '@payloadcms/ui'
+import { useRowLabel } from "@payloadcms/ui";
+
+const PREFERRED_KEYS = [
+  "title",
+  "label",
+  "heading",
+  "question",
+  "text",
+  "name",
+  "modelId",
+  "step",
+  "key",
+  "href",
+  "url",
+];
+
+function extractReadableLabel(data: Record<string, unknown> | undefined): string | null {
+  if (!data) return null;
+
+  for (const key of PREFERRED_KEYS) {
+    const val = data[key];
+    if (typeof val === "string" && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+
+  for (const [key, val] of Object.entries(data)) {
+    if (key === "id" || key === "blockType" || key === "blockName") continue;
+    if (typeof val === "string" && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+
+  return null;
+}
 
 /**
- * Universal RowLabel that shows the first non-empty string value from the row data.
- * Attach to any array field so collapsed rows show meaningful content instead of "Item 01".
- *
- * Usage in collection/global field:
- *   admin: {
- *     components: { RowLabel: 'engine/components/admin/FirstFieldRowLabel#FirstFieldRowLabel' }
- *   }
+ * Universal RowLabel that shows the readable title/label of a collapsed array row.
+ * Exported as both named and default so Payload importMap resolves either form.
  */
 export function FirstFieldRowLabel() {
-  const { data, rowNumber } = useRowLabel<Record<string, unknown>>()
+  const { data, rowNumber } = useRowLabel<Record<string, unknown>>();
+  const label = extractReadableLabel(data);
+  const idx = typeof rowNumber === "number" ? rowNumber + 1 : 1;
 
-  const label = data
-    ? Object.entries(data).find(
-        ([k, v]) => k !== 'id' && typeof v === 'string' && v.trim().length > 0
-      )?.[1] as string | undefined
-    : undefined
-
-  return <span>{label ?? `Item ${String(rowNumber).padStart(2, '0')}`}</span>
+  return <span>{label ?? `Пункт ${String(idx).padStart(2, "0")}`}</span>;
 }
+
+export default FirstFieldRowLabel;

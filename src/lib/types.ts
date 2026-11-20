@@ -58,6 +58,7 @@ export interface StorybookOrderPayload {
 export interface VideoOrderPayload {
   lang: Lang;
   character: "st_nicholas";
+  variationSlug?: string;
   childName: string;
   childNameVocative?: string;
   gender: ChildGender;

@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { localizeHref } from "./locale";
 import {
-  BLOG_ARTICLES,
-  BLOG_HUBS,
-  LEGAL_PAGES,
-  getServiceLandingBySlug,
-  type LegalPageItem,
-} from "./site-content";
+  getCmsBlogCategories,
+  getCmsHomeTemplate,
+  getCmsPageBySlug,
+  getCmsPostBySlug,
+  getCmsServiceBySlug,
+} from "./cms-content";
+import { LEGAL_PAGES, type LegalPageItem } from "./site-content";
 import type { Lang } from "./types";
 
 function getSiteUrl(): string {
@@ -42,15 +43,18 @@ export async function makeHomeMetadata(): Promise<Metadata> {
   const h = await headers();
   const locale: Lang = h.get("x-locale") === "ru" ? "ru" : "uk";
   const canonicalPath = h.get("x-canonical-path") || "/";
+  const homeTpl = await getCmsHomeTemplate(locale);
 
   const title =
-    locale === "ru"
+    homeTpl.seoTitle ||
+    (locale === "ru"
       ? "VideoVitannya — Персональные видеопоздравления и сказки PDF"
-      : "VideoVitannya — Персональні відеопривітання та казки PDF";
+      : "VideoVitannya — Персональні відеопривітання та казки PDF");
   const description =
-    locale === "ru"
+    homeTpl.seoDescription ||
+    (locale === "ru"
       ? "Платформа персонализированных цифровых подарков для детей и взрослых: именные видео от Святого Николая и иллюстрированные сказки в PDF."
-      : "Платформа персоналізованих цифрових подарунків для дітей і дорослих: іменні відео від Святого Миколая та ілюстровані казки в PDF.";
+      : "Платформа персоналізованих цифрових подарунків для дітей і дорослих: іменні відео від Святого Миколая та ілюстровані казки в PDF.");
 
   return {
     title,
@@ -66,19 +70,30 @@ export async function makeHomeMetadata(): Promise<Metadata> {
 
 export async function makeServiceMetadata(slug: string): Promise<Metadata> {
   const locale = await getServerLocale();
-  const item = getServiceLandingBySlug(slug);
+  const item = await getCmsServiceBySlug(slug, locale);
   if (!item) {
     return { title: "VideoVitannya" };
   }
   return {
-    title: item.seoTitle[locale],
-    description: item.seoDescription[locale],
+    title: item.seoTitle,
+    description: item.seoDescription,
     alternates: buildAlternates(`/${item.slug}`, locale),
     openGraph: {
-      title: item.seoTitle[locale],
-      description: item.seoDescription[locale],
-      images: [item.previewImage],
+      title: item.seoTitle,
+      description: item.seoDescription,
+      images: [item.coverImageUrl],
     },
+  };
+}
+
+export async function makeCmsPageMetadata(slug: string): Promise<Metadata> {
+  const locale = await getServerLocale();
+  const page = await getCmsPageBySlug(slug, locale);
+  if (!page) return { title: "VideoVitannya" };
+  return {
+    title: page.seoTitle,
+    description: page.seoDescription,
+    alternates: buildAlternates(`/${page.slug}`, locale),
   };
 }
 
@@ -86,6 +101,14 @@ export async function makeLegalMetadata(
   slug: LegalPageItem["slug"]
 ): Promise<Metadata> {
   const locale = await getServerLocale();
+  const page = await getCmsPageBySlug(slug, locale);
+  if (page) {
+    return {
+      title: page.seoTitle,
+      description: page.seoDescription,
+      alternates: buildAlternates(`/${page.slug}`, locale),
+    };
+  }
   const doc = LEGAL_PAGES[slug];
   return {
     title: doc.title[locale],
@@ -96,6 +119,14 @@ export async function makeLegalMetadata(
 
 export async function makePricingMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();
+  const page = await getCmsPageBySlug("tsiny", locale);
+  if (page) {
+    return {
+      title: page.seoTitle,
+      description: page.seoDescription,
+      alternates: buildAlternates("/tsiny", locale),
+    };
+  }
   return {
     title:
       locale === "ru"
@@ -109,26 +140,29 @@ export async function makePricingMetadata(): Promise<Metadata> {
   };
 }
 
-export async function makeBlogIndexMetadata(hubSlug?: string): Promise<Metadata> {
+export async function makeBlogIndexMetadata(
+  hubSlug?: string
+): Promise<Metadata> {
   const locale = await getServerLocale();
   if (hubSlug) {
-    const hub = BLOG_HUBS.find((h) => h.slug === hubSlug);
+    const categories = await getCmsBlogCategories(locale);
+    const hub = categories.find((h) => h.slug === hubSlug);
     if (!hub) return { title: "Блог | VideoVitannya" };
     return {
-      title: `${hub.title[locale]} | VideoVitannya`,
-      description: hub.description[locale],
+      title: `${hub.title} | VideoVitannya`,
+      description: hub.description,
       alternates: buildAlternates(`/blog/${hub.slug}`, locale),
     };
   }
   return {
     title:
       locale === "ru"
-        ? "Блог о поздравлениях: идеи, тексты, видео | VideoVitannya"
-        : "Блог про привітання: ідеї, тексти, відео | VideoVitannya",
+        ? "Блог про поздравления и сказки | VideoVitannya"
+        : "Блог про привітання та казки | VideoVitannya",
     description:
       locale === "ru"
-        ? "Идеи для личных поздравлений, тексты ко Дню Святого Николая и советы по выбору подарков для детей и близких."
-        : "Ідеї для особистих привітань, тексти до Дня Святого Миколая та поради щодо подарунків для дітей і близьких.",
+        ? "Идеи, тёплые слова и советы для создания личных видеопоздравлений, именных сказок и подарков близким."
+        : "Ідеї, теплі слова й поради для створення особистих відеопривітань, іменних казок та подарунків близьким.",
     alternates: buildAlternates("/blog", locale),
   };
 }
@@ -138,16 +172,14 @@ export async function makeBlogArticleMetadata(
   slug: string
 ): Promise<Metadata> {
   const locale = await getServerLocale();
-  const article = BLOG_ARTICLES.find((a) => a.hub === hubSlug && a.slug === slug);
-  if (!article) {
-    return {
-      title:
-        locale === "ru" ? "Статья | VideoVitannya" : "Стаття | VideoVitannya",
-    };
-  }
+  const article = await getCmsPostBySlug(hubSlug, slug, locale);
+  if (!article) return { title: "Блог | VideoVitannya" };
   return {
-    title: `${article.title[locale]} | VideoVitannya`,
-    description: article.description[locale],
-    alternates: buildAlternates(`/blog/${article.hub}/${article.slug}`, locale),
+    title: article.seoTitle,
+    description: article.seoDescription,
+    alternates: buildAlternates(`/blog/${article.hubSlug}/${article.slug}`, locale),
+    ...(article.coverImageUrl
+      ? { openGraph: { images: [article.coverImageUrl] } }
+      : {}),
   };
 }

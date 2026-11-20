@@ -1,6 +1,21 @@
-# Payload CMS 3.84 — Архитектура и дорожная карта (Этапы А, Б, В)
+# Payload CMS 3.84 — Архитектура и дорожная карта (Этапы А, Б, В, Г)
 
-> **Статус на 2026-11-20:** **Этап А полностью завершён и отполирован.** Интерфейс админки русифицирован по умолчанию с переключателем `RU | UA`, все кастомные страницы переведены на единую дизайн-систему `domainer-platform` / Payload, настройки разделены на отдельные страницы (`Общие`, `ИИ (Контент)`, `ИИ-сказки`, `ElevenLabs`, `Промпты`, `Лимиты`). **Этапы Б и В** готовы к реализации в новых чатах поверх фундамента Этапа А.
+> **Статус на 2026-11-21:** **Этап А, Этап Б и визуальный конструктор страниц/шаблонов (`HomeTemplate` + `Pages` + свободная область блоков на `Services`, всего 22 блока) полностью реализованы и проверены вживую.** Легаси-страница `/admin/tariffs` и отдельная коллекция `Faqs` удалены (FAQ — блок конструктора); в `HeaderNav` поддержаны вложенные выпадающие пункты (`children`); `Reviews` нелокализуемы (оригинальный язык автора) с поддержкой текстовых отзывов (с фото) и встраивания Instagram; в `AiEconomics` добавлена кнопка автообновления цен рабочих моделей из реестра LiteLLM + курса НБУ `USD → UAH` (`/api/ai/economics/refresh`). Далее остаются: **токенная система редизайна (`src/styles/tokens.css` + `DESIGN.md`)** и **Этап Г (полный отказ от SQLite → единый PostgreSQL 16)**.
+
+---
+
+## 0. Главный архитектурный принцип админки (обязательно к соблюдению)
+
+**Мы строим новую админку строго по нативной логике Payload CMS, а не переносим и не костылим экраны из старой самописной админки.**
+
+1. **Никакого легаси и дублирования экранов:** всё, что относится к контенту, каталогу услуг, ценам/тирам, вариациям, блогу, навигации, промптам, лимитам и системным справочникам, реализуется **исключительно нативными Collections и Globals Payload CMS** (с вкладками `tabs`, нативными фильтрами, списком колонок, локализацией `uk`/`ru`, `TranslateLocaleButton` и ИИ-кнопками).
+2. **Кастомные страницы (Custom Views) допускаются только там, где это действительно операционный инструмент, а не CRUD:**
+   - `/admin` (**Дашборд**) — сводная бизнес-аналитика, маржа, конверсии и «Состояние интеграций»;
+   - `/admin/orders` (**Заказы**) — операционный инспектор заказов с живыми действиями (`Resume`, `Sync Plata by mono`, возврат/финализация холда, `+1 AI-правка`, просмотр превью/результата).
+   - **Страница `/admin/tariffs` (`AdminSettingsTab`) — временный пережиток старой админки и подлежит полному удалению на Этапе Б:** цены и статусы услуг переезжают в коллекцию `Services`, а курсы себестоимости ИИ — в глобал `AiEconomics` («Курсы и маржа»).
+3. **Единый источник истины и целевой стек с одной БД:**
+   - Payload (PostgreSQL 16) — единственный источник истины для всех настроек, цен и контента.
+   - Временное хранение операционных таблиц в `node:sqlite` — лишь промежуточный шаг, чтобы не ломать проверенный E2E-чекаут во время сборки админки; в финале (**Этап Г**) проект полностью переходит на **единый PostgreSQL 16** без второй базы данных.
 
 ---
 
@@ -58,57 +73,70 @@
 
 ---
 
-## 2. Спецификация Этапа Б (для нового чата): Коллекции услуг, вариаций, демо, отзывов и блога
+## 2. Этап Б и визуальный конструктор страниц/шаблонов (Готово)
 
-**Цель Этапа Б:** перенести жёстко зашитый контент из `src/lib/site-content.ts` и `src/lib/pricing-defaults.ts` в локализованные (`uk` / `ru`) коллекции и глобалы Payload CMS с редактированием через админку, ИИ-генерацией текстов/SEO и двунаправленным переводом `RU ↔ UA`.
+**Итог:** платформа переведена на чистую Payload-нативную модель управления каталогом, ценами, блогом, навигацией, шаблоном главной и страницами — легаси-экран `/admin/tariffs` и отдельная коллекция `Faqs` удалены, все массивы используют читаемый `FirstFieldRowLabel`.
 
-### Новые коллекции (`engine/collections/`)
-1. **`Services` (`slug: "services"`):**
-   - Единый каталог всех услуг платформы: `svyatyj-mykolaj`, `kazka`, `ozhyvyty-foto`, `pisnya-na-zamovlennya`, `den-narodzhennya`, `novyj-rik`, `multfilm-pro-dytynu`.
-   - Общие поля: `slug`, `serviceType` (`video` | `storybook` | `photo_animation` | `song` | `other`), `status` (`active` | `coming_soon` | `hidden`), `sortOrder` (для сохранения «Відео від Святого Миколая» на 1-м месте), `ctaOrderUrl` (например `/create/video` или `/create/storybook`), базовые цены/тарифные привязки, обложка/иконка.
-   - Локализованные поля (`uk` / `ru`): название, бейдж, краткое описание карточки, расширенный список преимуществ, заголовок/подзаголовок посадочной страницы услуги, текст кнопки заказа, SEO-поля (`@payloadcms/plugin-seo`), кнопка `TranslateLocaleButton` + `PageSeoButton`.
+### Коллекции (`engine/collections/`)
+1. **`Services` (`slug: "services"` — единый источник истины по услуге, статусу и цене):**
+   - Каталог всех 7 услуг (`svyatyj-mykolaj`, `kazka`, `ozhyvyty-foto`, `pisnya-na-zamovlennya`, `den-narodzhennya`, `novyj-rik`, `multfilm-pro-dytynu`).
+   - **Вкладка «Основное и цена»**: `slug` (`SlugField`), `serviceKey`, `status` (`active` | `coming_soon` | `hidden`), `sortOrder`, `ctaOrderUrl`, `showcaseKind`, `coverImage`/`fallbackImageUrl`, `basePriceUah`, массив `pricingTiers`, `relatedServices`.
+   - **Вкладка «Контент (UA / RU)»**: `TranslateLocaleButton`, `title`, `label`, `badge`, `shortDescription`, `ctaLabel`, `features`, `h1`, `intro`, `heroFootnote`, `sections` и свободная область визуального конструктора **`extraBlocks`** (FAQ, отзывы, шаги, баннеры, CTA и др.).
+   - **Вкладка «SEO»**: `@payloadcms/plugin-seo` + кнопка `PageSeoButton`.
+   - `afterChange`/`afterDelete` синхронизируют кэш цен и ревалидируют страницы.
 2. **`ServiceVariations` (`slug: "service-variations"`):**
-   - Вариации внутри одной услуги с единой ценой и общей механикой заказа (например: Святой Николай в сказочной комнате, в зимнем лесу, в мастерской, или сезонный Дед Мороз).
-   - Поля: связь `service` (relationship → `services`), `variationSlug`, `enabled`, `isDefault`, `sortOrder`, локализованные `title`, `shortBadge`, `description`, демо-ролик (`demoVideoPath` / `media`), превью-кадр.
-   - Технические параметры пайплайна (нелокализуемые): `pipelineTemplateId` (папка/набор клипов для Python-сборщика), опциональный `elevenLabsVoiceIdOverride`, опциональные шаблоны реплик (`line03Uk`, `line03Ru`, `line04bUk`, `line04bRu`, `line07Uk`, `line07Ru`).
-   - Интеграция с конструктором `/create/video` и `VideoOrderPayload` (`variationSlug`), а также блоком выбора вариаций на странице услуги.
+   - Вариации сюжета/локации с наследованием цены родительской `Services` (и опциональным `priceOverrideUah`), `pipelineTemplateId`, `elevenLabsVoiceIdOverride` и кастомными репликами; интегрированы в `/create/video`, `/api/config/video-variations`, `/api/orders/video` и [src/lib/video/pipeline.ts](file:///g:/WwW/work/gifts-project/src/lib/video/pipeline.ts).
 3. **`Showcases` (`slug: "showcases"`):**
-   - Живые демонстрации для `#live-demos` (видео-плеер `<VideoShowcasePlayer />` и интерактивный PDF-просмотрщик `<StorybookShowcaseReader />`).
-   - Поля: связь с `service` и опционально `serviceVariation`, тип (`video` | `storybook_pdf` | `before_after`), локализованные заголовок/подпись/возраст/сюжет, медиа/ссылки на `mp4`/`pdf`, флаг `featuredOnHome`, `sortOrder`.
-4. **`Reviews` (`slug: "reviews"`):**
-   - Отзывы родителей: локализованные текст и автор/город, оценка, связь с `service`, флаг `featuredOnHome`, дата/сортировка.
-5. **`Faqs` (`slug: "faqs"`):**
-   - Часто задаваемые вопросы: локализованные `question` и `answer` (RichText / textarea), привязка к `service` (или общий), флаги `showOnHome`, `showOnPricing`, `sortOrder`.
+   - Живые демонстрации видео (`MP4`) и сказок (`PDF`) для `#live-demos` и страниц услуг.
+4. **`Reviews` (`slug: "reviews"` — нелокализуемая коллекция):**
+   - Отзывы хранятся на оригинальном языке автора (UA или RU) без перевода; поддерживаются два типа (`reviewType`): **текстовый отзыв** (с опциональным фото `photo`) и **отзыв из Instagram** (`instagramUrl` с авто-встраиванием `<iframe>`, опциональный `instagramEmbedHtml` и резервный скриншот). Выводятся на страницах через блок конструктора `ReviewsBlock` (режим «Все отзывы» с лимитом или «Выбрать конкретные»).
+5. **`Pages` (`slug: "pages"` — произвольные и сервисные страницы на конструкторе):**
+   - Локализованные страницы `/tsiny`, `/pro-nas`, `/kontakty`, `/oferta`, `/konfidentsiynist`, плюс любые новые лендинги через динамический маршрут [src/app/(site)/\[slug\]/page.tsx](file:///g:/WwW/work/gifts-project/src/app/(site)/[slug]/page.tsx) и автоматическое включение в [sitemap.ts](file:///g:/WwW/work/gifts-project/src/app/sitemap.ts).
 6. **Блог (`Posts`, `PostCategories`, `Authors`):**
-   - Перенос `BLOG_HUBS` и `BLOG_POSTS` из `src/lib/site-content.ts` в полноценный блог с `PostAiButtons` (генерация заголовка, анонса, текста HTML→Lexical, тегов, категоризации и SEO), `SlugField` (транслитерация UA/RU) и `TranslateLocaleButton` (`RU ↔ UA`).
-   - Обновление `/blog`, `/blog/[hub]`, `/blog/[hub]/[slug]` и `src/app/sitemap.ts` на чтение из Payload Local API с fallback.
+   - Полноценный блог на Lexical RichText с [PostAiButtons](file:///g:/WwW/work/gifts-project/engine/components/admin/PostAiButtons/index.tsx), [PageSeoButton](file:///g:/WwW/work/gifts-project/engine/components/admin/PageSeoButton/index.tsx), `SlugField`, `TagsField` и `TranslateLocaleButton`.
 
-### Новые глобалы навигации (`engine/globals/`)
-- **`HeaderNav` (`slug: "header-nav"`)** и **`FooterNav` (`slug: "footer-nav"`)**: локализованные пункты меню, колонки футера и юридические ссылки.
+### Шаблоны и глобалы (`engine/globals/`)
+- **Шаблоны (обязательные неудаляемые страницы, подменю `Контент → Шаблоны`):**
+  - **`HomeTemplate` (`slug: "home-template"`, «Главная страница»):** полностью собирается на блоках конструктора (`Hero`, `LiveDemos`, `ServicesCatalog`, `Steps`, `PrivacyTrust`, `Text`, `Reviews`, `FAQ`, `BlogGrid`, `CTA` + все общие блоки) и рендерит `/` и `/ru`.
+- **Навигация и экономика (подменю `Настройки`):**
+  - **`HeaderNav` (`slug: "header-nav"`):** пункты верхнего меню с поддержкой вложенных выпадающих подпунктов **`children`** (как в `domainer-platform`);
+  - **`FooterNav` (`slug: "footer-nav"`):** колонки ссылок и юридические ссылки;
+  - **`AiEconomics` (`slug: "ai-economics"`, «Курсы и маржа»):** курс `USD → UAH`, тарифы текстовых/image-моделей и ElevenLabs + кнопка [AiRatesRefreshButton](file:///g:/WwW/work/gifts-project/engine/components/admin/AiRatesRefreshButton/index.tsx) ([POST /api/ai/economics/refresh](file:///g:/WwW/work/gifts-project/src/app/api/ai/economics/refresh/route.ts), [ai-rates-sync.ts](file:///g:/WwW/work/gifts-project/src/lib/ai-rates-sync.ts)), подтягивающая цены реально используемых в проде моделей из реестра LiteLLM и актуальный курс НБУ `bank.gov.ua`.
 
-### Миграционный сидер Этапа Б (`scripts/seed-stage-b.ts`)
-- Идемпотентный скрипт переноса всех текущих UA/RU-данных из `src/lib/site-content.ts` и синхронизации статусов/цен с `src/lib/pricing-defaults.ts` в Postgres без перезаписи уже отредактированных в админке записей.
+### Визуальный конструктор блоков (`engine/blocks/` + `src/components/RenderBlocks.tsx`)
+22 блока (все массивы с `FirstFieldRowLabel`, вертикальные отступы через [engine/lib/blocks/spacing.ts](file:///g:/WwW/work/gifts-project/engine/lib/blocks/spacing.ts)):
+- **Специализированные и базовые (`catalog.ts`, `content.ts`):** `HeroBlock`, `LiveDemosBlock`, `ServicesCatalogBlock`, `PricingTableBlock`, `StepsBlock`, `PrivacyTrustBlock`, `ReviewsBlock`, `FAQBlock` (с JSON-LD `FAQPage`), `TextBlock` (Lexical + опция кнопки cookies), `BlogGridBlock`, `CTABlock`, `SpacerBlock`.
+- **Адаптированные общие блоки из `domainer-platform` (`extra.ts`):** `BannerBlock` (с dismissible), `FeaturesBlock` (cards / list / icons-only + `IconPickerField`/`IconColorField`), `IconListBlock`, `LogosBlock`, `StatsBlock`, `TextImageBlock`, `VideoBlock` (YouTube / Vimeo / Upload), `ManifestoBlock`, `PricingCardsBlock`, `PaymentLogosBlock` (Plata by mono, Visa, Mastercard, Apple Pay, Google Pay, monobank, Privat24, custom).
+
+### Итоговая навигация `/admin`
+- **Операции (Custom Views):** `Дашборд`, `Заказы`
+- **Каталог:** `Услуги`, `Вариации`, `Примеры`, `Отзывы`
+- **Контент:** `Страницы`, `Шаблоны → Главная страница`, `Статьи`, `Рубрики`, `Авторы`, `Медиа`
+- **Система → Пользователи / Настройки:** `Общие`, `Меню шапки`, `Меню футера`, `ИИ (Контент)`, `ИИ-сказки`, `ElevenLabs`, `Промпты`, `Лимиты`, `Курсы и маржа`
+
+### Миграционный сидер (`scripts/seed-stage-b.ts`)
+- Идемпотентный скрипт `npm run seed:stage-b` переносит `Services` (с `FAQBlock` в `extraBlocks`), `ServiceVariations`, `Showcases`, нелокализуемые `Reviews`, `HomeTemplate`, `Pages` (`tsiny`, `pro-nas`, `kontakty`, `oferta`, `konfidentsiynist`), `Authors`, `PostCategories`, `Posts`, `HeaderNav`, `FooterNav` и `AiEconomics`.
 
 ---
 
-## 3. Спецификация Этапа В (для нового чата): Конструктор страниц (`Pages`) и токенная система дизайна
+## 3. Оставшаяся часть Этапа В: Токенная система дизайна (`src/styles/tokens.css` + `DESIGN.md`)
 
-**Цель Этапа В:** дать возможность собирать и перестраивать структуру любых посадочных и информационных страниц из блоков прямо в `/admin` и подготовить единую CSS-токенную архитектуру под последующий полный редизайн (`DESIGN.md`).
+**Что осталось от Этапа В:** конструктор страниц (`Pages`, `HomeTemplate`, 22 блока и `RenderBlocks.tsx`) уже реализован; остаётся вынести цвета, типографику, отступы, радиусы и тени фронтенда в единый слой семантических CSS-токенов `src/styles/tokens.css` и выполнить полную переработку визуального дизайна поверх блочной архитектуры по `DESIGN.md`.
 
-### Коллекция `Pages` и система блоков (`engine/collections/Pages.ts` + `engine/blocks/`)
-1. **`Pages` (`slug: "pages"`):**
-   - Страницы: главная (`home`), цены (`tsiny`), о нас (`pro-nas`), контакты (`kontakty`), оферта (`oferta`), конфиденциальность (`konfidentsiynist`), а также произвольные промо-лендинги.
-   - Поля: `slug`, локализованный `title`, `layout` (массив Payload-блоков с выбором, добавлением, перетаскиванием и скрытием секций), SEO-вкладка + кнопка `TranslateLocaleButton` (`RU ↔ UA`).
-2. **Адаптация структурных блоков из `domainer-platform` (только layout/сетка без тёмных стилей исходного проекта):**
-   - `HeroBlock`, `FeaturesGridBlock`, `StepsHowItWorksBlock`, `FaqBlock` (подтягивает записи из `faqs`), `ReviewsBlock` (из `reviews`), `CtaBannerBlock`, `RichContentBlock`, `ContactsBlock`, `BlogPreviewBlock` (последние статьи из `posts`).
-3. **Специализированные блоки VideoVitannya:**
-   - `LiveDemosShowcaseBlock` — блок живых демо видео и PDF-сказок (сохраняет приоритетную позицию перед каталогом услуг);
-   - `ServicesCatalogBlock` — витрина услуг с фильтрацией по статусу и двумя кнопками (*«Детальніше»* / *«Замовити»*);
-   - `ServiceVariationsPickerBlock` — выбор вариации внутри услуги (под разные сюжеты/локации одного формата);
-   - `StorybookStylesShowcaseBlock` — витрина 6 художественных стилей и 2 режимов вёрстки;
-   - `PricingTableBlock` — таблица тарифов (берёт актуальные цены из настроек и описания из `Services`);
-   - `PrivacyTrustStripBlock` — полоса гарантий приватности (удаление EXIF и фото, 30-дневное хранение, Plata by mono).
+---
 
-### Токенная система и ревалидация (`src/styles/tokens.css` + `RenderBlocks.tsx`)
-- Вынести цвета, типографику, отступы, радиусы и тени фронтенда в единый слой семантических CSS-токенов `src/styles/tokens.css` по образцу организации токенов в `domainer-platform`, но со значениями палитры VideoVitannya (чтобы после утверждения `DESIGN.md` поменять визуал всего сайта через один файл и компоненты блоков).
-- Реализовать `RenderBlocks.tsx` (SSR через Payload Local API с `locale: "uk" | "ru"` и безопасным fallback, плюс `afterChange`-хуки с `revalidatePath` для `/` и `/ru/...`).
+## 4. Спецификация Этапа Г: Полный отказ от SQLite и переход на единый PostgreSQL 16
+
+**Цель Этапа Г:** убрать вторую базу данных (`node:sqlite`, `storage/gifts.db`), чтобы вся платформа в продакшне работала на **одном экземпляре PostgreSQL 16** (единый бэкап, нормальная конкурентность транзакций под вебхуки `Plata by mono` и отсутствие синхронизации через `app_state`).
+
+### Что переносится в PostgreSQL 16
+В SQLite к моменту завершения Этапа Б остаются только 3 технические операционные таблицы (таблица `app_state` становится полностью ненужной, так как лимиты, цены и курсы живут в Payload):
+1. `op_orders` (бывшая `orders` — заказы, статусы генерации, `payload_json`/`result_json`/`ai_cost_json` в `jsonb`, инвойсы `Plata by mono`, `access_token`, 30-дневный `expires_at`);
+2. `op_email_auth_tokens` (OTP-коды и одноразовые magic-ссылки для `/my-orders`);
+3. `op_telegram_tokens` (одноразовые deep-link токены доставки в Telegram).
+
+### Архитектурное решение
+- Эти 3 таблицы размещаются в **том же PostgreSQL 16** (`DATABASE_URL`, отдельная схема `app` или префикс `op_`), чтобы не смешиваться с таблицами Payload и не нагружать Payload-хуками частые обновления `progress_percent` во время рендера.
+- [src/lib/db.ts](file:///g:/WwW/work/gifts-project/src/lib/db.ts) переводится на асинхронный драйвер `pg` (общий пул `DATABASE_URL`), а чтение лимитов, цен и курсов ИИ в [src/lib/settings.ts](file:///g:/WwW/work/gifts-project/src/lib/settings.ts) переводится напрямую на кэшируемые запросы к Payload Local API (как в `src/lib/cms-ai-config.ts`).
+- После миграции и проверки E2E удаляются зависимость от экспериментального `node:sqlite`, `app_state` и `afterChange`-зеркалирование из глобалов/коллекций в SQLite.
+- Кастомные экраны `/admin` (`Дашборд`) и `/admin/orders` (`Заказы`) сохраняются без потери функциональности и работают напрямую с таблицами `op_*` в PostgreSQL.

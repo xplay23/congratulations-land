@@ -10,6 +10,7 @@ import {
 import { deleteUploadFile, getOrderDirs, resolveUploadPath } from "@/lib/storage";
 import { AiCostTracker } from "@/lib/ai-cost";
 import { getCmsAiConfig, type CmsAiRuntimeConfig } from "@/lib/cms-ai-config";
+import { getCmsVariationBySlug } from "@/lib/cms-content";
 import type { VideoOrderPayload, VideoResult } from "@/lib/types";
 
 const execFileAsync = promisify(execFile);
@@ -220,7 +221,28 @@ export async function runVideoPipeline(
       throw new Error("Uploaded child photo was not found or expired");
     }
 
-    const cmsConfig = await getCmsAiConfig();
+    const baseCmsConfig = await getCmsAiConfig();
+    const variation = payload.variationSlug
+      ? await getCmsVariationBySlug(payload.variationSlug)
+      : undefined;
+
+    const effectivePrompts: Record<string, string> = {
+      ...baseCmsConfig.prompts,
+      ...(variation?.line03Uk ? { "video-line-03-uk": variation.line03Uk } : {}),
+      ...(variation?.line03Ru ? { "video-line-03-ru": variation.line03Ru } : {}),
+      ...(variation?.line04bUk ? { "video-line-04b-uk": variation.line04bUk } : {}),
+      ...(variation?.line04bRu ? { "video-line-04b-ru": variation.line04bRu } : {}),
+      ...(variation?.line07Uk ? { "video-line-07-uk": variation.line07Uk } : {}),
+      ...(variation?.line07Ru ? { "video-line-07-ru": variation.line07Ru } : {}),
+    };
+    const cmsConfig: CmsAiRuntimeConfig = {
+      ...baseCmsConfig,
+      ...(variation?.elevenLabsVoiceIdOverride
+        ? { elevenLabsVoiceId: variation.elevenLabsVoiceIdOverride }
+        : {}),
+      prompts: effectivePrompts,
+    };
+
     const lines = buildVideoScriptLines(payload, cmsConfig.prompts);
     const audioDir = path.join(base, "custom_audio");
     fs.mkdirSync(audioDir, { recursive: true });

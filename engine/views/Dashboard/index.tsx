@@ -35,7 +35,7 @@ export default async function Dashboard(props: ServerProps) {
         </p>
       </div>
 
-      {/* Quick actions bar (future content links will be added after Stage B) */}
+      {/* Quick actions bar */}
       <div
         style={{
           display: "flex",
@@ -47,8 +47,20 @@ export default async function Dashboard(props: ServerProps) {
         <a href="/admin/orders" className="aui-btn aui-btn--primary">
           {isUk ? "Замовлення" : "Заказы"}
         </a>
-        <a href="/admin/tariffs" className="aui-btn aui-btn--ghost">
-          {isUk ? "Тарифи" : "Тарифы"}
+        <a href="/admin/globals/home-template" className="aui-btn aui-btn--ghost">
+          {isUk ? "Шаблон головної" : "Шаблон главной"}
+        </a>
+        <a href="/admin/collections/pages" className="aui-btn aui-btn--ghost">
+          {isUk ? "Сторінки" : "Страницы"}
+        </a>
+        <a href="/admin/collections/services" className="aui-btn aui-btn--ghost">
+          {isUk ? "Послуги та ціни" : "Услуги и цены"}
+        </a>
+        <a href="/admin/collections/reviews" className="aui-btn aui-btn--ghost">
+          {isUk ? "Відгуки" : "Отзывы"}
+        </a>
+        <a href="/admin/collections/posts" className="aui-btn aui-btn--ghost">
+          {isUk ? "Статті блогу" : "Статьи блога"}
         </a>
       </div>
 

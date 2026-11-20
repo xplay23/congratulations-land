@@ -6,6 +6,7 @@ import {
   getPricingConfig,
 } from "@/lib/settings";
 import { attachSessionCookie, getOrCreateSessionId } from "@/lib/session";
+import { getCmsVariationBySlug } from "@/lib/cms-content";
 import { runVideoPipeline } from "@/lib/video/pipeline";
 import type { VideoOrderPayload } from "@/lib/types";
 
@@ -62,9 +63,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const variationSlug =
+      typeof body.variationSlug === "string" && body.variationSlug.trim()
+        ? body.variationSlug.trim().slice(0, 80)
+        : undefined;
+    const variation = variationSlug
+      ? await getCmsVariationBySlug(variationSlug)
+      : undefined;
+
     const payload: VideoOrderPayload = {
       lang,
       character: "st_nicholas",
+      ...(variation ? { variationSlug: variation.variationSlug } : {}),
       childName,
       childNameVocative: body.childNameVocative?.trim() || undefined,
       gender: body.gender,
@@ -74,12 +84,17 @@ export async function POST(req: NextRequest) {
       parentalConsent: true,
     };
 
+    const priceKopiykas =
+      variation?.priceOverrideUah && variation.priceOverrideUah > 0
+        ? Math.round(variation.priceOverrideUah * 100)
+        : getDynamicPriceKopiykas("video");
+
     const order = createOrder({
       sessionId,
       productType: "video",
       lang,
       payload,
-      priceKopiykas: getDynamicPriceKopiykas("video"),
+      priceKopiykas,
       aiEditsLimit: limits.maxAiEditsPerVideo,
       retentionDays: limits.orderRetentionDays,
     });

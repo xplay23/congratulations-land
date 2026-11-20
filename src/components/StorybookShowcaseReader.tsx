@@ -11,16 +11,19 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageContext";
 import { ART_STYLE_META, LAYOUT_META } from "@/lib/i18n";
-import { DEMO_STORYBOOKS } from "@/lib/site-content";
+import { DEMO_STORYBOOKS, type DemoStorybookItem } from "@/lib/site-content";
 import type { Lang } from "@/lib/types";
 
 export function StorybookShowcaseReader({
   showOrderCta = true,
+  storybooks,
 }: {
   showOrderCta?: boolean;
+  storybooks?: DemoStorybookItem[];
 }) {
   const { lang, l } = useLanguage();
   const isUk = lang === "uk";
+  const items = storybooks && storybooks.length > 0 ? storybooks : DEMO_STORYBOOKS;
   const [selectedBookId, setSelectedBookId] = useState<Lang>(lang);
 
   useEffect(() => {
@@ -28,7 +31,7 @@ export function StorybookShowcaseReader({
   }, [lang]);
 
   const book =
-    DEMO_STORYBOOKS.find((b) => b.id === selectedBookId) ?? DEMO_STORYBOOKS[0];
+    items.find((b) => b.id === selectedBookId) ?? items[0];
 
   const styleLabel = ART_STYLE_META[book.artStyle]?.label[lang] || book.artStyle;
   const layoutLabel = LAYOUT_META[book.layoutMode]?.label[lang] || book.layoutMode;
@@ -51,7 +54,7 @@ export function StorybookShowcaseReader({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {DEMO_STORYBOOKS.map((item) => {
+          {items.map((item) => {
             const active = item.id === book.id;
             return (
               <button

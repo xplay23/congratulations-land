@@ -1,10 +1,18 @@
 import type { GlobalConfig } from "payload";
+import { invalidateCmsContentCache } from "@/lib/cms-cache";
 
 export const SiteSettings: GlobalConfig = {
   slug: "site-settings",
   label: { ru: "Общие", uk: "Загальні", en: "General" },
   admin: {
     group: { ru: "Настройки", uk: "Налаштування", en: "Settings" },
+  },
+  hooks: {
+    afterChange: [
+      () => {
+        invalidateCmsContentCache(["/", "/ru"]);
+      },
+    ],
   },
   fields: [
     {

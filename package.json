@@ -13,7 +13,8 @@
     "db:stop": "docker compose -f docker-compose.dev.yml down",
     "payload": "payload",
     "generate:importmap": "payload generate:importmap",
-    "seed:stage-a": "tsx --env-file=.env.local scripts/seed-stage-a.ts"
+    "seed:stage-a": "tsx --env-file=.env.local scripts/seed-stage-a.ts",
+    "seed:stage-b": "tsx --env-file=.env.local scripts/seed-stage-b.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",

@@ -1,6 +1,5 @@
-import { TranslateLocaleButton as TranslateLocaleButton_a64619c38c03ea6a432b77aa94a631c7 } from 'engine/components/admin/TranslateLocaleButton'
-import { SiteContactsDivider as SiteContactsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
-import { SiteFooterDivider as SiteFooterDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { default as default_a64619c38c03ea6a432b77aa94a631c7 } from 'engine/components/admin/TranslateLocaleButton'
+import { default as default_b41e96a7d458ef6ba2b2f6b20aab9a4d } from 'engine/components/admin/SlugField'
 import { RscEntryLexicalCell as RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
 import { RscEntryLexicalField as RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
 import { LexicalDiffComponent as LexicalDiffComponent_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
@@ -24,6 +23,23 @@ import { StrikethroughFeatureClient as StrikethroughFeatureClient_e70f5e05f09f93
 import { UnderlineFeatureClient as UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { BoldFeatureClient as BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { ItalicFeatureClient as ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
+import { IconPickerField as IconPickerField_99a7557e31c0af64cf26b09ab095c2b3 } from 'engine/components/admin/IconPickerField'
+import { IconColorField as IconColorField_cd821047aa89e30a130132fbbe8feaea } from 'engine/components/admin/IconColorField'
+import { default as default_b1a64cfda206bdb63da65d708cdb8fdf } from 'engine/components/admin/FirstFieldRowLabel'
+import { default as default_b15db497a86ea6ba08800bf89d58ee98 } from 'engine/components/admin/PageSeoButton'
+import { OverviewComponent as OverviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { MetaTitleComponent as MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { default as default_ef6c86855fb93b444604e4a0e662004c } from 'engine/components/admin/PostAiButtons'
+import { PostSidebarStatusDivider as PostSidebarStatusDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { PostSidebarCategoriesTagsDivider as PostSidebarCategoriesTagsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { default as default_902c65040a5d334f05e103fe626ad0dc } from 'engine/components/admin/TagsField'
+import { PostSidebarVisualIdentityDivider as PostSidebarVisualIdentityDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { TranslateLocaleButton as TranslateLocaleButton_a64619c38c03ea6a432b77aa94a631c7 } from 'engine/components/admin/TranslateLocaleButton'
+import { SiteContactsDivider as SiteContactsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { SiteFooterDivider as SiteFooterDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
 import { default as default_c10cdfae14fcbc1dbbf6c067f86f2cdd } from 'engine/components/admin/SocialLinkRowLabel'
 import { AiDisabledWarning as AiDisabledWarning_ce6319776419034c570ae7355b6704e5 } from 'engine/components/admin/AiDisabledWarning'
 import { AiTextGenerationDivider as AiTextGenerationDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
@@ -50,6 +66,8 @@ import { ElevenLabsVoiceSettingsDivider as ElevenLabsVoiceSettingsDivider_b0ed66
 import { RangeNumberField as RangeNumberField_070d2a67dbc4d6b6c3dd4c04cfb18567 } from 'engine/components/admin/RangeNumberField'
 import { default as default_db91b7b69d58731c5679cb56c50fea8c } from 'engine/components/admin/PromptRowLabel'
 import { PlatformLimitsDivider as PlatformLimitsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { AiEconomicsDivider as AiEconomicsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { default as default_edccd209d951498fb46fcae22a5d2838 } from 'engine/components/admin/AiRatesRefreshButton'
 import { AdminNav as AdminNav_4d341da0937af724a97a3712621e3a43 } from 'engine/components/admin/Nav'
 import { default as default_e3aa934947093f04be224b308a61515b } from 'engine/views/AdminIcon/index'
 import { default as default_21872b787e0e5f0fe7cf73c06bd5b5bf } from 'engine/views/AdminLogo/index'
@@ -57,14 +75,12 @@ import { default as default_c6d4a1d95986779bf3bfa7ba237f8c91 } from 'engine/view
 import { default as default_fad5a03ee4ede314c43e6c03b21968c1 } from 'engine/views/AdminHeaderLink/index'
 import { default as default_01fdb6cb42b8bb2ad64a3333656f087a } from 'engine/views/Dashboard/index'
 import { OrdersPageView as OrdersPageView_912542095966af8acf797722d4383b23 } from 'engine/views/Orders/index'
-import { TariffsPageView as TariffsPageView_536d2e100f7afefab2710319f0519334 } from 'engine/views/Tariffs/index'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
 export const importMap = {
-  "engine/components/admin/TranslateLocaleButton#TranslateLocaleButton": TranslateLocaleButton_a64619c38c03ea6a432b77aa94a631c7,
-  "engine/components/admin/SectionDivider#SiteContactsDivider": SiteContactsDivider_b0ed66b01863cfbecfa9693eae7558a9,
-  "engine/components/admin/SectionDivider#SiteFooterDivider": SiteFooterDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/TranslateLocaleButton#default": default_a64619c38c03ea6a432b77aa94a631c7,
+  "engine/components/admin/SlugField#default": default_b41e96a7d458ef6ba2b2f6b20aab9a4d,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalField": RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e,
   "@payloadcms/richtext-lexical/rsc#LexicalDiffComponent": LexicalDiffComponent_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -88,6 +104,23 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#UnderlineFeatureClient": UnderlineFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#BoldFeatureClient": BoldFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/richtext-lexical/client#ItalicFeatureClient": ItalicFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
+  "engine/components/admin/IconPickerField#IconPickerField": IconPickerField_99a7557e31c0af64cf26b09ab095c2b3,
+  "engine/components/admin/IconColorField#IconColorField": IconColorField_cd821047aa89e30a130132fbbe8feaea,
+  "engine/components/admin/FirstFieldRowLabel#default": default_b1a64cfda206bdb63da65d708cdb8fdf,
+  "engine/components/admin/PageSeoButton#default": default_b15db497a86ea6ba08800bf89d58ee98,
+  "@payloadcms/plugin-seo/client#OverviewComponent": OverviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "@payloadcms/plugin-seo/client#MetaTitleComponent": MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "@payloadcms/plugin-seo/client#MetaImageComponent": MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "engine/components/admin/PostAiButtons#default": default_ef6c86855fb93b444604e4a0e662004c,
+  "engine/components/admin/SectionDivider#PostSidebarStatusDivider": PostSidebarStatusDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/SectionDivider#PostSidebarCategoriesTagsDivider": PostSidebarCategoriesTagsDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/TagsField#default": default_902c65040a5d334f05e103fe626ad0dc,
+  "engine/components/admin/SectionDivider#PostSidebarVisualIdentityDivider": PostSidebarVisualIdentityDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/TranslateLocaleButton#TranslateLocaleButton": TranslateLocaleButton_a64619c38c03ea6a432b77aa94a631c7,
+  "engine/components/admin/SectionDivider#SiteContactsDivider": SiteContactsDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/SectionDivider#SiteFooterDivider": SiteFooterDivider_b0ed66b01863cfbecfa9693eae7558a9,
   "engine/components/admin/SocialLinkRowLabel#default": default_c10cdfae14fcbc1dbbf6c067f86f2cdd,
   "engine/components/admin/AiDisabledWarning#AiDisabledWarning": AiDisabledWarning_ce6319776419034c570ae7355b6704e5,
   "engine/components/admin/SectionDivider#AiTextGenerationDivider": AiTextGenerationDivider_b0ed66b01863cfbecfa9693eae7558a9,
@@ -114,6 +147,8 @@ export const importMap = {
   "engine/components/admin/RangeNumberField#RangeNumberField": RangeNumberField_070d2a67dbc4d6b6c3dd4c04cfb18567,
   "engine/components/admin/PromptRowLabel#default": default_db91b7b69d58731c5679cb56c50fea8c,
   "engine/components/admin/SectionDivider#PlatformLimitsDivider": PlatformLimitsDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/SectionDivider#AiEconomicsDivider": AiEconomicsDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/AiRatesRefreshButton#default": default_edccd209d951498fb46fcae22a5d2838,
   "engine/components/admin/Nav#AdminNav": AdminNav_4d341da0937af724a97a3712621e3a43,
   "engine/views/AdminIcon/index#default": default_e3aa934947093f04be224b308a61515b,
   "engine/views/AdminLogo/index#default": default_21872b787e0e5f0fe7cf73c06bd5b5bf,
@@ -121,6 +156,5 @@ export const importMap = {
   "engine/views/AdminHeaderLink/index#default": default_fad5a03ee4ede314c43e6c03b21968c1,
   "engine/views/Dashboard/index#default": default_01fdb6cb42b8bb2ad64a3333656f087a,
   "engine/views/Orders/index#OrdersPageView": OrdersPageView_912542095966af8acf797722d4383b23,
-  "engine/views/Tariffs/index#TariffsPageView": TariffsPageView_536d2e100f7afefab2710319f0519334,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

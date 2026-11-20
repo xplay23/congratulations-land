@@ -402,9 +402,8 @@ export function TranslateLocaleButton() {
 
   return (
     <div
-      className="field-type group-field group-field--top-level"
       style={{
-        marginBottom: "16px",
+        margin: "0 0 20px",
         padding: "14px 16px",
         borderRadius: "8px",
         border: "1px solid var(--theme-elevation-150)",

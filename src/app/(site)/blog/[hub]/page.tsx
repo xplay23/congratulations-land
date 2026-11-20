@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BlogIndexView } from "@/components/BlogViews";
-import { makeBlogIndexMetadata } from "@/lib/page-helpers";
-import { BLOG_HUBS } from "@/lib/site-content";
+import {
+  getCmsBlogCategories,
+  getCmsPosts,
+  getCmsServiceBySlug,
+} from "@/lib/cms-content";
+import { getServerLocale, makeBlogIndexMetadata } from "@/lib/page-helpers";
 
 export async function generateMetadata({
   params,
@@ -19,7 +23,24 @@ export default async function BlogHubPage({
   params: Promise<{ hub: string }>;
 }) {
   const { hub: hubSlug } = await params;
-  const hub = BLOG_HUBS.find((h) => h.slug === hubSlug);
+  const locale = await getServerLocale();
+  const [categories, posts] = await Promise.all([
+    getCmsBlogCategories(locale),
+    getCmsPosts(locale, hubSlug),
+  ]);
+  const hub = categories.find((h) => h.slug === hubSlug);
   if (!hub) notFound();
-  return <BlogIndexView hub={hub} />;
+
+  const targetService = hub.targetServiceSlug
+    ? await getCmsServiceBySlug(hub.targetServiceSlug, locale)
+    : undefined;
+
+  return (
+    <BlogIndexView
+      categories={categories}
+      posts={posts}
+      hub={hub}
+      targetService={targetService}
+    />
+  );
 }

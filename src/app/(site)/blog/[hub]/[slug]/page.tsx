@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BlogArticleView } from "@/components/BlogViews";
-import { makeBlogArticleMetadata } from "@/lib/page-helpers";
-import { BLOG_ARTICLES } from "@/lib/site-content";
+import {
+  getCmsBlogCategories,
+  getCmsPostBySlug,
+  getCmsPosts,
+  getCmsServiceBySlug,
+} from "@/lib/cms-content";
+import { getServerLocale, makeBlogArticleMetadata } from "@/lib/page-helpers";
 
 export async function generateMetadata({
   params,
@@ -18,8 +23,30 @@ export default async function BlogArticlePage({
 }: {
   params: Promise<{ hub: string; slug: string }>;
 }) {
-  const { hub, slug } = await params;
-  const article = BLOG_ARTICLES.find((a) => a.hub === hub && a.slug === slug);
+  const { hub: hubSlug, slug } = await params;
+  const locale = await getServerLocale();
+  const [article, categories, allPosts] = await Promise.all([
+    getCmsPostBySlug(hubSlug, slug, locale),
+    getCmsBlogCategories(locale),
+    getCmsPosts(locale),
+  ]);
+
   if (!article) notFound();
-  return <BlogArticleView article={article} />;
+
+  const hub = categories.find((c) => c.slug === article.hubSlug);
+  const ctaService = article.ctaServiceSlug
+    ? await getCmsServiceBySlug(article.ctaServiceSlug, locale)
+    : undefined;
+  const otherArticles = allPosts
+    .filter((p) => p.slug !== article.slug)
+    .slice(0, 3);
+
+  return (
+    <BlogArticleView
+      article={article}
+      hub={hub}
+      ctaService={ctaService}
+      otherArticles={otherArticles}
+    />
+  );
 }

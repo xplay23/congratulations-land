@@ -54,17 +54,70 @@ function renderPraiseIcon(icon: VideoPraiseOption["icon"]) {
   }
 }
 
+interface VideoVariationOption {
+  variationSlug: string;
+  title: string;
+  shortBadge: string;
+  description: string;
+  posterUrl: string;
+  demoVideoUrl: string;
+  isDefault: boolean;
+  priceOverrideUah: number | null;
+}
+
 export default function CreateVideoPage() {
   const router = useRouter();
   const { lang, setLang, l, setAssistantContext, setAssistantOpen } = useLanguage();
   const { pricing, getVideoPrice } = usePricing();
   const isUk = lang === "uk";
-  const videoPrice = getVideoPrice();
+  const baseVideoPrice = getVideoPrice();
   const videoEnabled = pricing.services.video?.enabled ?? true;
+
+  const [variations, setVariations] = useState<VideoVariationOption[]>([]);
+  const [selectedVariationSlug, setSelectedVariationSlug] = useState<string>("");
 
   useEffect(() => {
     setAssistantContext("video");
   }, [setAssistantContext]);
+
+  useEffect(() => {
+    let active = true;
+    const urlVariation =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("variation") || ""
+        : "";
+    fetch(`/api/config/video-variations?lang=${lang}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { variations: [] }))
+      .then((data: { variations?: VideoVariationOption[] }) => {
+        if (!active) return;
+        const list = Array.isArray(data.variations) ? data.variations : [];
+        setVariations(list);
+        if (list.length > 0) {
+          const matched =
+            (urlVariation &&
+              list.find((v) => v.variationSlug === urlVariation)) ||
+            list.find((v) => v.isDefault) ||
+            list[0];
+          setSelectedVariationSlug((prev) =>
+            prev && list.some((v) => v.variationSlug === prev)
+              ? prev
+              : matched.variationSlug
+          );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [lang]);
+
+  const selectedVariation = variations.find(
+    (v) => v.variationSlug === selectedVariationSlug
+  );
+  const videoPrice =
+    selectedVariation?.priceOverrideUah && selectedVariation.priceOverrideUah > 0
+      ? selectedVariation.priceOverrideUah
+      : baseVideoPrice;
 
   // Gender is unselected by default and required before submitting
   const [videoLang, setVideoLang] = useState<Lang>(lang);
@@ -232,6 +285,7 @@ export default function CreateVideoPage() {
         body: JSON.stringify({
           lang: videoLang,
           character: "st_nicholas",
+          variationSlug: selectedVariationSlug || undefined,
           childName: childName.trim(),
           childNameVocative: childNameVocative.trim() || undefined,
           gender,
@@ -300,6 +354,61 @@ export default function CreateVideoPage() {
           {isUk ? "Допомога з текстом" : "Помощь с текстом"}
         </button>
       </div>
+
+      {/* Variation Picker (shown automatically when >1 enabled variations exist in CMS) */}
+      {variations.length > 1 && (
+        <div className="space-y-3 rounded-2xl border border-white/10 bg-[#121a30]/80 p-4">
+          <div className="text-xs font-semibold uppercase tracking-wider text-amber-300">
+            {isUk ? "Оберіть сюжет / локацію відео" : "Выберите сюжет / локацию видео"}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {variations.map((v) => {
+              const active = v.variationSlug === selectedVariationSlug;
+              const vPrice = v.priceOverrideUah ?? baseVideoPrice;
+              return (
+                <button
+                  key={v.variationSlug}
+                  type="button"
+                  onClick={() => setSelectedVariationSlug(v.variationSlug)}
+                  className={`flex flex-col overflow-hidden rounded-xl border text-left transition ${
+                    active
+                      ? "border-amber-300 bg-amber-400/10 ring-1 ring-amber-300/40"
+                      : "border-white/10 bg-white/[0.03] hover:border-amber-300/35"
+                  }`}
+                >
+                  <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+                    <img
+                      src={v.posterUrl}
+                      alt={v.title}
+                      className="h-full w-full object-cover"
+                    />
+                    {active && (
+                      <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[#0b1020]">
+                        <Check className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-white">
+                        {v.title}
+                      </span>
+                      <span className="text-[11px] font-semibold text-amber-200">
+                        {vPrice} ₴
+                      </span>
+                    </div>
+                    {v.description && (
+                      <p className="line-clamp-2 text-[11px] text-slate-400">
+                        {v.description}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Character Selection Showcase */}
       <div className="grid gap-4 rounded-2xl border border-amber-300/35 bg-[#121a30]/95 p-4 sm:grid-cols-[240px_1fr] items-center shadow-lg">

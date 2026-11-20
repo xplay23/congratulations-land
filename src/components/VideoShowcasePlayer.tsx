@@ -4,16 +4,19 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, PlayCircle, Sparkles, User, Volume2 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageContext";
-import { DEMO_VIDEOS } from "@/lib/site-content";
+import { DEMO_VIDEOS, type DemoVideoItem } from "@/lib/site-content";
 import type { Lang } from "@/lib/types";
 
 export function VideoShowcasePlayer({
   showOrderCta = true,
+  videos,
 }: {
   showOrderCta?: boolean;
+  videos?: DemoVideoItem[];
 }) {
   const { lang, l } = useLanguage();
   const isUk = lang === "uk";
+  const items = videos && videos.length > 0 ? videos : DEMO_VIDEOS;
   const [selectedDemo, setSelectedDemo] = useState<Lang>(lang);
 
   useEffect(() => {
@@ -21,7 +24,7 @@ export function VideoShowcasePlayer({
   }, [lang]);
 
   const active =
-    DEMO_VIDEOS.find((v) => v.id === selectedDemo) ?? DEMO_VIDEOS[0];
+    items.find((v) => v.id === selectedDemo) ?? items[0];
 
   return (
     <div className="rounded-3xl border border-amber-200/20 bg-[#121a30]/90 p-5 shadow-2xl sm:p-7">
@@ -41,7 +44,7 @@ export function VideoShowcasePlayer({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {DEMO_VIDEOS.map((item) => {
+          {items.map((item) => {
             const activeTab = item.id === active.id;
             return (
               <button
