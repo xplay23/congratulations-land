@@ -1,4 +1,8 @@
 import { getPayload } from "@engine/lib/payload";
+import {
+  getAiConfigCacheVersion,
+  invalidateAiConfigCache,
+} from "./cms-cache";
 import type { ArtStyle } from "./types";
 
 export type ReasoningEffortLevel =
@@ -56,11 +60,16 @@ export interface CmsAiRuntimeConfig {
 }
 
 const CACHE_TTL_MS = 30_000;
-let cachedConfig: { value: CmsAiRuntimeConfig; expiresAt: number } | null = null;
+let cachedConfig: {
+  value: CmsAiRuntimeConfig;
+  version: number;
+  expiresAt: number;
+} | null = null;
 let inFlight: Promise<CmsAiRuntimeConfig> | null = null;
 
 export function invalidateCmsAiConfigCache(): void {
   cachedConfig = null;
+  invalidateAiConfigCache();
 }
 
 function normalizeProvider(raw: unknown): AiTextProvider {
@@ -172,7 +181,12 @@ export function getEnvAiFallback(): CmsAiRuntimeConfig {
 }
 
 export async function getCmsAiConfig(): Promise<CmsAiRuntimeConfig> {
-  if (cachedConfig && Date.now() < cachedConfig.expiresAt) {
+  const version = getAiConfigCacheVersion();
+  if (
+    cachedConfig &&
+    cachedConfig.version === version &&
+    Date.now() < cachedConfig.expiresAt
+  ) {
     return cachedConfig.value;
   }
   if (inFlight) return inFlight;
@@ -325,6 +339,7 @@ export async function getCmsAiConfig(): Promise<CmsAiRuntimeConfig> {
 
       cachedConfig = {
         value: resolved,
+        version: getAiConfigCacheVersion(),
         expiresAt: Date.now() + CACHE_TTL_MS,
       };
       return resolved;

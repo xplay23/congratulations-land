@@ -1,40 +1,69 @@
 import { revalidatePath } from "next/cache";
 
-let cacheVersion = 0;
-let pricingCacheVersion = 0;
-let limitsCacheVersion = 0;
-let aiRatesCacheVersion = 0;
+interface CacheVersions {
+  content: number;
+  pricing: number;
+  limits: number;
+  aiRates: number;
+  aiConfig: number;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __videovitannyaCacheVersions: CacheVersions | undefined;
+}
+
+function getVersions(): CacheVersions {
+  if (!globalThis.__videovitannyaCacheVersions) {
+    globalThis.__videovitannyaCacheVersions = {
+      content: 0,
+      pricing: 0,
+      limits: 0,
+      aiRates: 0,
+      aiConfig: 0,
+    };
+  }
+  return globalThis.__videovitannyaCacheVersions;
+}
 
 export function getCmsContentCacheVersion(): number {
-  return cacheVersion;
+  return getVersions().content;
 }
 
 export function getPricingCacheVersion(): number {
-  return pricingCacheVersion;
+  return getVersions().pricing;
 }
 
 export function getLimitsCacheVersion(): number {
-  return limitsCacheVersion;
+  return getVersions().limits;
 }
 
 export function getAiRatesCacheVersion(): number {
-  return aiRatesCacheVersion;
+  return getVersions().aiRates;
+}
+
+export function getAiConfigCacheVersion(): number {
+  return getVersions().aiConfig;
 }
 
 export function invalidatePricingCache(): void {
-  pricingCacheVersion += 1;
+  getVersions().pricing += 1;
 }
 
 export function invalidateLimitsCache(): void {
-  limitsCacheVersion += 1;
+  getVersions().limits += 1;
 }
 
 export function invalidateAiRatesCache(): void {
-  aiRatesCacheVersion += 1;
+  getVersions().aiRates += 1;
+}
+
+export function invalidateAiConfigCache(): void {
+  getVersions().aiConfig += 1;
 }
 
 export function invalidateCmsContentCache(paths: string[] = []): void {
-  cacheVersion += 1;
+  getVersions().content += 1;
   for (const p of paths) {
     try {
       revalidatePath(p);
