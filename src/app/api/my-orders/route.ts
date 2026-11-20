@@ -4,13 +4,13 @@ import { clearVerifiedEmailCookie, getVerifiedEmailFromCookie } from "@/lib/sess
 import type { StorybookResult } from "@/lib/types";
 
 export async function GET() {
-  cleanupExpiredOrders();
+  await cleanupExpiredOrders();
   const email = await getVerifiedEmailFromCookie();
   if (!email) {
     return NextResponse.json({ authenticated: false, email: null, orders: [] });
   }
 
-  const orders = getOrdersByEmail(email).map((o) => {
+  const orders = (await getOrdersByEmail(email)).map((o) => {
     const daysLeft = Math.max(
       0,
       Math.ceil((new Date(o.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))

@@ -1,5 +1,5 @@
 import type { GlobalConfig } from "payload";
-import { saveAiRatesConfig } from "@/lib/settings";
+import { invalidateAiRatesCache } from "@/lib/cms-cache";
 
 export const AiEconomics: GlobalConfig = {
   slug: "ai-economics",
@@ -13,54 +13,8 @@ export const AiEconomics: GlobalConfig = {
   },
   hooks: {
     afterChange: [
-      ({ doc }) => {
-        const d = doc as {
-          usdToUah?: number | null;
-          elevenLabsPer1kCharsUsd?: number | null;
-          textModelRates?: Array<{
-            modelId?: string | null;
-            inputPer1M?: number | null;
-            outputPer1M?: number | null;
-          }> | null;
-          imageRates?: Array<{
-            key?: string | null;
-            priceUsd?: number | null;
-          }> | null;
-        };
-
-        const textModels: Record<
-          string,
-          { inputPer1M: number; outputPer1M: number }
-        > = {};
-        for (const row of d.textModelRates ?? []) {
-          const id = String(row.modelId || "").trim();
-          if (!id) continue;
-          textModels[id] = {
-            inputPer1M: Number(row.inputPer1M ?? 0),
-            outputPer1M: Number(row.outputPer1M ?? 0),
-          };
-        }
-
-        const imagePerCallUsd: Record<string, number> = {};
-        for (const row of d.imageRates ?? []) {
-          const key = String(row.key || "").trim();
-          if (!key) continue;
-          imagePerCallUsd[key] = Number(row.priceUsd ?? 0);
-        }
-
-        saveAiRatesConfig({
-          usdToUah: typeof d.usdToUah === "number" ? d.usdToUah : undefined,
-          elevenLabsPer1kCharsUsd:
-            typeof d.elevenLabsPer1kCharsUsd === "number"
-              ? d.elevenLabsPer1kCharsUsd
-              : undefined,
-          textModels:
-            Object.keys(textModels).length > 0 ? textModels : undefined,
-          imagePerCallUsd:
-            Object.keys(imagePerCallUsd).length > 0
-              ? imagePerCallUsd
-              : undefined,
-        });
+      () => {
+        invalidateAiRatesCache();
       },
     ],
   },

@@ -4,7 +4,7 @@ import { getPricingConfig } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const pricing = getPricingConfig();
+  const pricing = await getPricingConfig();
   return NextResponse.json(pricing, {
     headers: { "Cache-Control": "no-store" },
   });

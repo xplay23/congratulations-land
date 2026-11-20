@@ -20,7 +20,7 @@ export async function POST(
     }
 
     const { id } = await context.params;
-    const order = getOrderById(assertSafeId(id));
+    const order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -28,7 +28,7 @@ export async function POST(
     try {
       const body = (await req.json()) as { email?: string };
       if (body.email?.trim()) {
-        setOrderCustomerEmail(order.id, body.email.trim().toLowerCase());
+        await setOrderCustomerEmail(order.id, body.email.trim().toLowerCase());
       }
     } catch {
       // Optional JSON body
@@ -39,7 +39,7 @@ export async function POST(
     const sr = order.result as StorybookResult | null;
 
     if (order.productType === "storybook" && sr?.generationStage !== "complete") {
-      const started = triggerStorybookFinalization(order.id, origin, "hold", demoReceiptUrl);
+      const started = await triggerStorybookFinalization(order.id, origin, "hold", demoReceiptUrl);
       return NextResponse.json({
         ok: true,
         finalizing: true,
@@ -47,7 +47,7 @@ export async function POST(
       });
     }
 
-    const updated = markOrderPaid(order.id, "success", demoReceiptUrl);
+    const updated = await markOrderPaid(order.id, "success", demoReceiptUrl);
 
     let emailDelivery: { channel: string; devFile?: string } | null = null;
     if (updated) {

@@ -22,7 +22,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getServerLocale();
   const [initialPricing, shell] = await Promise.all([
-    Promise.resolve(getPricingConfig()),
+    getPricingConfig(),
     getCmsSiteShell(locale),
   ]);
 

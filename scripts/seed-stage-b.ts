@@ -1,5 +1,4 @@
 import { getPayload } from "@engine/lib/payload";
-import { syncServicesToPricingCache } from "@engine/collections/Services";
 import { buildLexicalFromSections } from "@/lib/lexical-render";
 import { UI_TEXT } from "@/lib/i18n";
 import {
@@ -16,7 +15,7 @@ import {
   PRICE_FAQ,
   SERVICE_CATALOG,
 } from "@/lib/site-content";
-import { getAiRatesConfig, getPricingConfig } from "@/lib/settings";
+import { buildBaselinePricing } from "@/lib/settings";
 
 const SEED_REVIEWS = [
   {
@@ -64,8 +63,8 @@ const SEED_REVIEWS = [
 async function seedStageB() {
   console.log("[seed-stage-b] Starting Stage B migration seed...");
   const payload = await getPayload();
-  const currentPricing = getPricingConfig();
-  const currentRates = getAiRatesConfig();
+  const currentPricing = buildBaselinePricing();
+  const currentRates = DEFAULT_AI_RATES_CONFIG;
 
   // ── 1. Services (+ FAQ block in extraBlocks) ───────────────────────────────
   const serviceIdBySlug = new Map<string, number | string>();
@@ -1122,7 +1121,6 @@ async function seedStageB() {
     });
   }
 
-  await syncServicesToPricingCache(payload);
   console.log("[seed-stage-b] Completed successfully!");
   process.exit(0);
 }

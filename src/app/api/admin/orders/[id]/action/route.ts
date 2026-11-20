@@ -39,7 +39,7 @@ export async function POST(
 
   try {
     const { id } = await context.params;
-    let order = getOrderById(assertSafeId(id));
+    let order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -116,11 +116,11 @@ export async function POST(
           });
         }
         // Stale generating state (e.g. after server restart) -> reset and reclaim
-        const reset = resetOrderForResume(order.id);
+        const reset = await resetOrderForResume(order.id);
         if (reset) order = reset;
       }
 
-      const started = triggerStorybookFinalization(
+      const started = await triggerStorybookFinalization(
         order.id,
         origin,
         order.monoStatus || "hold",
@@ -156,7 +156,7 @@ export async function POST(
       if (order.monoInvoiceId) {
         await cancelMonoInvoice(order.monoInvoiceId, `admin_cancel_${order.id}`);
       }
-      const updated = markOrderPaymentCancelled(order.id, "reversed");
+      const updated = await markOrderPaymentCancelled(order.id, "reversed");
       return NextResponse.json({
         ok: true,
         status: updated?.status || "failed",
@@ -192,9 +192,9 @@ export async function POST(
         order.status !== "paid"
       ) {
         if (order.status === "generating" && !isStorybookFinalizationActive(order.id)) {
-          resetOrderForResume(order.id);
+          await resetOrderForResume(order.id);
         }
-        const started = triggerStorybookFinalization(
+        const started = await triggerStorybookFinalization(
           order.id,
           origin,
           mono.status,
@@ -211,7 +211,7 @@ export async function POST(
       }
 
       if (mono.status === "success" && order.status !== "paid") {
-        const updated = markOrderPaid(order.id, "success", mono.receiptUrl || null);
+        const updated = await markOrderPaid(order.id, "success", mono.receiptUrl || null);
         if (updated) {
           try {
             await sendPaidOrderEmail({ order: updated, baseUrl: origin });
@@ -227,7 +227,7 @@ export async function POST(
         });
       }
 
-      setOrderMonoInvoice(
+      await setOrderMonoInvoice(
         order.id,
         order.monoInvoiceId,
         order.monoPaymentUrl || "",
@@ -241,7 +241,7 @@ export async function POST(
     }
 
     if (action === "grant_ai_edit") {
-      const updated = updateOrderAiEditsLimit(order.id, order.aiEditsLimit + 1);
+      const updated = await updateOrderAiEditsLimit(order.id, order.aiEditsLimit + 1);
       return NextResponse.json({
         ok: true,
         aiEditsLimit: updated?.aiEditsLimit ?? order.aiEditsLimit + 1,

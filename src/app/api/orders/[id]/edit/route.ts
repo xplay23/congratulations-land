@@ -22,7 +22,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const order = getOrderById(assertSafeId(id));
+    const order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -117,7 +117,7 @@ export async function POST(
       return NextResponse.json({ error: "Unknown edit action" }, { status: 400 });
     }
 
-    costTracker.flushToOrder(order.id);
+    await costTracker.flushToOrder(order.id);
 
     const updatedResult: StorybookResult = {
       ...result,
@@ -147,7 +147,7 @@ export async function POST(
       });
     }
 
-    const saved = updateOrderResultAndEdits(order.id, updatedResult, isAiAction);
+    const saved = await updateOrderResultAndEdits(order.id, updatedResult, isAiAction);
 
     return NextResponse.json({
       ok: true,

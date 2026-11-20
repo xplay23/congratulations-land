@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       }
 
       const lang: Lang = body.lang === "ru" ? "ru" : "uk";
-      const { otpCode, magicToken } = createEmailAuthChallenge(email);
+      const { otpCode, magicToken } = await createEmailAuthChallenge(email);
       const magicLink = `${getAppBaseUrl(req)}/admin?magic=${encodeURIComponent(magicToken)}`;
 
       const mailRes = await sendAuthCodeAndMagicLinkEmail({
@@ -104,9 +104,9 @@ export async function POST(req: NextRequest) {
 
       const verifiedEmail =
         mode === "verify_magic" && body.magic
-          ? verifyEmailAuthByMagic(body.magic)
+          ? await verifyEmailAuthByMagic(body.magic)
           : body.email && body.code
-          ? verifyEmailAuthByOtp(body.email, body.code)
+          ? await verifyEmailAuthByOtp(body.email, body.code)
           : null;
 
       if (!verifiedEmail || !caps.adminEmails.includes(verifiedEmail.toLowerCase())) {

@@ -1,6 +1,6 @@
 import { getPayload } from "@engine/lib/payload";
 import { ART_STYLE_META } from "@/lib/i18n";
-import { getPlatformLimits } from "@/lib/settings";
+import { buildBaselinePlatformLimits } from "@/lib/settings";
 
 interface SeedPromptItem {
   type: string;
@@ -533,8 +533,8 @@ async function main() {
   });
   console.log("[seed-stage-a] ElevenLabsSettings verified/seeded.");
 
-  // 5b. Seed PlatformLimits global from SQLite defaults
-  const sqliteLimits = getPlatformLimits();
+  // 5b. Seed PlatformLimits global from baseline defaults
+  const defaultLimits = buildBaselinePlatformLimits();
   const currentLimits = (await payload.findGlobal({
     slug: "platform-limits",
     overrideAccess: true,
@@ -547,19 +547,19 @@ async function main() {
       maxPreviewOrdersPerSession:
         typeof currentLimits.maxPreviewOrdersPerSession === "number"
           ? currentLimits.maxPreviewOrdersPerSession
-          : sqliteLimits.maxPreviewOrdersPerSession,
+          : defaultLimits.maxPreviewOrdersPerSession,
       maxAiEditsPerBook:
         typeof currentLimits.maxAiEditsPerBook === "number"
           ? currentLimits.maxAiEditsPerBook
-          : sqliteLimits.maxAiEditsPerBook,
+          : defaultLimits.maxAiEditsPerBook,
       maxAiEditsPerVideo:
         typeof currentLimits.maxAiEditsPerVideo === "number"
           ? currentLimits.maxAiEditsPerVideo
-          : sqliteLimits.maxAiEditsPerVideo,
+          : defaultLimits.maxAiEditsPerVideo,
       orderRetentionDays:
         typeof currentLimits.orderRetentionDays === "number"
           ? currentLimits.orderRetentionDays
-          : sqliteLimits.orderRetentionDays,
+          : defaultLimits.orderRetentionDays,
     },
   });
   console.log("[seed-stage-a] PlatformLimits verified/seeded.");

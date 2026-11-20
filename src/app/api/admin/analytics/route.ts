@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   const productType: ProductType | "all" =
     ptParam === "storybook" || ptParam === "video" ? ptParam : "all";
 
-  const rows = getOrdersForAnalytics({
+  const rows = await getOrdersForAnalytics({
     fromIso: resolveFromIso(period),
     productType,
   });

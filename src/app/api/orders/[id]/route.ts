@@ -24,9 +24,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    cleanupExpiredOrders();
+    await cleanupExpiredOrders();
     const { id } = await context.params;
-    let order = getOrderById(assertSafeId(id));
+    let order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -45,7 +45,7 @@ export async function GET(
           order.productType === "storybook" && sr?.generationStage !== "complete";
 
         if (mono.status === "hold" || (mono.status === "success" && needsStage2)) {
-          const started = triggerStorybookFinalization(
+          const started = await triggerStorybookFinalization(
             order.id,
             getAppBaseUrl(req),
             mono.status,
@@ -55,7 +55,7 @@ export async function GET(
             order = started;
           }
         } else if (mono.status === "success") {
-          const updated = markOrderPaid(order.id, "success", mono.receiptUrl || null);
+          const updated = await markOrderPaid(order.id, "success", mono.receiptUrl || null);
           if (updated) {
             order = updated;
             try {
@@ -65,7 +65,7 @@ export async function GET(
             }
           }
         } else if (mono.status && mono.status !== order.monoStatus) {
-          setOrderMonoInvoice(
+          await setOrderMonoInvoice(
             order.id,
             order.monoInvoiceId,
             order.monoPaymentUrl || "",

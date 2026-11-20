@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getAdminAuthCapabilities, requireAdminApi } from "@/lib/admin-auth";
 import { getCmsAiConfig } from "@/lib/cms-ai-config";
 import { isMonoSandboxMode } from "@/lib/payments/mono";
@@ -6,16 +6,8 @@ import {
   getAiRatesConfig,
   getPlatformLimits,
   getPricingConfig,
-  saveAiRatesConfig,
-  savePlatformLimits,
-  savePricingConfig,
 } from "@/lib/settings";
 import { getTelegramBotUsername } from "@/lib/telegram/bot";
-import type {
-  AiRatesConfig,
-  PlatformLimitsConfig,
-  PricingConfig,
-} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -53,47 +45,20 @@ export async function GET() {
   const auth = await requireAdminApi();
   if (!auth.ok) return auth.response;
 
+  const [pricing, limits, aiRates, system] = await Promise.all([
+    getPricingConfig(),
+    getPlatformLimits(),
+    getAiRatesConfig(),
+    getSystemHealth(),
+  ]);
+
   return NextResponse.json(
     {
-      pricing: getPricingConfig(),
-      limits: getPlatformLimits(),
-      aiRates: getAiRatesConfig(),
-      system: await getSystemHealth(),
-    },
-    { headers: { "Cache-Control": "no-store" } }
-  );
-}
-
-export async function PUT(req: NextRequest) {
-  const auth = await requireAdminApi();
-  if (!auth.ok) return auth.response;
-
-  try {
-    const body = (await req.json()) as {
-      pricing?: Partial<PricingConfig>;
-      limits?: Partial<PlatformLimitsConfig>;
-      aiRates?: Partial<AiRatesConfig>;
-    };
-
-    const pricing = body.pricing
-      ? savePricingConfig(body.pricing)
-      : getPricingConfig();
-    const limits = body.limits
-      ? savePlatformLimits(body.limits)
-      : getPlatformLimits();
-    const aiRates = body.aiRates
-      ? saveAiRatesConfig(body.aiRates)
-      : getAiRatesConfig();
-
-    return NextResponse.json({
-      ok: true,
       pricing,
       limits,
       aiRates,
-      system: await getSystemHealth(),
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Failed saving settings";
-    return NextResponse.json({ error: msg }, { status: 400 });
-  }
+      system,
+    },
+    { headers: { "Cache-Control": "no-store" } }
+  );
 }

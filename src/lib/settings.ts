@@ -1,4 +1,9 @@
-import { getAppState, setAppState } from "./db";
+import { getPayload } from "@engine/lib/payload";
+import {
+  getAiRatesCacheVersion,
+  getLimitsCacheVersion,
+  getPricingCacheVersion,
+} from "./cms-cache";
 import {
   DEFAULT_AI_RATES_CONFIG,
   DEFAULT_PLATFORM_LIMITS,
@@ -14,40 +19,22 @@ import type {
   ServicePricingItem,
 } from "./types";
 
-const KEY_PRICING = "pricing_config";
-const KEY_LIMITS = "platform_limits";
-const KEY_AI_RATES = "ai_rates_config";
+const CACHE_TTL_MS = 30_000;
+
+const KNOWN_SERVICE_IDS = new Set<ServiceId>(SERVICE_ORDER);
+
+let pricingCache: { value: PricingConfig; version: number; expiresAt: number } | null = null;
+let pricingInFlight: Promise<PricingConfig> | null = null;
+
+let limitsCache: { value: PlatformLimitsConfig; version: number; expiresAt: number } | null = null;
+let limitsInFlight: Promise<PlatformLimitsConfig> | null = null;
+
+let aiRatesCache: { value: AiRatesConfig; version: number; expiresAt: number } | null = null;
+let aiRatesInFlight: Promise<AiRatesConfig> | null = null;
 
 function envNumber(name: string, fallback: number): number {
   const raw = Number(process.env[name]);
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
-}
-
-function buildBaselinePricing(): PricingConfig {
-  const sbBase = envNumber("STORYBOOK_PRICE_UAH", 199);
-  const sbExtra = envNumber("STORYBOOK_LONG_EXTRA_UAH", 50);
-  const videoBase = envNumber("VIDEO_PRICE_UAH", 249);
-
-  return {
-    currency: "UAH",
-    services: {
-      ...DEFAULT_PRICING_CONFIG.services,
-      storybook: {
-        ...DEFAULT_PRICING_CONFIG.services.storybook,
-        basePriceUah: sbBase,
-        tiers: {
-          "4": sbBase,
-          "6": sbBase,
-          "8": sbBase + sbExtra,
-        },
-      },
-      video: {
-        ...DEFAULT_PRICING_CONFIG.services.video,
-        basePriceUah: videoBase,
-      },
-    },
-    updatedAt: DEFAULT_PRICING_CONFIG.updatedAt,
-  };
 }
 
 function sanitizePositiveInt(val: unknown, fallback: number, min = 1, max = 100000): number {
@@ -67,6 +54,40 @@ function cleanStageLabel(raw: string): string {
     .replace(/\s*\((?:Етап|Этап|Stage)\s*\d+[^)]*\)/gi, "")
     .replace(/^(?:Етап|Этап|Stage)\s*\d+\s*[•·-]\s*/gi, "")
     .trim();
+}
+
+function pickLocalizedString(val: unknown, lang: "uk" | "ru"): string | undefined {
+  if (typeof val === "string") return val.trim() || undefined;
+  if (val && typeof val === "object") {
+    const obj = val as Record<string, unknown>;
+    const primary = obj[lang];
+    const fallback = obj[lang === "uk" ? "ru" : "uk"];
+    if (typeof primary === "string" && primary.trim()) return primary.trim();
+    if (typeof fallback === "string" && fallback.trim()) return fallback.trim();
+  }
+  return undefined;
+}
+
+function pickLocalizedFeatures(val: unknown, lang: "uk" | "ru"): string[] | undefined {
+  const arr = Array.isArray(val)
+    ? val
+    : val && typeof val === "object"
+      ? ((val as Record<string, unknown>)[lang] ??
+          (val as Record<string, unknown>)[lang === "uk" ? "ru" : "uk"])
+      : undefined;
+  if (!Array.isArray(arr)) return undefined;
+  const out = arr
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      if (item && typeof item === "object") {
+        const text = (item as Record<string, unknown>).text;
+        return typeof text === "string" ? text.trim() : "";
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+  return out.length > 0 ? out : undefined;
 }
 
 function sanitizeBilingualText(
@@ -104,54 +125,156 @@ function sanitizeFeatures(
   };
 }
 
-export function getPricingConfig(): PricingConfig {
+export function buildBaselinePricing(): PricingConfig {
+  const sbBase = envNumber("STORYBOOK_PRICE_UAH", 199);
+  const sbExtra = envNumber("STORYBOOK_LONG_EXTRA_UAH", 50);
+  const videoBase = envNumber("VIDEO_PRICE_UAH", 249);
+
+  return {
+    currency: "UAH",
+    services: {
+      ...DEFAULT_PRICING_CONFIG.services,
+      storybook: {
+        ...DEFAULT_PRICING_CONFIG.services.storybook,
+        basePriceUah: sbBase,
+        tiers: {
+          "4": sbBase,
+          "6": sbBase,
+          "8": sbBase + sbExtra,
+        },
+      },
+      video: {
+        ...DEFAULT_PRICING_CONFIG.services.video,
+        basePriceUah: videoBase,
+      },
+    },
+    updatedAt: DEFAULT_PRICING_CONFIG.updatedAt,
+  };
+}
+
+export function buildBaselinePlatformLimits(): PlatformLimitsConfig {
+  return {
+    maxPreviewOrdersPerSession: envNumber(
+      "MAX_PREVIEW_ORDERS_PER_SESSION",
+      DEFAULT_PLATFORM_LIMITS.maxPreviewOrdersPerSession
+    ),
+    maxAiEditsPerBook: envNumber(
+      "MAX_AI_EDITS_PER_BOOK",
+      DEFAULT_PLATFORM_LIMITS.maxAiEditsPerBook
+    ),
+    maxAiEditsPerVideo: DEFAULT_PLATFORM_LIMITS.maxAiEditsPerVideo,
+    orderRetentionDays: envNumber(
+      "ORDER_RETENTION_DAYS",
+      DEFAULT_PLATFORM_LIMITS.orderRetentionDays
+    ),
+    updatedAt: DEFAULT_PLATFORM_LIMITS.updatedAt,
+  };
+}
+
+async function loadPricingFromPayload(): Promise<PricingConfig> {
   const baseline = buildBaselinePricing();
-  const raw = getAppState(KEY_PRICING);
-  if (!raw) return baseline;
-
   try {
-    const parsed = JSON.parse(raw) as Partial<PricingConfig>;
-    const mergedServices = { ...baseline.services } as Record<ServiceId, ServicePricingItem>;
+    const payload = await getPayload();
+    const res = await payload.find({
+      collection: "services",
+      locale: "all",
+      limit: 50,
+      depth: 0,
+      overrideAccess: true,
+    });
 
-    for (const id of SERVICE_ORDER) {
+    const mergedServices = { ...baseline.services } as Record<
+      ServiceId,
+      ServicePricingItem
+    >;
+    let latestUpdatedAt = baseline.updatedAt;
+
+    for (const raw of res.docs as unknown as Array<Record<string, unknown>>) {
+      const id = String(raw.serviceKey || "") as ServiceId;
+      if (!KNOWN_SERVICE_IDS.has(id)) continue;
+
       const def = baseline.services[id];
-      const inc = parsed.services?.[id];
-      if (!inc) continue;
-
-      const tiers: Record<string, number> | undefined = def.tiers ? { ...def.tiers } : undefined;
-      if (tiers && inc.tiers) {
-        for (const [tk, tv] of Object.entries(inc.tiers)) {
-          tiers[tk] = sanitizePositiveInt(tv, tiers[tk] ?? def.basePriceUah, 1, 50000);
-        }
-      } else if (inc.tiers) {
-        const extraTiers: Record<string, number> = {};
-        for (const [tk, tv] of Object.entries(inc.tiers)) {
-          extraTiers[tk] = sanitizePositiveInt(tv, def.basePriceUah, 1, 50000);
-        }
-        Object.assign(def, { tiers: extraTiers });
+      const status = String(raw.status || "active");
+      const rawUpdatedAt =
+        typeof raw.updatedAt === "string" ? raw.updatedAt : undefined;
+      if (rawUpdatedAt && rawUpdatedAt > latestUpdatedAt) {
+        latestUpdatedAt = rawUpdatedAt;
       }
 
-      const basePriceUah = sanitizePositiveInt(inc.basePriceUah, def.basePriceUah, 1, 50000);
+      const tiersArr = Array.isArray(raw.pricingTiers)
+        ? (raw.pricingTiers as Array<{
+            key?: string | null;
+            priceUah?: number | null;
+          }>)
+        : [];
+      const incTiers: Record<string, number> = {};
+      for (const tier of tiersArr) {
+        const tk = String(tier.key || "").trim();
+        if (tk && typeof tier.priceUah === "number" && tier.priceUah > 0) {
+          incTiers[tk] = sanitizePositiveInt(tier.priceUah, def.basePriceUah, 1, 50000);
+        }
+      }
+
+      let tiers: Record<string, number> | undefined = def.tiers
+        ? { ...def.tiers, ...incTiers }
+        : Object.keys(incTiers).length > 0
+          ? incTiers
+          : undefined;
+
+      const basePriceUah = sanitizePositiveInt(
+        raw.basePriceUah,
+        def.basePriceUah,
+        1,
+        50000
+      );
+
       if (id === "storybook" && tiers) {
-        tiers["4"] = sanitizePositiveInt(inc.tiers?.["4"], basePriceUah, 1, 50000);
-        tiers["6"] = sanitizePositiveInt(inc.tiers?.["6"], basePriceUah, 1, 50000);
-        tiers["8"] = sanitizePositiveInt(inc.tiers?.["8"], tiers["8"] ?? basePriceUah + 50, 1, 50000);
+        tiers["4"] = sanitizePositiveInt(incTiers["4"], basePriceUah, 1, 50000);
+        tiers["6"] = sanitizePositiveInt(incTiers["6"], basePriceUah, 1, 50000);
+        tiers["8"] = sanitizePositiveInt(
+          incTiers["8"],
+          tiers["8"] ?? basePriceUah + 50,
+          1,
+          50000
+        );
       }
+
+      const titleUk = pickLocalizedString(raw.title, "uk");
+      const titleRu = pickLocalizedString(raw.title, "ru");
+      const descUk = pickLocalizedString(raw.shortDescription, "uk");
+      const descRu = pickLocalizedString(raw.shortDescription, "ru");
+      const badgeUk = pickLocalizedString(raw.badge, "uk");
+      const badgeRu = pickLocalizedString(raw.badge, "ru");
+      const ctaUk = pickLocalizedString(raw.ctaLabel, "uk");
+      const ctaRu = pickLocalizedString(raw.ctaLabel, "ru");
+      const featUk = pickLocalizedFeatures(raw.features, "uk");
+      const featRu = pickLocalizedFeatures(raw.features, "ru");
 
       mergedServices[id] = {
         ...def,
-        enabled: typeof inc.enabled === "boolean" ? inc.enabled : def.enabled,
-        comingSoon: typeof inc.comingSoon === "boolean" ? inc.comingSoon : def.comingSoon,
-        title: sanitizeBilingualText(inc.title, def.title, 160),
-        description: sanitizeBilingualText(inc.description, def.description, 500),
+        enabled: status === "active",
+        comingSoon: status === "coming_soon",
+        title: sanitizeBilingualText({ uk: titleUk, ru: titleRu }, def.title, 160),
+        description: sanitizeBilingualText(
+          { uk: descUk, ru: descRu },
+          def.description,
+          500
+        ),
         badgeLabel: def.badgeLabel
-          ? sanitizeBilingualText(inc.badgeLabel, def.badgeLabel, 80)
+          ? sanitizeBilingualText(
+              { uk: badgeUk, ru: badgeRu },
+              def.badgeLabel,
+              80
+            )
           : undefined,
         ctaLabel: def.ctaLabel
-          ? sanitizeBilingualText(inc.ctaLabel, def.ctaLabel, 80)
+          ? sanitizeBilingualText({ uk: ctaUk, ru: ctaRu }, def.ctaLabel, 80)
           : undefined,
-        features: sanitizeFeatures(inc.features, def.features),
-        basePriceUah,
+        features: sanitizeFeatures(
+          featUk || featRu ? { uk: featUk, ru: featRu } : undefined,
+          def.features
+        ),
+        basePriceUah: id === "storybook" && tiers?.["6"] ? tiers["6"] : basePriceUah,
         tiers,
       };
     }
@@ -159,63 +282,48 @@ export function getPricingConfig(): PricingConfig {
     return {
       currency: "UAH",
       services: mergedServices,
-      updatedAt: parsed.updatedAt || baseline.updatedAt,
+      updatedAt: latestUpdatedAt,
     };
-  } catch {
+  } catch (err) {
+    console.warn("[settings] Failed to load pricing from Payload, using baseline:", err);
     return baseline;
   }
 }
 
-export function savePricingConfig(input: Partial<PricingConfig>): PricingConfig {
-  const current = getPricingConfig();
-  const nextServices = { ...current.services } as Record<ServiceId, ServicePricingItem>;
-
-  for (const id of SERVICE_ORDER) {
-    const cur = current.services[id];
-    const inc = input.services?.[id];
-    if (!inc) continue;
-
-    const basePriceUah = sanitizePositiveInt(inc.basePriceUah, cur.basePriceUah, 1, 50000);
-    let tiers: Record<string, number> | undefined = cur.tiers ? { ...cur.tiers } : undefined;
-    if (inc.tiers) {
-      tiers = tiers || {};
-      for (const [k, v] of Object.entries(inc.tiers)) {
-        tiers[k] = sanitizePositiveInt(v, tiers[k] ?? basePriceUah, 1, 50000);
-      }
-    }
-
-    nextServices[id] = {
-      ...cur,
-      enabled: typeof inc.enabled === "boolean" ? inc.enabled : cur.enabled,
-      comingSoon: typeof inc.comingSoon === "boolean" ? inc.comingSoon : cur.comingSoon,
-      title: sanitizeBilingualText(inc.title, cur.title, 160),
-      description: sanitizeBilingualText(inc.description, cur.description, 500),
-      badgeLabel: cur.badgeLabel
-        ? sanitizeBilingualText(inc.badgeLabel, cur.badgeLabel, 80)
-        : undefined,
-      ctaLabel: cur.ctaLabel
-        ? sanitizeBilingualText(inc.ctaLabel, cur.ctaLabel, 80)
-        : undefined,
-      features: sanitizeFeatures(inc.features, cur.features),
-      basePriceUah: id === "storybook" && tiers?.["6"] ? tiers["6"] : basePriceUah,
-      tiers,
-    };
+export async function getPricingConfig(): Promise<PricingConfig> {
+  const version = getPricingCacheVersion();
+  const now = Date.now();
+  if (
+    pricingCache &&
+    pricingCache.version === version &&
+    pricingCache.expiresAt > now
+  ) {
+    return pricingCache.value;
   }
 
-  const saved: PricingConfig = {
-    currency: "UAH",
-    services: nextServices,
-    updatedAt: new Date().toISOString(),
-  };
-  setAppState(KEY_PRICING, JSON.stringify(saved));
-  return saved;
+  if (!pricingInFlight) {
+    pricingInFlight = loadPricingFromPayload()
+      .then((value) => {
+        pricingCache = {
+          value,
+          version: getPricingCacheVersion(),
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        };
+        return value;
+      })
+      .finally(() => {
+        pricingInFlight = null;
+      });
+  }
+
+  return pricingInFlight;
 }
 
-export function getDynamicPriceKopiykas(
+export async function getDynamicPriceKopiykas(
   productType: "storybook" | "video",
   pageCount?: number
-): number {
-  const cfg = getPricingConfig();
+): Promise<number> {
+  const cfg = await getPricingConfig();
   const uah =
     productType === "storybook"
       ? getStorybookPriceFromConfig(cfg, pageCount)
@@ -223,158 +331,176 @@ export function getDynamicPriceKopiykas(
   return Math.round(uah * 100);
 }
 
-export function getPlatformLimits(): PlatformLimitsConfig {
-  const baseline: PlatformLimitsConfig = {
-    maxPreviewOrdersPerSession: envNumber("MAX_PREVIEW_ORDERS_PER_SESSION", DEFAULT_PLATFORM_LIMITS.maxPreviewOrdersPerSession),
-    maxAiEditsPerBook: envNumber("MAX_AI_EDITS_PER_BOOK", DEFAULT_PLATFORM_LIMITS.maxAiEditsPerBook),
-    maxAiEditsPerVideo: DEFAULT_PLATFORM_LIMITS.maxAiEditsPerVideo,
-    orderRetentionDays: envNumber("ORDER_RETENTION_DAYS", DEFAULT_PLATFORM_LIMITS.orderRetentionDays),
-    updatedAt: DEFAULT_PLATFORM_LIMITS.updatedAt,
-  };
-
-  const raw = getAppState(KEY_LIMITS);
-  if (!raw) return baseline;
-
+async function loadPlatformLimitsFromPayload(): Promise<PlatformLimitsConfig> {
+  const baseline = buildBaselinePlatformLimits();
   try {
-    const parsed = JSON.parse(raw) as Partial<PlatformLimitsConfig>;
+    const payload = await getPayload();
+    const doc = (await payload.findGlobal({
+      slug: "platform-limits",
+      depth: 0,
+      overrideAccess: true,
+    })) as unknown as Record<string, unknown> | null;
+
+    if (!doc) return baseline;
+
     return {
       maxPreviewOrdersPerSession: sanitizePositiveInt(
-        parsed.maxPreviewOrdersPerSession,
+        doc.maxPreviewOrdersPerSession,
         baseline.maxPreviewOrdersPerSession,
         1,
         100
       ),
       maxAiEditsPerBook: sanitizePositiveInt(
-        parsed.maxAiEditsPerBook,
+        doc.maxAiEditsPerBook,
         baseline.maxAiEditsPerBook,
         0,
         20
       ),
       maxAiEditsPerVideo: sanitizePositiveInt(
-        parsed.maxAiEditsPerVideo,
+        doc.maxAiEditsPerVideo,
         baseline.maxAiEditsPerVideo,
         0,
         20
       ),
       orderRetentionDays: sanitizePositiveInt(
-        parsed.orderRetentionDays,
+        doc.orderRetentionDays,
         baseline.orderRetentionDays,
         1,
         365
       ),
-      updatedAt: parsed.updatedAt || baseline.updatedAt,
+      updatedAt:
+        typeof doc.updatedAt === "string" ? doc.updatedAt : baseline.updatedAt,
     };
-  } catch {
+  } catch (err) {
+    console.warn("[settings] Failed to load platform-limits from Payload, using baseline:", err);
     return baseline;
   }
 }
 
-export function savePlatformLimits(input: Partial<PlatformLimitsConfig>): PlatformLimitsConfig {
-  const cur = getPlatformLimits();
-  const saved: PlatformLimitsConfig = {
-    maxPreviewOrdersPerSession: sanitizePositiveInt(
-      input.maxPreviewOrdersPerSession,
-      cur.maxPreviewOrdersPerSession,
-      1,
-      100
-    ),
-    maxAiEditsPerBook: sanitizePositiveInt(
-      input.maxAiEditsPerBook,
-      cur.maxAiEditsPerBook,
-      0,
-      20
-    ),
-    maxAiEditsPerVideo: sanitizePositiveInt(
-      input.maxAiEditsPerVideo,
-      cur.maxAiEditsPerVideo,
-      0,
-      20
-    ),
-    orderRetentionDays: sanitizePositiveInt(
-      input.orderRetentionDays,
-      cur.orderRetentionDays,
-      1,
-      365
-    ),
-    updatedAt: new Date().toISOString(),
-  };
-  setAppState(KEY_LIMITS, JSON.stringify(saved));
-  return saved;
+export async function getPlatformLimits(): Promise<PlatformLimitsConfig> {
+  const version = getLimitsCacheVersion();
+  const now = Date.now();
+  if (
+    limitsCache &&
+    limitsCache.version === version &&
+    limitsCache.expiresAt > now
+  ) {
+    return limitsCache.value;
+  }
+
+  if (!limitsInFlight) {
+    limitsInFlight = loadPlatformLimitsFromPayload()
+      .then((value) => {
+        limitsCache = {
+          value,
+          version: getLimitsCacheVersion(),
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        };
+        return value;
+      })
+      .finally(() => {
+        limitsInFlight = null;
+      });
+  }
+
+  return limitsInFlight;
 }
 
-export function getAiRatesConfig(): AiRatesConfig {
-  const raw = getAppState(KEY_AI_RATES);
-  if (!raw) return DEFAULT_AI_RATES_CONFIG;
-
+async function loadAiRatesFromPayload(): Promise<AiRatesConfig> {
   try {
-    const parsed = JSON.parse(raw) as Partial<AiRatesConfig>;
+    const payload = await getPayload();
+    const doc = (await payload.findGlobal({
+      slug: "ai-economics",
+      depth: 0,
+      overrideAccess: true,
+    })) as unknown as {
+      usdToUah?: number | null;
+      elevenLabsPer1kCharsUsd?: number | null;
+      textModelRates?: Array<{
+        modelId?: string | null;
+        inputPer1M?: number | null;
+        outputPer1M?: number | null;
+      }> | null;
+      imageRates?: Array<{
+        key?: string | null;
+        priceUsd?: number | null;
+      }> | null;
+      updatedAt?: string | null;
+    } | null;
+
+    if (!doc) return DEFAULT_AI_RATES_CONFIG;
+
     const textModels = { ...DEFAULT_AI_RATES_CONFIG.textModels };
-    if (parsed.textModels) {
-      for (const [model, rates] of Object.entries(parsed.textModels)) {
-        const def = textModels[model] || textModels.default;
-        textModels[model] = {
-          inputPer1M: sanitizePositiveFloat(rates?.inputPer1M, def.inputPer1M, 0, 500),
-          outputPer1M: sanitizePositiveFloat(rates?.outputPer1M, def.outputPer1M, 0, 500),
-        };
-      }
+    for (const row of doc.textModelRates ?? []) {
+      const model = String(row.modelId || "").trim();
+      if (!model) continue;
+      const def = textModels[model] || textModels.default;
+      textModels[model] = {
+        inputPer1M: sanitizePositiveFloat(row.inputPer1M, def.inputPer1M, 0, 500),
+        outputPer1M: sanitizePositiveFloat(row.outputPer1M, def.outputPer1M, 0, 500),
+      };
     }
 
     const imagePerCallUsd = { ...DEFAULT_AI_RATES_CONFIG.imagePerCallUsd };
-    if (parsed.imagePerCallUsd) {
-      for (const [k, v] of Object.entries(parsed.imagePerCallUsd)) {
-        imagePerCallUsd[k] = sanitizePositiveFloat(v, imagePerCallUsd[k] ?? 0.045, 0, 10);
-      }
+    for (const row of doc.imageRates ?? []) {
+      const key = String(row.key || "").trim();
+      if (!key) continue;
+      imagePerCallUsd[key] = sanitizePositiveFloat(
+        row.priceUsd,
+        imagePerCallUsd[key] ?? 0.045,
+        0,
+        10
+      );
     }
 
     return {
-      usdToUah: sanitizePositiveFloat(parsed.usdToUah, DEFAULT_AI_RATES_CONFIG.usdToUah, 1, 500),
+      usdToUah: sanitizePositiveFloat(
+        doc.usdToUah,
+        DEFAULT_AI_RATES_CONFIG.usdToUah,
+        1,
+        500
+      ),
       textModels,
       imagePerCallUsd,
       elevenLabsPer1kCharsUsd: sanitizePositiveFloat(
-        parsed.elevenLabsPer1kCharsUsd,
+        doc.elevenLabsPer1kCharsUsd,
         DEFAULT_AI_RATES_CONFIG.elevenLabsPer1kCharsUsd,
         0,
         50
       ),
-      updatedAt: parsed.updatedAt || DEFAULT_AI_RATES_CONFIG.updatedAt,
+      updatedAt: doc.updatedAt || DEFAULT_AI_RATES_CONFIG.updatedAt,
     };
-  } catch {
+  } catch (err) {
+    console.warn("[settings] Failed to load ai-economics from Payload, using defaults:", err);
     return DEFAULT_AI_RATES_CONFIG;
   }
 }
 
-export function saveAiRatesConfig(input: Partial<AiRatesConfig>): AiRatesConfig {
-  const cur = getAiRatesConfig();
-  const textModels = { ...cur.textModels };
-  if (input.textModels) {
-    for (const [model, rates] of Object.entries(input.textModels)) {
-      const def = textModels[model] || textModels.default;
-      textModels[model] = {
-        inputPer1M: sanitizePositiveFloat(rates?.inputPer1M, def.inputPer1M, 0, 500),
-        outputPer1M: sanitizePositiveFloat(rates?.outputPer1M, def.outputPer1M, 0, 500),
-      };
-    }
+export async function getAiRatesConfig(): Promise<AiRatesConfig> {
+  const version = getAiRatesCacheVersion();
+  const now = Date.now();
+  if (
+    aiRatesCache &&
+    aiRatesCache.version === version &&
+    aiRatesCache.expiresAt > now
+  ) {
+    return aiRatesCache.value;
   }
 
-  const imagePerCallUsd = { ...cur.imagePerCallUsd };
-  if (input.imagePerCallUsd) {
-    for (const [k, v] of Object.entries(input.imagePerCallUsd)) {
-      imagePerCallUsd[k] = sanitizePositiveFloat(v, imagePerCallUsd[k] ?? 0.045, 0, 10);
-    }
+  if (!aiRatesInFlight) {
+    aiRatesInFlight = loadAiRatesFromPayload()
+      .then((value) => {
+        aiRatesCache = {
+          value,
+          version: getAiRatesCacheVersion(),
+          expiresAt: Date.now() + CACHE_TTL_MS,
+        };
+        return value;
+      })
+      .finally(() => {
+        aiRatesInFlight = null;
+      });
   }
 
-  const saved: AiRatesConfig = {
-    usdToUah: sanitizePositiveFloat(input.usdToUah, cur.usdToUah, 1, 500),
-    textModels,
-    imagePerCallUsd,
-    elevenLabsPer1kCharsUsd: sanitizePositiveFloat(
-      input.elevenLabsPer1kCharsUsd,
-      cur.elevenLabsPer1kCharsUsd,
-      0,
-      50
-    ),
-    updatedAt: new Date().toISOString(),
-  };
-  setAppState(KEY_AI_RATES, JSON.stringify(saved));
-  return saved;
+  return aiRatesInFlight;
 }

@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const order = getOrderById(assertSafeId(id));
+    const order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -33,7 +33,7 @@ export async function POST(
     }
 
     const botUsername = getTelegramBotUsername();
-    const token = createTelegramDeliveryToken(order.id);
+    const token = await createTelegramDeliveryToken(order.id);
     if (!botUsername) {
       return NextResponse.json({
         configured: false,

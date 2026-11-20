@@ -14,7 +14,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const order = getOrderById(assertSafeId(id));
+    const order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -42,7 +42,7 @@ export async function POST(
       );
     }
 
-    setOrderCustomerEmail(order.id, resolvedEmail);
+    await setOrderCustomerEmail(order.id, resolvedEmail);
 
     if (order.status === "paid") {
       return NextResponse.json({
@@ -82,7 +82,7 @@ export async function POST(
       paymentType: useHold ? "hold" : "debit",
     });
 
-    setOrderMonoInvoice(order.id, invoice.invoiceId, invoice.pageUrl, "created");
+    await setOrderMonoInvoice(order.id, invoice.invoiceId, invoice.pageUrl, "created");
 
     return NextResponse.json({
       invoiceId: invoice.invoiceId,

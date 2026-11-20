@@ -37,19 +37,19 @@ export async function runStorybookPipeline(
   try {
     const { clean, preview } = getOrderDirs(orderId);
 
-    updateOrderProgress(orderId, "photo_vision", 8);
+    await updateOrderProgress(orderId, "photo_vision", 8);
     const visionPassports = await extractPhotoVisualPassports(payload, costTracker);
 
     const written = await generateThreeStepStory(
       payload,
       (step, pct) => {
-        updateOrderProgress(orderId, step, pct);
+        void updateOrderProgress(orderId, step, pct).catch(() => undefined);
       },
       visionPassports,
       costTracker
     );
 
-    updateOrderProgress(orderId, "anchor_portrait", 45);
+    await updateOrderProgress(orderId, "anchor_portrait", 45);
     const anchorPath = await generateCanonicalAnchor({
       payload,
       visualBible: written.visualBible,
@@ -68,7 +68,7 @@ export async function runStorybookPipeline(
     // Family/pet photo is no longer needed once companion anchor is created
     deleteUploadFile(payload.companionPhotoUploadId);
 
-    updateOrderProgress(orderId, "illustrations_preview", 52);
+    await updateOrderProgress(orderId, "illustrations_preview", 52);
     const art = await generatePreviewBookIllustrations({
       payload,
       visualBible: written.visualBible,
@@ -81,11 +81,13 @@ export async function runStorybookPipeline(
       costTracker,
       onProgress: (done, total) => {
         const pct = 52 + Math.round((done / Math.max(1, total)) * 36);
-        updateOrderProgress(orderId, "illustrations_preview", pct);
+        void updateOrderProgress(orderId, "illustrations_preview", pct).catch(
+          () => undefined
+        );
       },
     });
 
-    updateOrderProgress(orderId, "pdf_compile", 92);
+    await updateOrderProgress(orderId, "pdf_compile", 92);
     const previewPdfFile = "book_preview.pdf";
     const cleanPdfFile = "book_clean.pdf";
 
@@ -117,13 +119,15 @@ export async function runStorybookPipeline(
       outPath: path.join(preview, previewPdfFile),
     });
 
-    completeOrderGeneration(orderId, result);
+    await completeOrderGeneration(orderId, result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Storybook generation failed";
     console.error(`[storybook:${orderId}]`, err);
-    failOrderGeneration(orderId, message);
+    await failOrderGeneration(orderId, message);
   } finally {
-    costTracker.flushToOrder(orderId);
+    await costTracker.flushToOrder(orderId).catch((e) => {
+      console.error(`[storybook:${orderId}] cost flush error:`, e);
+    });
     deleteUploadFile(payload.photoUploadId);
     deleteUploadFile(payload.companionPhotoUploadId);
   }
@@ -167,12 +171,14 @@ async function runStorybookFinalizationWorker(
           ...workingResult,
           pages: updatedPages,
         };
-        savePartialStorybookResult(order.id, workingResult, pct);
-        costTracker.flushToOrder(order.id);
+        void savePartialStorybookResult(order.id, workingResult, pct).catch(
+          () => undefined
+        );
+        void costTracker.flushToOrder(order.id).catch(() => undefined);
       },
     });
 
-    updateOrderProgress(order.id, "pdf_compile", 92);
+    await updateOrderProgress(order.id, "pdf_compile", 92);
 
     const finalResult: StorybookResult = {
       ...workingResult,
@@ -200,7 +206,7 @@ async function runStorybookFinalizationWorker(
       outPath: path.join(clean, finalResult.cleanPdfFile),
     });
 
-    savePartialStorybookResult(order.id, finalResult, 97);
+    await savePartialStorybookResult(order.id, finalResult, 97);
 
     // Capture the Plata by mono hold only AFTER the complete clean PDF is safely built
     if (
@@ -212,7 +218,11 @@ async function runStorybookFinalizationWorker(
       await finalizeMonoInvoice(order.monoInvoiceId, order.priceKopiykas);
     }
 
-    const paidOrder = markOrderPaid(order.id, "success", order.receiptUrl || null);
+    const paidOrder = await markOrderPaid(
+      order.id,
+      "success",
+      order.receiptUrl || null
+    );
     if (paidOrder) {
       try {
         await sendPaidOrderEmail({ order: paidOrder, baseUrl });
@@ -223,9 +233,11 @@ async function runStorybookFinalizationWorker(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Post-payment finalization failed";
     console.error(`[storybook-finalize:${order.id}]`, err);
-    failOrderGeneration(order.id, message);
+    await failOrderGeneration(order.id, message);
   } finally {
-    costTracker.flushToOrder(order.id);
+    await costTracker.flushToOrder(order.id).catch((e) => {
+      console.error(`[storybook-finalize:${order.id}] cost flush error:`, e);
+    });
     activeFinalizations.delete(order.id);
   }
 }
@@ -238,17 +250,17 @@ export function isStorybookFinalizationActive(orderId: string): boolean {
  * Triggers idempotent Stage 2 post-payment generation (for remaining storybook pages)
  * and captures the Plata by mono hold once the clean PDF succeeds.
  */
-export function triggerStorybookFinalization(
+export async function triggerStorybookFinalization(
   orderId: string,
   baseUrl: string,
   monoStatus: string,
   receiptUrl?: string | null
-): OrderRecord | null {
+): Promise<OrderRecord | null> {
   if (activeFinalizations.has(orderId)) {
     return null;
   }
 
-  const claimed = claimOrderFinalization(orderId, monoStatus, receiptUrl);
+  const claimed = await claimOrderFinalization(orderId, monoStatus, receiptUrl);
   if (!claimed) {
     return null;
   }

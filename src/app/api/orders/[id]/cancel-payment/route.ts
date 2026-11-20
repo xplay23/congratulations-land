@@ -16,7 +16,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const order = getOrderById(assertSafeId(id));
+    const order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -48,7 +48,7 @@ export async function POST(
       await cancelMonoInvoice(order.monoInvoiceId, `cancel_${order.id}`);
     }
 
-    const updated = markOrderPaymentCancelled(order.id, "reversed");
+    const updated = await markOrderPaymentCancelled(order.id, "reversed");
     return NextResponse.json({
       ok: true,
       status: updated?.status || "failed",

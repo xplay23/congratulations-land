@@ -17,7 +17,7 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    const order = getOrderById(assertSafeId(id));
+    const order = await getOrderById(assertSafeId(id));
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
@@ -49,7 +49,7 @@ export async function POST(
       return NextResponse.json({ ok: true, status: "paid" });
     }
 
-    const started = triggerStorybookFinalization(
+    const started = await triggerStorybookFinalization(
       order.id,
       getAppBaseUrl(req),
       order.monoStatus || "hold",

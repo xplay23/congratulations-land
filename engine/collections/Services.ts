@@ -1,157 +1,9 @@
-import type { CollectionConfig, Payload } from "payload";
+import type { CollectionConfig } from "payload";
 import { pageBuilderBlocks } from "@engine/blocks";
-import { invalidateCmsContentCache } from "@/lib/cms-cache";
-import { savePricingConfig } from "@/lib/settings";
-import type { PricingConfig, ServiceId, ServicePricingItem } from "@/lib/types";
-
-const KNOWN_SERVICE_IDS = new Set<ServiceId>([
-  "storybook",
-  "video",
-  "photo_animation",
-  "song",
-  "postcard",
-]);
-
-function pickLocalizedString(
-  val: unknown,
-  lang: "uk" | "ru"
-): string | undefined {
-  if (typeof val === "string") return val.trim() || undefined;
-  if (val && typeof val === "object") {
-    const obj = val as Record<string, unknown>;
-    const primary = obj[lang];
-    const fallback = obj[lang === "uk" ? "ru" : "uk"];
-    if (typeof primary === "string" && primary.trim()) return primary.trim();
-    if (typeof fallback === "string" && fallback.trim()) return fallback.trim();
-  }
-  return undefined;
-}
-
-function pickLocalizedFeatures(
-  val: unknown,
-  lang: "uk" | "ru"
-): string[] | undefined {
-  const arr =
-    Array.isArray(val)
-      ? val
-      : val && typeof val === "object"
-        ? ((val as Record<string, unknown>)[lang] ??
-            (val as Record<string, unknown>)[lang === "uk" ? "ru" : "uk"])
-        : undefined;
-  if (!Array.isArray(arr)) return undefined;
-  const out = arr
-    .map((item) => {
-      if (typeof item === "string") return item.trim();
-      if (item && typeof item === "object") {
-        const text = (item as Record<string, unknown>).text;
-        return typeof text === "string" ? text.trim() : "";
-      }
-      return "";
-    })
-    .filter(Boolean);
-  return out.length > 0 ? out : undefined;
-}
-
-export async function syncServicesToPricingCache(payload: Payload): Promise<void> {
-  try {
-    const res = await payload.find({
-      collection: "services",
-      locale: "all",
-      limit: 50,
-      depth: 0,
-      overrideAccess: true,
-    });
-
-    const partialServices: Partial<Record<ServiceId, Partial<ServicePricingItem>>> =
-      {};
-
-    for (const raw of res.docs as unknown as Array<Record<string, unknown>>) {
-      const key = String(raw.serviceKey || "") as ServiceId;
-      if (!KNOWN_SERVICE_IDS.has(key)) continue;
-
-      const status = String(raw.status || "active");
-      const basePrice =
-        typeof raw.basePriceUah === "number" && raw.basePriceUah > 0
-          ? Math.round(raw.basePriceUah)
-          : undefined;
-
-      const tiersArr = Array.isArray(raw.pricingTiers)
-        ? (raw.pricingTiers as Array<{
-            key?: string | null;
-            priceUah?: number | null;
-          }>)
-        : [];
-      const tiers: Record<string, number> = {};
-      for (const tier of tiersArr) {
-        const tk = String(tier.key || "").trim();
-        if (tk && typeof tier.priceUah === "number" && tier.priceUah > 0) {
-          tiers[tk] = Math.round(tier.priceUah);
-        }
-      }
-
-      const titleUk = pickLocalizedString(raw.title, "uk");
-      const titleRu = pickLocalizedString(raw.title, "ru");
-      const descUk = pickLocalizedString(raw.shortDescription, "uk");
-      const descRu = pickLocalizedString(raw.shortDescription, "ru");
-      const badgeUk = pickLocalizedString(raw.badge, "uk");
-      const badgeRu = pickLocalizedString(raw.badge, "ru");
-      const ctaUk = pickLocalizedString(raw.ctaLabel, "uk");
-      const ctaRu = pickLocalizedString(raw.ctaLabel, "ru");
-      const featUk = pickLocalizedFeatures(raw.features, "uk");
-      const featRu = pickLocalizedFeatures(raw.features, "ru");
-
-      partialServices[key] = {
-        enabled: status === "active",
-        comingSoon: status === "coming_soon",
-        ...(basePrice ? { basePriceUah: basePrice } : {}),
-        ...(Object.keys(tiers).length > 0 ? { tiers } : {}),
-        ...(titleUk || titleRu
-          ? { title: { uk: titleUk || titleRu || "", ru: titleRu || titleUk || "" } }
-          : {}),
-        ...(descUk || descRu
-          ? {
-              description: {
-                uk: descUk || descRu || "",
-                ru: descRu || descUk || "",
-              },
-            }
-          : {}),
-        ...(badgeUk || badgeRu
-          ? {
-              badgeLabel: {
-                uk: badgeUk || badgeRu || "",
-                ru: badgeRu || badgeUk || "",
-              },
-            }
-          : {}),
-        ...(ctaUk || ctaRu
-          ? {
-              ctaLabel: {
-                uk: ctaUk || ctaRu || "",
-                ru: ctaRu || ctaUk || "",
-              },
-            }
-          : {}),
-        ...(featUk || featRu
-          ? {
-              features: {
-                uk: featUk || featRu || [],
-                ru: featRu || featUk || [],
-              },
-            }
-          : {}),
-      };
-    }
-
-    if (Object.keys(partialServices).length > 0) {
-      savePricingConfig({
-        services: partialServices as PricingConfig["services"],
-      });
-    }
-  } catch (err) {
-    console.warn("[Services] Failed to sync pricing cache:", err);
-  }
-}
+import {
+  invalidateCmsContentCache,
+  invalidatePricingCache,
+} from "@/lib/cms-cache";
 
 export const Services: CollectionConfig = {
   slug: "services",
@@ -169,11 +21,9 @@ export const Services: CollectionConfig = {
   },
   hooks: {
     afterChange: [
-      async ({ doc, req }) => {
+      async ({ doc }) => {
         const slug = String((doc as { slug?: string }).slug || "");
-        if (!req.context?.skipPricingSync) {
-          await syncServicesToPricingCache(req.payload);
-        }
+        invalidatePricingCache();
         invalidateCmsContentCache([
           "/",
           "/ru",
@@ -184,11 +34,9 @@ export const Services: CollectionConfig = {
       },
     ],
     afterDelete: [
-      async ({ doc, req }) => {
+      async ({ doc }) => {
         const slug = String((doc as { slug?: string }).slug || "");
-        if (!req.context?.skipPricingSync) {
-          await syncServicesToPricingCache(req.payload);
-        }
+        invalidatePricingCache();
         invalidateCmsContentCache([
           "/",
           "/ru",

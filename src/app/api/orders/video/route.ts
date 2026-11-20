@@ -12,7 +12,7 @@ import type { VideoOrderPayload } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const pricing = getPricingConfig();
+    const pricing = await getPricingConfig();
     if (!pricing.services.video?.enabled) {
       return NextResponse.json(
         { error: "Video greeting service is temporarily disabled." },
@@ -20,9 +20,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const limits = getPlatformLimits();
+    const limits = await getPlatformLimits();
     const { sessionId, isNew } = await getOrCreateSessionId();
-    if (countSessionPreviewOrders(sessionId) >= limits.maxPreviewOrdersPerSession) {
+    if ((await countSessionPreviewOrders(sessionId)) >= limits.maxPreviewOrdersPerSession) {
       return NextResponse.json(
         { error: "Session preview limit reached." },
         { status: 429 }
@@ -87,9 +87,9 @@ export async function POST(req: NextRequest) {
     const priceKopiykas =
       variation?.priceOverrideUah && variation.priceOverrideUah > 0
         ? Math.round(variation.priceOverrideUah * 100)
-        : getDynamicPriceKopiykas("video");
+        : await getDynamicPriceKopiykas("video");
 
-    const order = createOrder({
+    const order = await createOrder({
       sessionId,
       productType: "video",
       lang,

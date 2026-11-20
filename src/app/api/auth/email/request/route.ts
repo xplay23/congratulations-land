@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { otpCode, magicToken } = createEmailAuthChallenge(email);
+    const { otpCode, magicToken } = await createEmailAuthChallenge(email);
     const origin = getAppBaseUrl(req);
     const magicLink = `${origin}/my-orders?magic=${encodeURIComponent(magicToken)}`;
 

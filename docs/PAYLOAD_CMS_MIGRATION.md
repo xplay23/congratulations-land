@@ -1,6 +1,6 @@
 # Payload CMS 3.84 — Архитектура и дорожная карта (Этапы А, Б, В, Г)
 
-> **Статус на 2026-11-21:** **Этап А, Этап Б и визуальный конструктор страниц/шаблонов (`HomeTemplate` + `Pages` + свободная область блоков на `Services`, всего 22 блока) полностью реализованы и проверены вживую.** Легаси-страница `/admin/tariffs` и отдельная коллекция `Faqs` удалены (FAQ — блок конструктора); в `HeaderNav` поддержаны вложенные выпадающие пункты (`children`); `Reviews` нелокализуемы (оригинальный язык автора) с поддержкой текстовых отзывов (с фото) и встраивания Instagram; в `AiEconomics` добавлена кнопка автообновления цен рабочих моделей из реестра LiteLLM + курса НБУ `USD → UAH` (`/api/ai/economics/refresh`). Далее остаются: **токенная система редизайна (`src/styles/tokens.css` + `DESIGN.md`)** и **Этап Г (полный отказ от SQLite → единый PostgreSQL 16)**.
+> **Статус на 2026-11-21:** **Этапы А, Б, визуальный конструктор страниц/шаблонов (`HomeTemplate` + `Pages` + свободная область блоков на `Services`, всего 22 блока) и Этап Г (полный отказ от SQLite → единый PostgreSQL 16 со схемой `app`) полностью реализованы и проверены вживую.** Легаси-страница `/admin/tariffs`, отдельная коллекция `Faqs`, зависимость от `node:sqlite` и таблица `app_state` полностью удалены; операционные таблицы (`app.orders`, `app.email_auth_tokens`, `app.telegram_tokens`, `app.runtime_state`) работают в том же `PostgreSQL 16` (`pg` Pool) изолированно от схемы `public` Payload CMS; цены, лимиты и курсы `AiEconomics` читаются напрямую из Payload Local API с 30-секундным кэшем и мгновенной инвалидацией. Далее остаётся только **остаток Этапа В (`src/styles/tokens.css`) и полная переработка визуального дизайна (`DESIGN.md`)**.
 
 ---
 
@@ -12,10 +12,10 @@
 2. **Кастомные страницы (Custom Views) допускаются только там, где это действительно операционный инструмент, а не CRUD:**
    - `/admin` (**Дашборд**) — сводная бизнес-аналитика, маржа, конверсии и «Состояние интеграций»;
    - `/admin/orders` (**Заказы**) — операционный инспектор заказов с живыми действиями (`Resume`, `Sync Plata by mono`, возврат/финализация холда, `+1 AI-правка`, просмотр превью/результата).
-   - **Страница `/admin/tariffs` (`AdminSettingsTab`) — временный пережиток старой админки и подлежит полному удалению на Этапе Б:** цены и статусы услуг переезжают в коллекцию `Services`, а курсы себестоимости ИИ — в глобал `AiEconomics` («Курсы и маржа»).
-3. **Единый источник истины и целевой стек с одной БД:**
-   - Payload (PostgreSQL 16) — единственный источник истины для всех настроек, цен и контента.
-   - Временное хранение операционных таблиц в `node:sqlite` — лишь промежуточный шаг, чтобы не ломать проверенный E2E-чекаут во время сборки админки; в финале (**Этап Г**) проект полностью переходит на **единый PostgreSQL 16** без второй базы данных.
+   - **Страница `/admin/tariffs` (`AdminSettingsTab`) — удалена на Этапе Б:** цены и статусы услуг живут в коллекции `Services`, а курсы себестоимости ИИ — в глобале `AiEconomics` («Курсы и маржа»).
+3. **Единый источник истины и стек с одной БД:**
+   - Payload (схема `public` в PostgreSQL 16) — единственный источник истины для всех настроек, цен и контента.
+   - На **Этапе Г** проект полностью перешёл на **единый PostgreSQL 16** (операционные таблицы вынесены в изолированную схему `app`; `node:sqlite` удалён).
 
 ---
 
@@ -35,15 +35,13 @@
      - [engine/globals/StorybookAISettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/StorybookAISettings.ts) (`storybook-ai-settings`, «ИИ-сказки»: три независимые секции с выбором провайдера, ключа, динамического `<select>` модели и `reasoningEffort` — *Текст сказки*, *Режиссура и Vision QA*, *Иллюстрации сказок* + качество);
      - [engine/globals/ElevenLabsSettings.ts](file:///g:/WwW/work/gifts-project/engine/globals/ElevenLabsSettings.ts) (`elevenlabs-settings`, «ElevenLabs»: ключ, `<select>` TTS-модели с fallback-списком при отсутствии `models_read`, выбор голоса из живого `/api/ai/elevenlabs-voices` + ручной Voice ID, слайдеры с числовым вводом `RangeNumberField` для `stability` и `similarityBoost`);
      - [engine/globals/AIPrompts.ts](file:///g:/WwW/work/gifts-project/engine/globals/AIPrompts.ts) (`ai-prompts`, «Промпты»: 26 редактируемых шаблонов с `{{переменными}}`);
-     - [engine/globals/PlatformLimits.ts](file:///g:/WwW/work/gifts-project/engine/globals/PlatformLimits.ts) (`platform-limits`, «Лимиты»: вертикальная страница настроек лимитов превью, AI-правок и TTL хранения с мгновенной синхронизацией в SQLite через `afterChange`).
+     - [engine/globals/PlatformLimits.ts](file:///g:/WwW/work/gifts-project/engine/globals/PlatformLimits.ts) (`platform-limits`, «Лимиты»: вертикальная страница настроек лимитов превью, AI-правок и TTL хранения с мгновенной инвалидацией кэша `settings.ts`).
 
-2. **Операционный контур заказов и оплаты — `node:sqlite` (`storage/platform.sqlite`):**
-   - Заказы видео и сказок, `Plata by mono` холды/финализация/webhook, OTP + magic links (`/my-orders`), 30-дневное хранение готовых файлов (`storage/`), очистка EXIF-фото, расчёт маржи `ai_cost_json` и обезличенная аналитика остаются в [src/lib/db.ts](file:///g:/WwW/work/gifts-project/src/lib/db.ts) и [src/lib/settings.ts](file:///g:/WwW/work/gifts-project/src/lib/settings.ts).
+2. **Операционный контур заказов и оплаты (на Этапе Г перенесён из `node:sqlite` в схему `app` единого `PostgreSQL 16`):**
+   - Заказы видео и сказок, `Plata by mono` холды/финализация/webhook, OTP + magic links (`/my-orders`), 30-дневное хранение готовых файлов (`storage/`), очистка EXIF-фото, расчёт маржи `ai_cost_json` и обезличенная аналитика работают в [src/lib/db.ts](file:///g:/WwW/work/gifts-project/src/lib/db.ts) (`pg` Pool, схема `app`) и [src/lib/settings.ts](file:///g:/WwW/work/gifts-project/src/lib/settings.ts) (Payload Local API).
    - Кастомные страницы админки полностью переписаны на единую дизайн-систему `domainer-platform` / Payload (`@engine/components/admin/ui`: `Card`, `Button`, `Input`, `Select`, `Checkbox`, `BarRow`, `Alert`, `SectionLabel`, `C`) и встроены как Custom Views:
      - `/admin` → [Dashboard](file:///g:/WwW/work/gifts-project/engine/views/Dashboard/index.tsx) (аналитика + [AdminSystemHealthCard.tsx](file:///g:/WwW/work/gifts-project/src/components/admin/AdminSystemHealthCard.tsx) «Состояние интеграций» внизу страницы);
-     - `/admin/orders` → [Orders](file:///g:/WwW/work/gifts-project/engine/views/Orders/index.tsx) (инспектор заказов, Resume, Sync Mono, возврат/холд, `+1 AI-правка`);
-     - `/admin/tariffs` → [Tariffs](file:///g:/WwW/work/gifts-project/engine/views/Tariffs/index.tsx) (тарифы, видимость, тексты услуг и курсы расчёта маржи ИИ).
-   - Однословная навигация в [Nav/index.tsx](file:///g:/WwW/work/gifts-project/engine/components/admin/Nav/index.tsx): `Дашборд`, `Заказы`, `Тарифы`, `Контент → Медиа`, `Система → Пользователи / Настройки` (`Общие`, `ИИ (Контент)`, `ИИ-сказки`, `ElevenLabs`, `Промпты`, `Лимиты`).
+     - `/admin/orders` → [Orders](file:///g:/WwW/work/gifts-project/engine/views/Orders/index.tsx) (инспектор заказов, Resume, Sync Mono, возврат/холд, `+1 AI-правка`).
    - Авторизация в [src/lib/admin-auth.ts](file:///g:/WwW/work/gifts-project/src/lib/admin-auth.ts) принимает активную сессию Payload наравне с существующими методами входа (`ADMIN_PASSWORD` / `ADMIN_EMAILS`).
 
 ### Маршрутизация, стили, i18n и двунаправленный перевод
@@ -125,18 +123,19 @@
 
 ---
 
-## 4. Спецификация Этапа Г: Полный отказ от SQLite и переход на единый PostgreSQL 16
+## 4. Этап Г: Полный отказ от SQLite и переход на единый PostgreSQL 16 (Готово)
 
-**Цель Этапа Г:** убрать вторую базу данных (`node:sqlite`, `storage/gifts.db`), чтобы вся платформа в продакшне работала на **одном экземпляре PostgreSQL 16** (единый бэкап, нормальная конкурентность транзакций под вебхуки `Plata by mono` и отсутствие синхронизации через `app_state`).
+**Итог Этапа Г:** вторая база данных (`node:sqlite`, `storage/gifts.db`, `app_state`) полностью удалена — вся платформа работает на **одном экземпляре PostgreSQL 16** (`DATABASE_URL`).
 
-### Что переносится в PostgreSQL 16
-В SQLite к моменту завершения Этапа Б остаются только 3 технические операционные таблицы (таблица `app_state` становится полностью ненужной, так как лимиты, цены и курсы живут в Payload):
-1. `op_orders` (бывшая `orders` — заказы, статусы генерации, `payload_json`/`result_json`/`ai_cost_json` в `jsonb`, инвойсы `Plata by mono`, `access_token`, 30-дневный `expires_at`);
-2. `op_email_auth_tokens` (OTP-коды и одноразовые magic-ссылки для `/my-orders`);
-3. `op_telegram_tokens` (одноразовые deep-link токены доставки в Telegram).
-
-### Архитектурное решение
-- Эти 3 таблицы размещаются в **том же PostgreSQL 16** (`DATABASE_URL`, отдельная схема `app` или префикс `op_`), чтобы не смешиваться с таблицами Payload и не нагружать Payload-хуками частые обновления `progress_percent` во время рендера.
-- [src/lib/db.ts](file:///g:/WwW/work/gifts-project/src/lib/db.ts) переводится на асинхронный драйвер `pg` (общий пул `DATABASE_URL`), а чтение лимитов, цен и курсов ИИ в [src/lib/settings.ts](file:///g:/WwW/work/gifts-project/src/lib/settings.ts) переводится напрямую на кэшируемые запросы к Payload Local API (как в `src/lib/cms-ai-config.ts`).
-- После миграции и проверки E2E удаляются зависимость от экспериментального `node:sqlite`, `app_state` и `afterChange`-зеркалирование из глобалов/коллекций в SQLite.
-- Кастомные экраны `/admin` (`Дашборд`) и `/admin/orders` (`Заказы`) сохраняются без потери функциональности и работают напрямую с таблицами `op_*` в PostgreSQL.
+### Реализованная архитектура в PostgreSQL 16
+1. **Изолированная схема `app` (защита от `push: true` Payload/Drizzle в `public`):**
+   - `app.orders` — заказы видео и сказок (`payload_json`/`result_json`/`ai_cost_json` в `JSONB`, временные метки в `TIMESTAMPTZ`, атомарный захват `claimOrderFinalization` с `GREATEST` и `RETURNING *`, транзакционный `mergeOrderAiCost` с `SELECT ... FOR UPDATE`);
+   - `app.email_auth_tokens` — атомарные одноразовые OTP-коды и magic-ссылки для `/my-orders`;
+   - `app.telegram_tokens` — транзакционные одноразовые deep-link токены доставки в Telegram с защитой от дублей в пределах 120 с;
+   - `app.runtime_state` — лёгкое хранилище служебного runtime-состояния (в частности, `telegram_last_offset` для локального polling-синка `/api/telegram/sync`).
+2. **Асинхронный драйвер и единый источник настроек:**
+   - [src/lib/db.ts](file:///g:/WwW/work/gifts-project/src/lib/db.ts) переписан на асинхронный `pg` (`Pool`, синглтон `globalThis.__videovitannyaPgPool` с автоматическим идемпотентным `ensureSchema`).
+   - [src/lib/settings.ts](file:///g:/WwW/work/gifts-project/src/lib/settings.ts) читает цены (`services`), лимиты (`platform-limits`) и курсы ИИ (`ai-economics`) напрямую через Payload Local API с 30-секундным кэшем и мгновенной версионной инвалидацией из `afterChange`/`afterDelete` хуков ([cms-cache.ts](file:///g:/WwW/work/gifts-project/src/lib/cms-cache.ts)).
+   - [src/lib/ai-cost.ts](file:///g:/WwW/work/gifts-project/src/lib/ai-cost.ts) резолвит тарифы моделей и сохраняет себестоимость в `async flushToOrder(orderId)`.
+   - Удалены `node:sqlite`, `app_state`, `afterChange`-зеркалирование из `Services`/`PlatformLimits`/`AiEconomics`, чтение SQLite из сидеров `seed-stage-a.ts`/`seed-stage-b.ts` и легаси `PUT /api/admin/settings`.
+   - Кастомные экраны `/admin` (`Дашборд`) и `/admin/orders` (`Заказы`) работают напрямую с таблицами `app.*` в PostgreSQL.

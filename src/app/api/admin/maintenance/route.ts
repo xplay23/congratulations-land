@@ -7,7 +7,7 @@ export async function POST() {
   const auth = await requireAdminApi();
   if (!auth.ok) return auth.response;
 
-  const expiredOrdersCleaned = cleanupExpiredOrders();
+  const expiredOrdersCleaned = await cleanupExpiredOrders();
   const expiredUploadsCleaned = cleanupExpiredUploads();
 
   return NextResponse.json({

@@ -2,10 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   consumeTelegramDeliveryToken,
-  getAppState,
   getOrderById,
-  setAppState,
+  getRuntimeState,
   setOrderTelegramChat,
+  setRuntimeState,
 } from "@/lib/db";
 import { getOrderRetentionDays, getOrderDirs } from "@/lib/storage";
 import type { OrderRecord, StorybookResult, VideoResult } from "@/lib/types";
@@ -184,7 +184,7 @@ export async function processTelegramUpdate(
     return { handled: true };
   }
 
-  const consumed = consumeTelegramDeliveryToken(startToken, chatId);
+  const consumed = await consumeTelegramDeliveryToken(startToken, chatId);
   if (consumed.status === "already_delivered_recently") {
     return { handled: true };
   }
@@ -196,13 +196,13 @@ export async function processTelegramUpdate(
     return { handled: true };
   }
 
-  const order = getOrderById(consumed.orderId);
+  const order = await getOrderById(consumed.orderId);
   if (!order || order.status !== "paid" || !order.result) {
     await sendTelegramTextMessage(chatId, "Замовлення не знайдено або ще не оплачене.");
     return { handled: true };
   }
 
-  setOrderTelegramChat(order.id, String(chatId));
+  await setOrderTelegramChat(order.id, String(chatId));
 
   // Give instant feedback before uploading a potentially large (20-48 MB) file
   const isUk = order.lang === "uk";
@@ -252,7 +252,7 @@ export async function syncPendingTelegramUpdates(baseUrl: string): Promise<{
         return { mode: "webhook" as const, processed: 0, deliveredOrderIds: [] };
       }
 
-      const storedOffset = Number(getAppState("telegram_last_offset") || "0");
+      const storedOffset = Number((await getRuntimeState("telegram_last_offset")) || "0");
       const currentOffset = Number.isFinite(storedOffset) && storedOffset > 0 ? storedOffset : 0;
       const qs = currentOffset > 0 ? `?offset=${currentOffset}&timeout=0` : "?timeout=0";
       const data = (await tgApi(`getUpdates${qs}`)) as { result?: TelegramUpdate[] };
@@ -273,7 +273,7 @@ export async function syncPendingTelegramUpdates(baseUrl: string): Promise<{
       // concurrent polls never re-process the same Telegram update.
       if (maxUpdateId >= currentOffset) {
         const nextOffset = maxUpdateId + 1;
-        setAppState("telegram_last_offset", String(nextOffset));
+        await setRuntimeState("telegram_last_offset", String(nextOffset));
         await tgApi(`getUpdates?offset=${nextOffset}&limit=1&timeout=0`);
       }
 

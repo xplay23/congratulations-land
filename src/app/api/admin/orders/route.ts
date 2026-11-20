@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
   const limit = Number(sp.get("limit") || "50");
   const offset = Number(sp.get("offset") || "0");
 
-  const { orders, total } = listOrdersAdmin({
+  const { orders, total } = await listOrdersAdmin({
     status,
     productType,
     lang,

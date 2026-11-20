@@ -247,7 +247,7 @@ export async function runVideoPipeline(
     const audioDir = path.join(base, "custom_audio");
     fs.mkdirSync(audioDir, { recursive: true });
 
-    updateOrderProgress(orderId, "video_tts", 20);
+    await updateOrderProgress(orderId, "video_tts", 20);
 
     const hasElevenLabs = Boolean(cmsConfig.elevenLabsApiKey?.trim());
     let modeUsed: VideoResult["modeUsed"] = "real_ffmpeg_demo_audio";
@@ -260,19 +260,31 @@ export async function runVideoPipeline(
         path.join(audioDir, line03Filename),
         cmsConfig
       );
-      costTracker.addElevenLabsUsage("video_tts_line03", lines.line03.length);
+      costTracker.addElevenLabsUsage(
+        "video_tts_line03",
+        lines.line03.length,
+        cmsConfig.elevenLabsModelId
+      );
       await synthesizeElevenLabsMp3(
         lines.line04b,
         path.join(audioDir, "line_04b.mp3"),
         cmsConfig
       );
-      costTracker.addElevenLabsUsage("video_tts_line04b", lines.line04b.length);
+      costTracker.addElevenLabsUsage(
+        "video_tts_line04b",
+        lines.line04b.length,
+        cmsConfig.elevenLabsModelId
+      );
       await synthesizeElevenLabsMp3(
         lines.line07_1,
         path.join(audioDir, "line_07_1.mp3"),
         cmsConfig
       );
-      costTracker.addElevenLabsUsage("video_tts_line07_1", lines.line07_1.length);
+      costTracker.addElevenLabsUsage(
+        "video_tts_line07_1",
+        lines.line07_1.length,
+        cmsConfig.elevenLabsModelId
+      );
       modeUsed = "real_ffmpeg_elevenlabs";
     } else {
       // Fallback to verified pre-synthesized pilot voice samples so FFmpeg/Pillow assembly still runs end-to-end
@@ -294,7 +306,7 @@ export async function runVideoPipeline(
       copyAudio("line_07_1.mp3", "line_07_1.mp3");
     }
 
-    updateOrderProgress(orderId, "video_render", 50);
+    await updateOrderProgress(orderId, "video_render", 50);
     const cleanVideoFile = "video_clean.mp4";
     const previewVideoFile = "video_preview.mp4";
     const cleanVideoPath = path.join(clean, cleanVideoFile);
@@ -325,7 +337,7 @@ export async function runVideoPipeline(
     // Child photo is already baked into shot 04b of clean MP4 — delete original upload immediately
     deleteUploadFile(payload.photoUploadId);
 
-    updateOrderProgress(orderId, "video_preview", 85);
+    await updateOrderProgress(orderId, "video_preview", 85);
     await createWatermarkedPreviewVideo(cleanVideoPath, previewVideoPath, payload.lang);
 
     const result: VideoResult = {
@@ -335,13 +347,15 @@ export async function runVideoPipeline(
       modeUsed,
     };
 
-    completeOrderGeneration(orderId, result);
+    await completeOrderGeneration(orderId, result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Video assembly failed";
     console.error(`[video:${orderId}]`, err);
-    failOrderGeneration(orderId, message);
+    await failOrderGeneration(orderId, message);
   } finally {
-    costTracker.flushToOrder(orderId);
+    await costTracker.flushToOrder(orderId).catch((e) => {
+      console.error(`[video:${orderId}] cost flush error:`, e);
+    });
     deleteUploadFile(payload.photoUploadId);
   }
 }

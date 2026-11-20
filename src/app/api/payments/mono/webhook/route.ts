@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       receiptUrl?: string;
     };
 
-    const order = getOrderByInvoiceId(event.invoiceId);
+    const order = await getOrderByInvoiceId(event.invoiceId);
     if (!order) {
       return NextResponse.json({ ok: true, ignored: true });
     }
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       order.productType === "storybook" && sr?.generationStage !== "complete";
 
     if (event.status === "hold" || (event.status === "success" && needsStage2)) {
-      triggerStorybookFinalization(
+      await triggerStorybookFinalization(
         order.id,
         origin,
         event.status,
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     if (event.status === "success") {
       if (order.status !== "paid") {
-        const updated = markOrderPaid(order.id, "success", event.receiptUrl || null);
+        const updated = await markOrderPaid(order.id, "success", event.receiptUrl || null);
         if (updated) {
           try {
             await sendPaidOrderEmail({ order: updated, baseUrl: origin });
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else {
-      setOrderMonoInvoice(
+      await setOrderMonoInvoice(
         order.id,
         event.invoiceId,
         order.monoPaymentUrl || "",

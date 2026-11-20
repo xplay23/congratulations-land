@@ -1,5 +1,5 @@
 import type { GlobalConfig } from "payload";
-import { savePlatformLimits } from "@/lib/settings";
+import { invalidateLimitsCache } from "@/lib/cms-cache";
 
 export const PlatformLimits: GlobalConfig = {
   slug: "platform-limits",
@@ -9,26 +9,8 @@ export const PlatformLimits: GlobalConfig = {
   },
   hooks: {
     afterChange: [
-      ({ doc }) => {
-        const d = doc as Record<string, unknown>;
-        savePlatformLimits({
-          maxPreviewOrdersPerSession:
-            typeof d.maxPreviewOrdersPerSession === "number"
-              ? d.maxPreviewOrdersPerSession
-              : undefined,
-          maxAiEditsPerBook:
-            typeof d.maxAiEditsPerBook === "number"
-              ? d.maxAiEditsPerBook
-              : undefined,
-          maxAiEditsPerVideo:
-            typeof d.maxAiEditsPerVideo === "number"
-              ? d.maxAiEditsPerVideo
-              : undefined,
-          orderRetentionDays:
-            typeof d.orderRetentionDays === "number"
-              ? d.orderRetentionDays
-              : undefined,
-        });
+      () => {
+        invalidateLimitsCache();
       },
     ],
   },

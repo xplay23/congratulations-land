@@ -13,7 +13,7 @@ import type { CompanionGender, StorybookOrderPayload } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
-    const pricing = getPricingConfig();
+    const pricing = await getPricingConfig();
     if (!pricing.services.storybook?.enabled) {
       return NextResponse.json(
         { error: "Storybook service is temporarily disabled." },
@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const limits = getPlatformLimits();
+    const limits = await getPlatformLimits();
     const { sessionId, isNew } = await getOrCreateSessionId();
-    if (countSessionPreviewOrders(sessionId) >= limits.maxPreviewOrdersPerSession) {
+    if ((await countSessionPreviewOrders(sessionId)) >= limits.maxPreviewOrdersPerSession) {
       return NextResponse.json(
         { error: "Session preview limit reached. Please complete an existing order or try later." },
         { status: 429 }
@@ -154,12 +154,12 @@ export async function POST(req: NextRequest) {
       dedication: body.dedication?.trim() || undefined,
     };
 
-    const order = createOrder({
+    const order = await createOrder({
       sessionId,
       productType: "storybook",
       lang,
       payload,
-      priceKopiykas: getDynamicPriceKopiykas("storybook", payload.pageCount),
+      priceKopiykas: await getDynamicPriceKopiykas("storybook", payload.pageCount),
       aiEditsLimit: limits.maxAiEditsPerBook,
       retentionDays: limits.orderRetentionDays,
     });

@@ -12,9 +12,9 @@ export async function POST(req: NextRequest) {
 
     let verifiedEmail: string | null = null;
     if (body.magic) {
-      verifiedEmail = verifyEmailAuthByMagic(body.magic);
+      verifiedEmail = await verifyEmailAuthByMagic(body.magic);
     } else if (body.email && body.code) {
-      verifiedEmail = verifyEmailAuthByOtp(body.email, body.code);
+      verifiedEmail = await verifyEmailAuthByOtp(body.email, body.code);
     }
 
     if (!verifiedEmail) {
