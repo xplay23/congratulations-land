@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { deleteUploadFile, getOrderDirs, resolveUploadPath } from "@/lib/storage";
 import { AiCostTracker } from "@/lib/ai-cost";
+import { getCmsAiConfig, type CmsAiRuntimeConfig } from "@/lib/cms-ai-config";
 import type { VideoOrderPayload, VideoResult } from "@/lib/types";
 
 const execFileAsync = promisify(execFile);
@@ -17,7 +18,23 @@ function getPilotRoot(): string {
   return path.resolve(process.cwd(), "video-pipeline");
 }
 
-function buildVideoScriptLines(payload: VideoOrderPayload) {
+function applyVideoTemplate(
+  template: string | undefined,
+  fallback: string,
+  vars: Record<string, string>
+): string {
+  if (!template || !template.trim()) return fallback;
+  let out = template.trim();
+  for (const [key, val] of Object.entries(vars)) {
+    out = out.replaceAll(`{${key}}`, val);
+  }
+  return out;
+}
+
+function buildVideoScriptLines(
+  payload: VideoOrderPayload,
+  prompts?: Record<string, string>
+) {
   const name = payload.childName.trim();
   const voc = payload.childNameVocative?.trim() || name;
   const ach = payload.achievement.trim();
@@ -29,10 +46,23 @@ function buildVideoScriptLines(payload: VideoOrderPayload) {
         ? `У свій ${age} ти`
         : `У свої ${age} ти`
       : "Цього року ти";
+    const vars = { name, voc, ach, age, agePrefix };
     return {
-      line03: `Вітаю тебе, ${voc}! Я так радий нарешті завітати до тебе особисто!`,
-      line04b: `${agePrefix} ${ach}…`,
-      line07_1: `Щасливих свят, ${voc}!`,
+      line03: applyVideoTemplate(
+        prompts?.["video-line-03-uk"],
+        `Вітаю тебе, ${voc}! Я так радий нарешті завітати до тебе особисто!`,
+        vars
+      ),
+      line04b: applyVideoTemplate(
+        prompts?.["video-line-04b-uk"],
+        `${agePrefix} ${ach}…`,
+        vars
+      ),
+      line07_1: applyVideoTemplate(
+        prompts?.["video-line-07-uk"],
+        `Щасливих свят, ${voc}!`,
+        vars
+      ),
     };
   }
 
@@ -41,10 +71,23 @@ function buildVideoScriptLines(payload: VideoOrderPayload) {
       ? `В свой ${age} ты`
       : `В свои ${age} ты`
     : "В этом году ты";
+  const vars = { name, voc, ach, age, agePrefix };
   return {
-    line03: `Здравствуй, ${voc}! Как же я рад заглянуть к тебе лично!`,
-    line04b: `${agePrefix} ${ach}…`,
-    line07_1: `Счастливых праздников, ${voc}!`,
+    line03: applyVideoTemplate(
+      prompts?.["video-line-03-ru"],
+      `Здравствуй, ${voc}! Как же я рад заглянуть к тебе лично!`,
+      vars
+    ),
+    line04b: applyVideoTemplate(
+      prompts?.["video-line-04b-ru"],
+      `${agePrefix} ${ach}…`,
+      vars
+    ),
+    line07_1: applyVideoTemplate(
+      prompts?.["video-line-07-ru"],
+      `Счастливых праздников, ${voc}!`,
+      vars
+    ),
   };
 }
 
@@ -54,7 +97,9 @@ async function callElevenLabsTts(
   apiKey: string,
   voiceId: string,
   modelId: string,
-  text: string
+  text: string,
+  stability = 0.5,
+  similarityBoost = 0.78
 ): Promise<Response> {
   return fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
@@ -68,28 +113,49 @@ async function callElevenLabsTts(
         text,
         model_id: modelId,
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.78,
+          stability,
+          similarity_boost: similarityBoost,
         },
       }),
     }
   );
 }
 
-async function synthesizeElevenLabsMp3(text: string, outPath: string): Promise<void> {
-  const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
+async function synthesizeElevenLabsMp3(
+  text: string,
+  outPath: string,
+  cmsConfig?: CmsAiRuntimeConfig
+): Promise<void> {
+  const cfg = cmsConfig || (await getCmsAiConfig());
+  const apiKey = cfg.elevenLabsApiKey?.trim();
   if (!apiKey) {
     throw new Error("ELEVENLABS_API_KEY is not configured");
   }
-  const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim() || "NOpBlnGInO9m6vDvFkFC";
-  const modelId = process.env.ELEVENLABS_MODEL_ID?.trim() || "eleven_v4";
+  const voiceId = cfg.elevenLabsVoiceId?.trim() || "NOpBlnGInO9m6vDvFkFC";
+  const modelId = cfg.elevenLabsModelId?.trim() || "eleven_v4";
+  const stability = cfg.elevenLabsStability ?? 0.5;
+  const similarityBoost = cfg.elevenLabsSimilarityBoost ?? 0.78;
 
-  let res = await callElevenLabsTts(apiKey, voiceId, modelId, text);
+  let res = await callElevenLabsTts(
+    apiKey,
+    voiceId,
+    modelId,
+    text,
+    stability,
+    similarityBoost
+  );
   if (res.status === 402 && voiceId !== FALLBACK_PREMADE_VOICE_ID) {
     console.warn(
       `[elevenlabs] Voice ${voiceId} requires paid plan (402); falling back to premade voice ${FALLBACK_PREMADE_VOICE_ID}`
     );
-    res = await callElevenLabsTts(apiKey, FALLBACK_PREMADE_VOICE_ID, modelId, text);
+    res = await callElevenLabsTts(
+      apiKey,
+      FALLBACK_PREMADE_VOICE_ID,
+      modelId,
+      text,
+      stability,
+      similarityBoost
+    );
   }
 
   if (!res.ok) {
@@ -154,23 +220,36 @@ export async function runVideoPipeline(
       throw new Error("Uploaded child photo was not found or expired");
     }
 
-    const lines = buildVideoScriptLines(payload);
+    const cmsConfig = await getCmsAiConfig();
+    const lines = buildVideoScriptLines(payload, cmsConfig.prompts);
     const audioDir = path.join(base, "custom_audio");
     fs.mkdirSync(audioDir, { recursive: true });
 
     updateOrderProgress(orderId, "video_tts", 20);
 
-    const hasElevenLabs = Boolean(process.env.ELEVENLABS_API_KEY?.trim());
+    const hasElevenLabs = Boolean(cmsConfig.elevenLabsApiKey?.trim());
     let modeUsed: VideoResult["modeUsed"] = "real_ffmpeg_demo_audio";
 
     const line03Filename = payload.lang === "ru" ? "line_03_v2.mp3" : "line_03.mp3";
 
     if (hasElevenLabs) {
-      await synthesizeElevenLabsMp3(lines.line03, path.join(audioDir, line03Filename));
+      await synthesizeElevenLabsMp3(
+        lines.line03,
+        path.join(audioDir, line03Filename),
+        cmsConfig
+      );
       costTracker.addElevenLabsUsage("video_tts_line03", lines.line03.length);
-      await synthesizeElevenLabsMp3(lines.line04b, path.join(audioDir, "line_04b.mp3"));
+      await synthesizeElevenLabsMp3(
+        lines.line04b,
+        path.join(audioDir, "line_04b.mp3"),
+        cmsConfig
+      );
       costTracker.addElevenLabsUsage("video_tts_line04b", lines.line04b.length);
-      await synthesizeElevenLabsMp3(lines.line07_1, path.join(audioDir, "line_07_1.mp3"));
+      await synthesizeElevenLabsMp3(
+        lines.line07_1,
+        path.join(audioDir, "line_07_1.mp3"),
+        cmsConfig
+      );
       costTracker.addElevenLabsUsage("video_tts_line07_1", lines.line07_1.length);
       modeUsed = "real_ffmpeg_elevenlabs";
     } else {

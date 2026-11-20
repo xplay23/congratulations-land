@@ -1,13 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
+import type OpenAI from "openai";
 import { toFile } from "openai";
 import sharp from "sharp";
 import {
   buildChatModelParams,
-  createOpenAIClient,
-  getDirectorModel,
-  getImageModel,
-  getImageQuality,
+  getCmsOpenAIRuntime,
   withOpenAIRetry,
 } from "@/lib/openai-client";
 import { resolveUploadPath } from "@/lib/storage";
@@ -216,7 +214,7 @@ export async function generateCanonicalAnchor(params: {
   costTracker?: AiCostTracker;
 }): Promise<string> {
   const anchorPath = path.join(params.cleanDir, "anchor.png");
-  const client = createOpenAIClient();
+  const { imageClient: client, config } = await getCmsOpenAIRuntime();
 
   if (!client) {
     await renderDemoArt(
@@ -229,8 +227,8 @@ export async function generateCanonicalAnchor(params: {
     return anchorPath;
   }
 
-  const imageModel = getImageModel();
-  const quality = getImageQuality();
+  const imageModel = config.storybookImageModel;
+  const quality = config.storybookImageQuality;
   const uploadPath = resolveUploadPath(params.payload.photoUploadId);
   const mediumRule = getMediumTranslationRule(params.payload.artStyle);
 
@@ -295,7 +293,7 @@ export async function generateCompanionAnchor(params: {
   if (!uploadPath) return null;
 
   const compAnchorPath = path.join(params.cleanDir, "companion_anchor.png");
-  const client = createOpenAIClient();
+  const { imageClient: client, config } = await getCmsOpenAIRuntime();
 
   if (!client) {
     await renderDemoArt(
@@ -308,8 +306,8 @@ export async function generateCompanionAnchor(params: {
     return compAnchorPath;
   }
 
-  const imageModel = getImageModel();
-  const quality = getImageQuality();
+  const imageModel = config.storybookImageModel;
+  const quality = config.storybookImageQuality;
   const mediumRule = getMediumTranslationRule(params.payload.artStyle);
   const authoritativeFacts = [
     params.payload.companionType === "pet" && params.payload.companionSpecies
@@ -361,13 +359,13 @@ async function generateSceneWithReferences(params: {
   costStep?: string;
   isQaRetry?: boolean;
 }): Promise<void> {
-  const client = createOpenAIClient();
+  const { imageClient: client, config } = await getCmsOpenAIRuntime();
   if (!client) {
     throw new Error("OpenAI client unavailable");
   }
 
-  const imageModel = getImageModel();
-  const quality = getImageQuality();
+  const imageModel = config.storybookImageModel;
+  const quality = config.storybookImageQuality;
   const anchorBuf = fs.readFileSync(params.anchorPath);
   const refs = [await toFile(anchorBuf, "anchor.png", { type: "image/png" })];
 
@@ -421,11 +419,11 @@ async function verifyAndRepairSceneImage(params: {
     costStep: params.costStep,
   });
 
-  if (process.env.OPENAI_VISION_QA === "false") {
+  const { client, config } = await getCmsOpenAIRuntime();
+  if (!config.storybookVisionQaEnabled) {
     return;
   }
 
-  const client = createOpenAIClient();
   if (!client || !fs.existsSync(params.outPath)) {
     return;
   }
@@ -433,7 +431,15 @@ async function verifyAndRepairSceneImage(params: {
   try {
     const imgBuf = fs.readFileSync(params.outPath);
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
-    const directorModel = getDirectorModel();
+    const directorModel = config.storybookDirectorModel;
+    const qaPromptCustom = config.prompts["storybook-vision-qa"]?.trim();
+    const qaChecklist =
+      qaPromptCustom ||
+      `Check for ANY major defect in these 4 categories:
+1) Depth/Occlusion/Perspective: e.g. distant outdoor objects crossing in front of indoor window bars/frames, flattened billboard sails on angled vehicles, or footprints pointing backwards.
+2) Anatomy & Hands: extra/missing limbs, fused fingers gripping one shared item, mutated animal paws.
+3) Spatial/Story Mismatch: duplicate character clone in foreground when meant to be distant, wrong pet species, or missing core scene subject.
+4) Format: split panels, collage borders, or visible text/letters inside the artwork.`;
     const qaRes = await withOpenAIRetry("vision_qa", () =>
       client.chat.completions.create({
         ...buildChatModelParams(0.1, 450, directorModel),
@@ -449,11 +455,7 @@ async function verifyAndRepairSceneImage(params: {
               {
                 type: "text",
                 text: `Expected scene summary: ${params.expectedSummary}
-Check for ANY major defect in these 4 categories:
-1) Depth/Occlusion/Perspective: e.g. distant outdoor objects crossing in front of indoor window bars/frames, flattened billboard sails on angled vehicles, or footprints pointing backwards.
-2) Anatomy & Hands: extra/missing limbs, fused fingers gripping one shared item, mutated animal paws.
-3) Spatial/Story Mismatch: duplicate character clone in foreground when meant to be distant, wrong pet species, or missing core scene subject.
-4) Format: split panels, collage borders, or visible text/letters inside the artwork.
+${qaChecklist}
 
 Return ONLY valid JSON:
 { "passed": true/false, "defectFix": "concise 1-sentence English visual fix instruction if passed=false, else empty string" }`,
@@ -507,7 +509,7 @@ async function renderSingleBookPage(params: {
   companionAnchorPath: string | null;
   cleanDir: string;
   previewDir: string;
-  client: ReturnType<typeof createOpenAIClient>;
+  client: OpenAI | null;
   costTracker?: AiCostTracker;
 }): Promise<StoryPageItem> {
   const { page, payload, visualBible, anchorPath, companionAnchorPath, cleanDir, previewDir, client } = params;
@@ -583,7 +585,7 @@ export async function generatePreviewBookIllustrations(params: {
   coverPreviewFile: string;
   pages: StoryPageItem[];
 }> {
-  const client = createOpenAIClient();
+  const { imageClient: client } = await getCmsOpenAIRuntime();
   const limit = Math.max(1, params.previewPageLimit ?? PREVIEW_ILLUSTRATED_PAGES);
   const previewIndices = params.pages
     .map((p, idx) => ({ p, idx }))
@@ -681,7 +683,7 @@ export async function generateRemainingBookIllustrations(params: {
   ) => void;
   costTracker?: AiCostTracker;
 }): Promise<StoryPageItem[]> {
-  const client = createOpenAIClient();
+  const { imageClient: client } = await getCmsOpenAIRuntime();
   const updatedPages: StoryPageItem[] = params.pages.map((p) => ({ ...p }));
 
   const pendingIndices = updatedPages
@@ -746,7 +748,7 @@ export async function regenerateSinglePageIllustration(params: {
   previewDir: string;
   costTracker?: AiCostTracker;
 }): Promise<StoryPageItem> {
-  const client = createOpenAIClient();
+  const { imageClient: client } = await getCmsOpenAIRuntime();
   const nextRevision = (params.page.imageRevision || 1) + 1;
   const cleanFile = `page_${params.page.pageNumber}_r${nextRevision}.png`;
   const previewFile = `page_${params.page.pageNumber}_r${nextRevision}_preview.jpg`;

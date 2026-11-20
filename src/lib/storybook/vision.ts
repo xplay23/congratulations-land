@@ -1,8 +1,7 @@
 import fs from "node:fs";
 import {
   buildChatModelParams,
-  createOpenAIClient,
-  getDirectorModel,
+  getCmsOpenAIRuntime,
   withOpenAIRetry,
 } from "@/lib/openai-client";
 import { resolveUploadPath } from "@/lib/storage";
@@ -47,10 +46,10 @@ export async function extractPhotoVisualPassports(
   payload: StorybookOrderPayload,
   costTracker?: AiCostTracker
 ): Promise<PhotoVisualPassports> {
-  const client = createOpenAIClient();
+  const { client, config } = await getCmsOpenAIRuntime();
   if (!client) return {};
 
-  const directorModel = getDirectorModel();
+  const directorModel = config.storybookDirectorModel;
   const result: PhotoVisualPassports = {};
 
   const childPhotoPath = resolveUploadPath(payload.photoUploadId);

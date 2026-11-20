@@ -1,24 +1,46 @@
 {
   "name": "videovitannya-platform",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db": "docker compose -f docker-compose.dev.yml up -d",
+    "db:stop": "docker compose -f docker-compose.dev.yml down",
+    "payload": "payload",
+    "generate:importmap": "payload generate:importmap",
+    "seed:stage-a": "tsx --env-file=.env.local scripts/seed-stage-a.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.64",
+    "@ai-sdk/google": "^3.0.53",
+    "@ai-sdk/openai": "^3.0.48",
+    "@payloadcms/db-postgres": "3.84.1",
+    "@payloadcms/live-preview-react": "3.84.1",
+    "@payloadcms/next": "3.84.1",
+    "@payloadcms/plugin-seo": "3.84.1",
+    "@payloadcms/richtext-lexical": "3.84.1",
+    "@payloadcms/ui": "3.84.1",
     "@pdf-lib/fontkit": "^1.1.1",
+    "ai": "^6.0.138",
+    "clsx": "^2.1.1",
+    "graphql": "^16.8.1",
     "lucide-react": "^0.511.0",
-    "next": "^15.3.2",
+    "marked": "^18.0.2",
+    "next": "16.2.6",
     "nodemailer": "^10.6.0",
     "openai": "^4.103.0",
+    "payload": "3.84.1",
     "pdf-lib": "^1.17.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "sharp": "^0.34.2"
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "sharp": "^0.34.2",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.7",
@@ -27,6 +49,7 @@
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5",
     "tailwindcss": "^4.1.7",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
 }

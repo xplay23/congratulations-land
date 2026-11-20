@@ -1,0 +1,152 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Domainer Platform — Custom admin page styles
+   Styles for our own admin views: Dashboard, Analytics, Import Wizard.
+   Field-specific helpers for custom field components (BrandColorField, etc).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Setup Wizard — fullpage override ───────────────────────────────────── */
+/* MinimalTemplate adds its own padding/centering — neutralize it for the wizard */
+.template-minimal.wizard-page {
+  padding: 0 !important;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.template-minimal.wizard-page .template-minimal__wrap {
+  flex: 1;
+  padding: 0 !important;
+  max-width: none !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* Payload wraps MinimalTemplate in a #app > main — ensure it's full height */
+body:has(.wizard-page) #app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+body:has(.wizard-page) #app > main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Field with inline regen button — narrows input to leave room for the button */
+.field-with-regen .field-type__wrap input,
+.field-with-regen .field-type__wrap textarea {
+  width: calc(100% - 45px);
+}
+
+/* Move field-description under the label (before the editor/textarea) */
+/* RichText (Lexical): Description is inside __wrap after AfterInput — reorder within it */
+.field-desc-top.rich-text-lexical .rich-text-lexical__wrap {
+  display: flex;
+  flex-direction: column;
+}
+.field-desc-top.rich-text-lexical .field-description {
+  order: -1;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+/* Textarea: Description is inside __wrap after textarea — reorder within it */
+.field-desc-top.textarea .field-type__wrap {
+  display: flex;
+  flex-direction: column;
+}
+.field-desc-top.textarea .field-description {
+  order: -1;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+/* ── Help page ───────────────────────────────────────────────────────────── */
+
+/* Single solid CTA — Open documentation */
+.help-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--adm-color-blue-cta);
+  color: #fff !important;
+  padding: 11px 18px;
+  border-radius: var(--adm-radius);
+  font-size: var(--adm-fs-body);
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid var(--adm-color-blue-cta-hover);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: background 0.15s;
+}
+.help-btn-primary:hover {
+  background: var(--adm-color-blue-cta-hover);
+  text-decoration: none;
+}
+
+/* 2×2 service card grid */
+.help-svc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 20px 0 24px;
+}
+@media (max-width: 720px) {
+  .help-svc-grid { grid-template-columns: 1fr; }
+}
+
+/* Service card */
+.help-svc-card {
+  background: var(--theme-elevation-50, #18181b);
+  border: 1px solid var(--theme-border-color, rgba(255, 255, 255, 0.08));
+  border-radius: var(--adm-radius-lg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s;
+}
+.help-svc-card:hover {
+  border-color: var(--help-border-strong);
+}
+
+/* Arrow links: arrow nudges right, whole link dims slightly */
+/* Default font-size 15px; card CTA overrides inline with --adm-fs-meta */
+.help-arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--adm-fs-body-lg);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+.help-arrow-link:hover {
+  opacity: 0.82;
+  text-decoration: none;
+}
+.help-arrow-link svg {
+  transition: transform 0.15s ease;
+}
+.help-arrow-link:hover svg {
+  transform: translateX(3px);
+}
+
+/* Inline underline links: lighten toward text on dark, darken on light */
+.help-inline-link {
+  color: var(--theme-text, #f4f4f5);
+  border-bottom: 1px solid var(--help-border-strong);
+  padding-bottom: 1px;
+  text-decoration: none;
+  transition: color 0.15s, border-bottom-color 0.15s;
+}
+.help-inline-link--muted {
+  color: var(--adm-color-muted, #a1a1aa);
+}
+.help-inline-link:hover,
+.help-inline-link--muted:hover {
+  color: var(--theme-text, #f4f4f5);
+  border-bottom-color: var(--help-border-strong);
+  text-decoration: none;
+}
+[data-theme="light"] .help-inline-link:hover,
+[data-theme="light"] .help-inline-link--muted:hover {
+  color: var(--theme-text, #09090b);
+}

@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuthCapabilities, requireAdminApi } from "@/lib/admin-auth";
-import {
-  getDirectorModel,
-  getImageModel,
-  getImageQuality,
-  getOpenAIApiKey,
-  getTextModel,
-} from "@/lib/openai-client";
+import { getCmsAiConfig } from "@/lib/cms-ai-config";
 import { isMonoSandboxMode } from "@/lib/payments/mono";
 import {
   getAiRatesConfig,
@@ -25,8 +19,9 @@ import type {
 
 export const dynamic = "force-dynamic";
 
-function getSystemHealth() {
+async function getSystemHealth() {
   const caps = getAdminAuthCapabilities();
+  const aiCfg = await getCmsAiConfig();
   const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
   const hasSmtp = Boolean(
     process.env.SMTP_HOST?.trim() &&
@@ -35,14 +30,14 @@ function getSystemHealth() {
   );
 
   return {
-    hasOpenAI: Boolean(getOpenAIApiKey()),
-    textModel: getTextModel(),
-    directorModel: getDirectorModel(),
-    imageModel: getImageModel(),
-    imageQuality: getImageQuality(),
-    visionQaEnabled: process.env.OPENAI_VISION_QA !== "false",
-    hasElevenLabs: Boolean(process.env.ELEVENLABS_API_KEY?.trim()),
-    elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID?.trim() || "NOpBlnGInO9m6vDvFkFC",
+    hasOpenAI: Boolean(aiCfg.apiKey),
+    textModel: aiCfg.storybookWriterModel,
+    directorModel: aiCfg.storybookDirectorModel,
+    imageModel: aiCfg.storybookImageModel,
+    imageQuality: aiCfg.storybookImageQuality,
+    visionQaEnabled: aiCfg.storybookVisionQaEnabled,
+    hasElevenLabs: Boolean(aiCfg.elevenLabsApiKey),
+    elevenLabsVoiceId: aiCfg.elevenLabsVoiceId,
     monoSandbox: isMonoSandboxMode(),
     monoTokenConfigured: Boolean(process.env.MONO_TOKEN?.trim()),
     emailTransport: hasResend ? "resend" : hasSmtp ? "smtp" : "dev_outbox",
@@ -63,7 +58,7 @@ export async function GET() {
       pricing: getPricingConfig(),
       limits: getPlatformLimits(),
       aiRates: getAiRatesConfig(),
-      system: getSystemHealth(),
+      system: await getSystemHealth(),
     },
     { headers: { "Cache-Control": "no-store" } }
   );
@@ -80,16 +75,22 @@ export async function PUT(req: NextRequest) {
       aiRates?: Partial<AiRatesConfig>;
     };
 
-    const pricing = body.pricing ? savePricingConfig(body.pricing) : getPricingConfig();
-    const limits = body.limits ? savePlatformLimits(body.limits) : getPlatformLimits();
-    const aiRates = body.aiRates ? saveAiRatesConfig(body.aiRates) : getAiRatesConfig();
+    const pricing = body.pricing
+      ? savePricingConfig(body.pricing)
+      : getPricingConfig();
+    const limits = body.limits
+      ? savePlatformLimits(body.limits)
+      : getPlatformLimits();
+    const aiRates = body.aiRates
+      ? saveAiRatesConfig(body.aiRates)
+      : getAiRatesConfig();
 
     return NextResponse.json({
       ok: true,
       pricing,
       limits,
       aiRates,
-      system: getSystemHealth(),
+      system: await getSystemHealth(),
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed saving settings";

@@ -1,7 +1,9 @@
 import OpenAI from "openai";
+import { getCmsAiConfig, type CmsAiRuntimeConfig } from "./cms-ai-config";
 
 export function getOpenAIApiKey(): string | null {
-  const key = process.env.OPENAI_API_KEY?.trim() || process.env.OPEN_AI_KEY?.trim();
+  const key =
+    process.env.OPENAI_API_KEY?.trim() || process.env.OPEN_AI_KEY?.trim();
   return key || null;
 }
 
@@ -14,7 +16,9 @@ export function getDirectorModel(): string {
 }
 
 export function getImageModel(): string {
-  return process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2.5-sunburst-2026-09-08";
+  return (
+    process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2.5-sunburst-2026-09-08"
+  );
 }
 
 export function getImageQuality(): "low" | "medium" | "high" | "auto" {
@@ -23,8 +27,8 @@ export function getImageQuality(): "low" | "medium" | "high" | "auto" {
   return "medium";
 }
 
-export function createOpenAIClient(): OpenAI | null {
-  const apiKey = getOpenAIApiKey();
+export function createOpenAIClient(apiKeyOverride?: string | null): OpenAI | null {
+  const apiKey = apiKeyOverride?.trim() || getOpenAIApiKey();
   if (!apiKey) return null;
   return new OpenAI({
     apiKey,
@@ -33,13 +37,39 @@ export function createOpenAIClient(): OpenAI | null {
   });
 }
 
+export interface CmsOpenAIRuntime {
+  client: OpenAI | null;
+  imageClient: OpenAI | null;
+  config: CmsAiRuntimeConfig;
+}
+
+export async function getCmsOpenAIRuntime(): Promise<CmsOpenAIRuntime> {
+  const config = await getCmsAiConfig();
+  return {
+    client: createOpenAIClient(config.apiKey),
+    imageClient: createOpenAIClient(config.imageApiKey ?? config.apiKey),
+    config,
+  };
+}
+
 function isRetryableOpenAIError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
-  const e = err as { status?: number; code?: string; name?: string; message?: string };
-  if (typeof e.status === "number" && (e.status === 429 || e.status >= 500)) return true;
-  if (e.name === "APIConnectionError" || e.name === "APIConnectionTimeoutError") return true;
+  const e = err as {
+    status?: number;
+    code?: string;
+    name?: string;
+    message?: string;
+  };
+  if (typeof e.status === "number" && (e.status === 429 || e.status >= 500)) {
+    return true;
+  }
+  if (e.name === "APIConnectionError" || e.name === "APIConnectionTimeoutError") {
+    return true;
+  }
   const msg = String(e.message || "");
-  return /\b(429|500|502|503|504)\b|server had an error|overloaded|timed out|ECONNRESET/i.test(msg);
+  return /\b(429|500|502|503|504)\b|server had an error|overloaded|timed out|ECONNRESET/i.test(
+    msg
+  );
 }
 
 /**

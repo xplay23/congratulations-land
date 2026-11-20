@@ -6,6 +6,7 @@ const UNLOCALIZED_PREFIXES = [
   "/admin",
   "/assets",
   "/samples",
+  "/media",
 ];
 
 const UNLOCALIZED_EXACT = new Set([

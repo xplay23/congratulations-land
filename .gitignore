@@ -5,6 +5,7 @@ node_modules/
 
 # Local runtime storage & SQLite database
 storage/
+public/media/
 
 # Secrets & Environment
 .env

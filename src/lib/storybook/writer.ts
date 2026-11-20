@@ -1,10 +1,20 @@
 import {
   buildChatModelParams,
-  createOpenAIClient,
-  getDirectorModel,
-  getTextModel,
+  getCmsOpenAIRuntime,
   withOpenAIRetry,
 } from "@/lib/openai-client";
+
+function renderPromptVars(
+  template: string | undefined,
+  vars: Record<string, string>
+): string | null {
+  if (!template || !template.trim()) return null;
+  let out = template.trim();
+  for (const [key, val] of Object.entries(vars)) {
+    out = out.replaceAll(`{{${key}}}`, val);
+  }
+  return out;
+}
 import { ART_STYLE_META, TONE_LABELS } from "@/lib/i18n";
 import type { AiCostTracker } from "@/lib/ai-cost";
 import type { PhotoVisualPassports } from "./vision";
@@ -280,7 +290,7 @@ export async function generateThreeStepStory(
   visionPassports?: PhotoVisualPassports,
   costTracker?: AiCostTracker
 ): Promise<WrittenStoryDraft> {
-  const client = createOpenAIClient();
+  const { client, config } = await getCmsOpenAIRuntime();
   if (!client) {
     onProgress?.("story_beats", 15);
     onProgress?.("story_draft", 24);
@@ -289,10 +299,14 @@ export async function generateThreeStepStory(
     return buildDemoStory(payload);
   }
 
+  const writerModel = config.storybookWriterModel;
+  const directorModel = config.storybookDirectorModel;
   const langName = payload.lang === "uk" ? "Ukrainian (Українська)" : "Russian (Русский)";
   const wordRange = getWordRangeByAge(payload.ageGroup);
   const toneLabel = TONE_LABELS[payload.tone][payload.lang];
-  const styleDesc = ART_STYLE_META[payload.artStyle].prompt;
+  const styleDesc =
+    config.prompts[`style-${payload.artStyle}`]?.trim() ||
+    ART_STYLE_META[payload.artStyle].prompt;
   const hasCompanion = payload.companionType !== "none";
   const appearanceSummary = buildAppearanceSummary(
     payload,
@@ -307,15 +321,22 @@ export async function generateThreeStepStory(
     ? `${requestedToy} (REQUIRED recurring item across the story & VisualBible)`
     : "none selected by user (NOT required — do NOT force a recurring item; leave recurringToyLock empty, though natural everyday props may appear if the scene calls for them)";
 
+  const defaultBeatsSystem = `You are a master children's book architect writing in ${langName}. Build concrete, warm, sensory story beats (never preachy). Strictly respect the declared child gender and companion species/relation/gender (for example, never turn a dog into a cat or change a companion's gender).`;
+  const customBeatsSystem = renderPromptVars(
+    config.prompts["storybook-beats-system"],
+    { langName }
+  );
+  const beatsSystemPrompt = `${customBeatsSystem || defaultBeatsSystem}\nReturn strict JSON only.`;
+
   // Step 1: Story beats
   onProgress?.("story_beats", 12);
   const beatsRes = await withOpenAIRetry("story_beats", () =>
     client.chat.completions.create({
-      ...buildChatModelParams(0.8, 1400),
+      ...buildChatModelParams(0.8, 1400, writerModel),
       messages: [
         {
           role: "system",
-          content: `You are a master children's book architect writing in ${langName}. Build concrete, warm, sensory story beats (never preachy). Strictly respect the declared child gender and companion species/relation/gender (for example, never turn a dog into a cat or change a companion's gender). Return strict JSON only.`,
+          content: beatsSystemPrompt,
         },
         {
           role: "user",
@@ -335,7 +356,7 @@ Return JSON: { "title": "...", "subtitle": "...", "beats": [{ "pageNumber": 1, "
     })
   );
 
-  costTracker?.addChatUsage("story_beats", getTextModel(), beatsRes.usage);
+  costTracker?.addChatUsage("story_beats", writerModel, beatsRes.usage);
   const beatsRaw = beatsRes.choices[0]?.message?.content || "{}";
   const beatsJson = extractJsonObject<{
     title: string;
@@ -343,20 +364,26 @@ Return JSON: { "title": "...", "subtitle": "...", "beats": [{ "pageNumber": 1, "
     beats: Array<{ pageNumber: number; beatSummary: string; sceneAction: string }>;
   }>(beatsRaw);
 
+  const defaultDraftSystem = `You are an acclaimed children's author in ${langName}.
+Write warm, rhythmic read-aloud prose (${wordRange} words per page), concrete sensory details matching the chosen setting's season and world (e.g., rustle of leaves, warm bread, creak of wood — never inject snow or winter unless the setting calls for it), zero robotic AI clichés ("вдруг понял, что главное сокровище — дружба"), zero moralizing lectures.
+Never put emojis, stars (★), or decorative symbols in titles, headings, or text — use plain Cyrillic prose and standard punctuation only.
+Strictly preserve the child's gender and the companion's exact species/relation and gender (e.g. male dog MUST act, sound, and take masculine verbs like a dog — NEVER meow or purr!).
+If layoutMode is "panorama", assign alternating "textZone": "left" or "right".`;
+  const customDraftSystem = renderPromptVars(
+    config.prompts["storybook-draft-system"],
+    { langName, wordRange }
+  );
+  const draftSystemPrompt = `${customDraftSystem || defaultDraftSystem}\nReturn strict JSON only.`;
+
   // Step 2: Literary Draft + Anti-AI Liveliness (Prose only, decoupled from visual prompts)
   onProgress?.("story_draft", 22);
   const draftRes = await withOpenAIRetry("story_draft", () =>
     client.chat.completions.create({
-      ...buildChatModelParams(0.8, 2600),
+      ...buildChatModelParams(0.8, 2600, writerModel),
       messages: [
         {
           role: "system",
-          content: `You are an acclaimed children's author in ${langName}.
-Write warm, rhythmic read-aloud prose (${wordRange} words per page), concrete sensory details matching the chosen setting's season and world (e.g., rustle of leaves, warm bread, creak of wood — never inject snow or winter unless the setting calls for it), zero robotic AI clichés ("вдруг понял, что главное сокровище — дружба"), zero moralizing lectures.
-Never put emojis, stars (★), or decorative symbols in titles, headings, or text — use plain Cyrillic prose and standard punctuation only.
-Strictly preserve the child's gender and the companion's exact species/relation and gender (e.g. male dog MUST act, sound, and take masculine verbs like a dog — NEVER meow or purr!).
-If layoutMode is "panorama", assign alternating "textZone": "left" or "right".
-Return strict JSON only.`,
+          content: draftSystemPrompt,
         },
         {
           role: "user",
@@ -385,7 +412,7 @@ Return JSON:
     })
   );
 
-  costTracker?.addChatUsage("story_draft", getTextModel(), draftRes.usage);
+  costTracker?.addChatUsage("story_draft", writerModel, draftRes.usage);
   const draftJson = extractJsonObject<{
     title: string;
     subtitle: string;
@@ -397,21 +424,34 @@ Return JSON:
     }>;
   }>(draftRes.choices[0]?.message?.content || "{}");
 
-  // Step 3: Dedicated RU/UA Proofreader (before visual directing so visuals sync 1:1 with final text!)
-  onProgress?.("story_proofread", 32);
-  const proofRes = await withOpenAIRetry("story_proofread", () =>
-    client.chat.completions.create({
-      ...buildChatModelParams(0.2, 2600),
-      messages: [
-        {
-          role: "system",
-          content: `You are a meticulous native ${langName} literary proofreader for children's books.
+  const defaultProofSystem = `You are a meticulous native ${langName} literary proofreader for children's books.
 Check and fix:
 1) Case endings and declensions of the child's name "${payload.childName}" (e.g., avoid errors like "вёл Мила" -> "вёл Милу").
 2) In Ukrainian: use proper кличний відмінок (${payload.childNameVocative || payload.childName}) in direct speech.
 3) Consistent verb/adjective gender for child (${payload.gender === "girl" ? "feminine" : "masculine"}) AND for the companion (${companionSummary}). Fix any species mismatch (e.g. if companion is a dog, remove cat sounds like "муркоче"/"мурлычет").
-4) Natural punctuation, em-dashes, and warm read-aloud rhythm without changing the plot or shortening pages below ${wordRange} words. Remove any emojis or decorative symbols like ★/✦.
-Return strict JSON with the exact structure: { "title": "...", "subtitle": "...", "pages": [{ "pageNumber": 1, "heading": "...", "text": "..." }], "fixesApplied": ["brief note"] }`,
+4) Natural punctuation, em-dashes, and warm read-aloud rhythm without changing the plot or shortening pages below ${wordRange} words. Remove any emojis or decorative symbols like ★/✦.`;
+  const customProofSystem = renderPromptVars(
+    config.prompts["storybook-proofread-system"],
+    {
+      langName,
+      childName: payload.childName,
+      childNameVocative: payload.childNameVocative || payload.childName,
+      genderPronoun: payload.gender === "girl" ? "feminine" : "masculine",
+      companionSummary,
+      wordRange,
+    }
+  );
+  const proofSystemPrompt = `${customProofSystem || defaultProofSystem}\nReturn strict JSON with the exact structure: { "title": "...", "subtitle": "...", "pages": [{ "pageNumber": 1, "heading": "...", "text": "..." }], "fixesApplied": ["brief note"] }`;
+
+  // Step 3: Dedicated RU/UA Proofreader (before visual directing so visuals sync 1:1 with final text!)
+  onProgress?.("story_proofread", 32);
+  const proofRes = await withOpenAIRetry("story_proofread", () =>
+    client.chat.completions.create({
+      ...buildChatModelParams(0.2, 2600, writerModel),
+      messages: [
+        {
+          role: "system",
+          content: proofSystemPrompt,
         },
         {
           role: "user",
@@ -429,7 +469,7 @@ Return strict JSON with the exact structure: { "title": "...", "subtitle": "..."
     })
   );
 
-  costTracker?.addChatUsage("story_proofread", getTextModel(), proofRes.usage);
+  costTracker?.addChatUsage("story_proofread", writerModel, proofRes.usage);
   const proofJson = extractJsonObject<{
     title: string;
     subtitle: string;
@@ -451,16 +491,7 @@ Return strict JSON with the exact structure: { "title": "...", "subtitle": "..."
     };
   });
 
-  // Step 4: Visual Director & Continuity Supervisor (uses lighter director model gpt-6.2-sol on FINAL text)
-  onProgress?.("story_director", 40);
-  const directorModel = getDirectorModel();
-  const directorRes = await withOpenAIRetry("story_director", () =>
-    client.chat.completions.create({
-      ...buildChatModelParams(0.4, 3400, directorModel),
-      messages: [
-        {
-          role: "system",
-          content: `You are a master children's book Visual Director and Continuity Supervisor.
+  const defaultDirectorSystem = `You are a master children's book Visual Director and Continuity Supervisor.
 You receive FINAL proofread book pages and must design the VisualBible + per-page camera/composition/physics directing briefs so every illustration matches the text 1-to-1, avoids anatomical/physics glitches, keeps recurring story objects identical across pages, and NEVER repeats front-facing camera stares.
 
 STRICT DIRECTING RULES (apply universally across any story world):
@@ -473,8 +504,22 @@ STRICT DIRECTING RULES (apply universally across any story world):
 7. Style & Layout fidelity:
    - Art style is "${styleDesc}". Maintain rich painterly storybook detail, lighting, and atmosphere while keeping 2D illustrated proportions (never photorealistic skin pores or fabric macro).
    - For "coverPrompt": compose a warm full-body vertical cover scene (1024x1536) with boots/feet clearly visible on a firm path (~78% down from top), leaving calm sky/canopy in the top 18% and quiet foreground in bottom 20% for title typography.
-   - If layoutMode is "panorama", preserve a quiet low-contrast scenic zone on each page's assigned "textZone" ("left" or "right" third) without lining characters up toward the viewer.
-8. Return strict JSON only (English prompts, zero text/letters inside images).`,
+   - If layoutMode is "panorama", preserve a quiet low-contrast scenic zone on each page's assigned "textZone" ("left" or "right" third) without lining characters up toward the viewer.`;
+  const customDirectorSystem = renderPromptVars(
+    config.prompts["storybook-director-system"],
+    { styleDesc }
+  );
+  const directorSystemPrompt = `${customDirectorSystem || defaultDirectorSystem}\n8. Return strict JSON only (English prompts, zero text/letters inside images).`;
+
+  // Step 4: Visual Director & Continuity Supervisor (uses lighter director model gpt-6.2-sol on FINAL text)
+  onProgress?.("story_director", 40);
+  const directorRes = await withOpenAIRetry("story_director", () =>
+    client.chat.completions.create({
+      ...buildChatModelParams(0.4, 3400, directorModel),
+      messages: [
+        {
+          role: "system",
+          content: directorSystemPrompt,
         },
         {
           role: "user",
@@ -602,7 +647,7 @@ export async function rewriteSinglePageText(params: {
   instruction: string;
   costTracker?: AiCostTracker;
 }): Promise<{ heading: string; text: string }> {
-  const client = createOpenAIClient();
+  const { client, config } = await getCmsOpenAIRuntime();
   if (!client) {
     return {
       heading: params.currentHeading,
@@ -610,12 +655,13 @@ export async function rewriteSinglePageText(params: {
     };
   }
 
+  const writerModel = config.storybookWriterModel;
   const langName = params.lang === "uk" ? "Ukrainian (Українська)" : "Russian (Русский)";
   const wordRange = getWordRangeByAge(params.ageGroup);
 
   const res = await withOpenAIRetry("rewrite_page", () =>
     client.chat.completions.create({
-      ...buildChatModelParams(0.6, 1000),
+      ...buildChatModelParams(0.6, 1000, writerModel),
       messages: [
         {
           role: "system",
@@ -632,7 +678,7 @@ User edit instruction: ${params.instruction}`,
     })
   );
 
-  params.costTracker?.addChatUsage("rewrite_page", getTextModel(), res.usage);
+  params.costTracker?.addChatUsage("rewrite_page", writerModel, res.usage);
   return extractJsonObject<{ heading: string; text: string }>(
     res.choices[0]?.message?.content || "{}"
   );

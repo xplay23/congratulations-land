@@ -1,0 +1,62 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Domainer Platform — Admin layout
+   "Plate on a table" container + nav background. Applies to all /admin pages.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Base font size — scales entire admin UI down from Payload's default */
+html {
+  font-size: 14px;
+}
+
+/* Outer background (the "table") */
+body,
+.template-default {
+  background-color: var(--theme-bg);
+}
+
+[data-theme=dark] body,
+[data-theme=dark] .template-default {
+  background-color: #131313;
+}
+
+[data-theme=light] body,
+[data-theme=light] .template-default {
+  background-color: #f3f3f3;
+}
+
+/* Inner container (the "plate") */
+.template-default__wrap {
+  width: auto;
+  margin: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: calc(100vh - 20px);
+}
+
+[data-theme=dark] .template-default__wrap {
+  background-color: #1c1c1c;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme=light] .template-default__wrap {
+  background-color: #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Nav */
+.nav {
+  border-right: none;
+}
+
+/* Hide nav until Payload hydrates the grid — prevents 1fr→0 flash on load */
+.template-default:not(.template-default--nav-hydrated) .nav {
+  visibility: hidden;
+}
+
+[data-theme=dark] .nav {
+  background-color: #131313;
+}
+
+[data-theme=light] .nav {
+  background-color: #f3f3f3;
+}

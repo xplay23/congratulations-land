@@ -1,0 +1,11 @@
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css" source("../../src/components/admin");
+
+/* Restore Tailwind border/box-sizing behavior strictly inside custom admin wrappers */
+.vv-admin-tw *,
+.vv-admin-tw ::before,
+.vv-admin-tw ::after {
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 0;
+}

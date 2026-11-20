@@ -1,0 +1,938 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Domainer Platform — Public Site Design Tokens
+   All visual properties must reference these variables — no hardcoded hex.
+   ThemeScript injects per-site overrides on top of these at runtime.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Dark theme (default) ─────────────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+	--bg-base: #111111;
+	--bg-surface: #181818;
+	--bg-stripe: rgba(255, 255, 255, 0.03);
+	--bg-raised: #222222;
+	--bg-inset: #0d0d0d;
+	--bg-chrome: #000000;
+
+	--text-primary: #f0ece4;
+	--text-secondary: #bbbbbb;
+	--text-muted: #9e9e9e;
+	--text-disabled: #333333;
+
+	--border-subtle: rgba(255, 255, 255, 0.06);
+	--border-default: rgba(255, 255, 255, 0.10);
+	--border-strong: rgba(255, 255, 255, 0.18);
+
+	--icon-bg: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Light theme ──────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+	--bg-base: #f8f8f6;
+	--bg-surface: #ffffff;
+	--bg-stripe: rgba(0, 0, 0, 0.03);
+	--bg-raised: #f0ede8;
+	--bg-inset: #ede9e2;
+	--bg-chrome: #ffffff;
+
+	--text-primary: #1a1a1a;
+	--text-secondary: #555;
+	--text-muted: #767676;
+	--text-disabled: #bbbbbb;
+
+	--border-subtle: rgba(0, 0, 0, 0.07);
+	--border-default: rgba(0, 0, 0, 0.10);
+	--border-strong: rgba(0, 0, 0, 0.18);
+
+	--icon-bg: rgba(0, 0, 0, 0.06);
+}
+
+/* ── Accent colors — theme-independent, overridable via ThemeScript ───────── */
+:root {
+	--accent-gold: #e8c84a;
+	--accent-cta: #111827;
+	--accent-cta-hover: #353b47;
+
+	/* Buy Now button (provider link) — separate accent from the general CTA color, text is always white */
+	--buy-now-color: #2563eb;
+	--buy-now-color-light: #4d82f0;
+	--buy-now-color-hover: #1f4fc4;
+	/* Solid color by default; ThemeScript swaps this to a linear-gradient() when
+     payment-settings.buyNowGradientColor is set. */
+	--buy-now-bg: var(--buy-now-color-hover);
+
+	/* Spaceship Checkout button — independent color, same solid/gradient pattern */
+	--spaceship-checkout-color: #2563eb;
+	--spaceship-checkout-color-light: #4d82f0;
+	--spaceship-checkout-color-hover: #1f4fc4;
+	--spaceship-checkout-bg: var(--spaceship-checkout-color-hover);
+
+	/* Border radius — overridden by ThemeScript from themeConfig.borderRadius */
+	--radius: 4px;
+
+	/* Typography — ThemeScript overrides this at runtime based on fontFamily setting */
+	--font-display: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+
+	/* Logo tile background — intentionally theme-independent (light neutral so
+     logos render correctly regardless of dark/light site theme) */
+	--logo-tile: #fff;
+}
+
+/* ── Tailwind v4 @theme exports ───────────────────────────────────────────── */
+/* Registers CSS vars as Tailwind tokens so utilities like bg-surface,        */
+/* text-text-primary, border-border-subtle work without [var(--...)] syntax.  */
+@theme {
+	/* Colors */
+	--color-bg-base: var(--bg-base);
+	--color-bg-surface: var(--bg-surface);
+	--color-bg-raised: var(--bg-raised);
+	--color-bg-inset: var(--bg-inset);
+	--color-bg-chrome: var(--bg-chrome);
+	--color-bg-stripe: var(--bg-stripe);
+
+	--color-text-primary: var(--text-primary);
+	--color-text-secondary: var(--text-secondary);
+	--color-text-muted: var(--text-muted);
+	--color-text-disabled: var(--text-disabled);
+
+	--color-border-subtle: var(--border-subtle);
+	--color-border-default: var(--border-default);
+	--color-border-strong: var(--border-strong);
+
+	--color-accent-gold: var(--accent-gold);
+	--color-accent-cta: var(--accent-cta);
+	--color-accent-cta-hover: var(--accent-cta-hover);
+
+	--color-logo-tile: var(--logo-tile);
+	--color-bg-icon: var(--icon-bg);
+
+	/* Typography */
+	--font-sans: var(--font-display);
+
+	/* Border radius */
+	--radius-DEFAULT: var(--radius);
+	--radius-pill: 999px;
+
+	/* Layout */
+	--header-height: 3.5rem;
+	/* h-14 = 56px — must match SiteHeader h-14 */
+	--width-page: 1200px;
+	--width-page-wide: 1500px;
+
+	/* Spacing scale — section/block/gap rhythm */
+	--spacing-section: 80px;
+	--spacing-block: 40px;
+	--spacing-card: 20px;
+	--spacing-gap: 12px;
+	--spacing-page-x: 40px;
+	--spacing-page-x-sm: 20px;
+}
+
+/* ── Layout utilities ─────────────────────────────────────────────────────── */
+
+/* Site border-radius — single control point for all rounded corners.
+   Replace bare `rounded` (Tailwind default 4px) with `radius` everywhere
+   so the admin's --radius token applies and can be changed in one place. */
+@utility radius {
+	border-radius: var(--radius);
+}
+
+/* Partial-side variants — used in fused input+button combos */
+@utility radius-l {
+	border-radius: var(--radius) 0 0 var(--radius);
+}
+
+@utility radius-r {
+	border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+@utility radius-t {
+	border-radius: var(--radius) var(--radius) 0 0;
+}
+
+/* Page-width container — use on every top-level section wrapper */
+@utility container-page {
+	max-width: var(--width-page);
+	margin-inline: auto;
+	padding-inline: var(--spacing-page-x);
+}
+
+/* Wide container — use for full-width layouts like inventory (1500px) */
+@utility container-wide {
+	max-width: var(--width-page-wide);
+	margin-inline: auto;
+	padding-inline: var(--spacing-page-x);
+}
+
+/* Responsive padding override for mobile — apply alongside container-page/container-wide: */
+/* <div className="container-page px-page-x-sm md:px-page-x">                             */
+
+/* Standard block/panel — bg-surface + border-subtle + radius + p-5 */
+@utility block-panel {
+	background-color: var(--bg-surface);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius);
+	padding: 20px;
+}
+
+/* Raised panel variant — TransferInfoWidget etc */
+@utility block-panel-raised {
+	background-color: var(--bg-raised);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius);
+	padding: 20px;
+}
+
+/* ── Button classes ───────────────────────────────────────────────────────── */
+/* Defined as plain CSS so :hover pseudo-class works without JS.              */
+/* Works in RSC — no event handlers needed.                                   */
+
+.cta-primary-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--accent-cta);
+	color: var(--accent-cta-text);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius);
+	font-size: 14px;
+	font-weight: 500;
+	padding: 10px 24px;
+	transition: opacity 150ms ease;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.cta-primary-btn:hover {
+	opacity: 0.85;
+}
+
+.cta-secondary-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--bg-inset);
+	color: var(--text-primary);
+	border: 1px solid var(--border-default);
+	border-radius: var(--radius);
+	font-size: 14px;
+	font-weight: 600;
+	padding: 10px 24px;
+	transition: opacity 150ms ease;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.cta-secondary-btn:hover {
+	opacity: 0.85;
+}
+
+/* Cookie banner — smaller than the section-level cta-* buttons, both variants
+   share the same border/padding/font-size so Accept and Decline render at
+   identical size (a bare border on one side and none on the other was the
+   original size-mismatch bug). */
+.cookie-banner-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius);
+	font-size: 13px;
+	font-weight: 600;
+	padding: 8px 16px;
+	transition: opacity 150ms ease;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.cookie-banner-btn:hover {
+	opacity: 0.85;
+}
+
+.cookie-banner-btn--default {
+	background-color: var(--bg-surface);
+	color: var(--text-primary);
+}
+
+.cookie-banner-btn--decline {
+	background-color: var(--bg-inset);
+	color: var(--text-primary);
+	border-color: var(--border-default);
+}
+
+.cookie-banner-btn--accept {
+	background-color: var(--accent-cta);
+	color: var(--accent-cta-text);
+}
+
+/* Nav CTA — same as primary but bg-color hover instead of opacity           */
+/* Used in SiteHeader where accent-cta-hover must animate                    */
+.cta-nav-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--accent-cta);
+	color: var(--accent-cta-text);
+	border-radius: var(--radius);
+	font-size: 14px;
+	font-weight: 600;
+	padding: 8px 20px;
+	transition: background-color 150ms ease;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.cta-nav-btn:hover {
+	background-color: var(--accent-cta-hover);
+}
+
+/* Fused input+button submit (search, newsletter) */
+.cta-submit-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background-color: var(--accent-cta);
+	color: var(--accent-cta-text);
+	border-left: none;
+	border-radius: 0 var(--radius) var(--radius) 0;
+	font-size: 12px;
+	font-weight: 600;
+	padding: 8px 16px;
+	transition: opacity 150ms ease;
+	cursor: pointer;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.cta-submit-btn:hover {
+	opacity: 0.9;
+}
+
+.cta-submit-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.5;
+}
+
+/* Standalone variant — full radius + left border, for submit buttons not fused to an input */
+.cta-submit-btn--full {
+	border-left: 1px solid var(--border-subtle);
+	border-radius: var(--radius);
+}
+
+/* Buy Now — separate accent color from the general CTA, larger, always-white text.
+   Same simple opacity hover as the marketplace buttons (.cta-submit-btn). */
+.buy-now-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	background: var(--buy-now-bg);
+	color: #ffffff;
+	border-radius: var(--radius);
+	font-size: 15px;
+	font-weight: 700;
+	padding: 14px 24px;
+	transition: opacity 150ms ease;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.buy-now-btn:hover {
+	opacity: 0.9;
+}
+
+/* Spaceship Checkout — same shape as .buy-now-btn, independent color. */
+.buy-now-btn--spaceship {
+	background: var(--spaceship-checkout-bg);
+	font-weight: 400;
+}
+
+.buy-now-btn--spaceship__logo {
+	width: 140px;
+}
+
+.pay-with-atom {
+	display: flex;
+	background: linear-gradient(271.19deg, #1a0caa 0px, #002991 100%) !important;
+	border-radius: var(--radius) !important;
+	color: var(--text-primary) !important;
+	gap: 8px !important;
+	padding: 10px 24px !important;
+}
+
+.pay-with-atom .default-text {
+	color: #fff;
+	font-size: 15px !important;
+	font-weight: 400;
+	padding-right: 0 !important;
+}
+
+.pay-with-atom img {
+	width: 100px !important;
+}
+
+/* Rich text button labels (Spaceship Checkout / AtomPay) — .richtext img's
+   width:100%+margin default is meant for document flow, not a fixed-height
+   flex button. Cap to text line-height so an uploaded logo sits inline. */
+.buy-now-btn__content {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.buy-now-btn__content img {
+	width: auto;
+	height: 20px;
+	margin: 0;
+	border-radius: 0;
+}
+
+/* ── Input base ───────────────────────────────────────────────────────────── */
+.input-base {
+	background-color: var(--bg-inset);
+	border: 1px solid var(--border-default);
+	border-radius: var(--radius);
+	padding: 8px 12px;
+	font-size: 13px;
+	color: var(--text-secondary);
+	transition: border-color 150ms ease;
+}
+
+.input-base::placeholder {
+	color: var(--text-muted);
+}
+
+.input-base:focus {
+	outline: none;
+	border-color: var(--border-default);
+}
+
+.input-base:disabled {
+	opacity: 0.4;
+}
+
+/* Fused left input (search, newsletter) */
+.input-fused {
+	background-color: var(--bg-inset);
+	border: 1px solid var(--border-subtle);
+	border-radius: var(--radius) 0 0 var(--radius);
+	border-right: none;
+	padding: 8px 12px;
+	font-size: 13px;
+	color: var(--text-secondary);
+	transition: border-color 150ms ease;
+	flex: 1;
+	min-width: 0;
+}
+
+.input-fused::placeholder {
+	color: var(--text-muted);
+}
+
+.input-fused:focus {
+	outline: none;
+	border-color: var(--border-default);
+}
+
+.input-fused:disabled {
+	opacity: 0.4;
+}
+
+/* ── Typography role classes — size, spacing, line-height only ───────────── */
+/* font-weight is NOT included — set it via font-bold / font-medium / etc.   */
+/* Color is NOT included — set it via text-text-primary / text-accent-gold.  */
+/* This allows all Tailwind modifiers (hover:, group-hover:, font-*) to work.*/
+
+/* Fixed-weight roles — font-weight is part of the role, never overridden */
+.type-display {
+	font-size: 56px;
+	font-weight: 700;
+	letter-spacing: -0.03em;
+	line-height: 0.95;
+}
+
+.type-heading {
+	font-size: 32px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+}
+
+.type-heading-sm {
+	font-size: 28px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+}
+
+.type-title {
+	font-size: 22px;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.05;
+}
+
+/* Variable-weight roles — font-weight set in the component via font-* utility */
+.type-subheading {
+	font-size: 16px;
+	line-height: 1.4;
+}
+
+.type-body-xl {
+	font-size: 18px;
+	line-height: 1.6;
+}
+
+/* Pages that opt out of sticky footer — footer follows content naturally */
+main:has(> .no-sticky-footer) {
+	flex: none;
+}
+
+.type-body-lg {
+	font-size: 16px;
+	line-height: 1.5;
+}
+
+.type-body {
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+.type-body-sm {
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.type-caption {
+	font-size: 12px;
+	line-height: 1.4;
+}
+
+.type-meta {
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	line-height: 1.4;
+}
+
+.type-label {
+	font-size: 10px;
+	letter-spacing: 0.12em;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
+/* Price — fixed weight 700, color applied via text-accent-gold in component */
+.type-price-lg {
+	font-size: 32px;
+	font-weight: 700;
+	line-height: 1.0;
+}
+
+.type-price {
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1.0;
+}
+
+.type-price-sm {
+	font-size: 14px;
+	font-weight: 700;
+	line-height: 1.0;
+}
+
+/* ── System italic — uses OS font instead of loading italic font files ─────── */
+@utility system-italic {
+	font-style: italic;
+	font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ── Domain Hero — theme tokens ──────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+	--hero-tint-opacity: 0.12;
+	--hero-glow-opacity: 0.15;
+	--hero-grid-color: rgba(255, 255, 255, 0.08);
+	--hero-mesh-color: rgba(255, 255, 255, 0.18);
+	--hero-content-shadow: 0 -24px 80px rgba(0, 0, 0, 0.90);
+}
+
+[data-theme="light"] {
+	--hero-tint-opacity: 0.06;
+	--hero-glow-opacity: 0.08;
+	--hero-grid-color: rgba(0, 0, 0, 0.07);
+	--hero-mesh-color: rgba(0, 0, 0, 0.10);
+	--hero-content-shadow: 0 -24px 48px rgba(0, 0, 0, 0.07);
+}
+
+/* ── Domain Hero animations ───────────────────────────────────────────────── */
+@keyframes hero-dot-blink {
+
+	0%,
+	48% {
+		opacity: 1;
+	}
+
+	50%,
+	98% {
+		opacity: 0.1;
+	}
+
+	100% {
+		opacity: 1;
+	}
+}
+
+@keyframes hero-scroll-line {
+	0% {
+		transform: scaleY(0);
+		opacity: 0;
+		transform-origin: top;
+	}
+
+	40% {
+		transform: scaleY(1);
+		opacity: 0.85;
+		transform-origin: top;
+	}
+
+	60% {
+		transform: scaleY(1);
+		opacity: 0.85;
+		transform-origin: bottom;
+	}
+
+	100% {
+		transform: scaleY(0);
+		opacity: 0;
+		transform-origin: bottom;
+	}
+}
+
+.hero-dot-blink {
+	animation: hero-dot-blink 1.1s step-start infinite;
+}
+
+.hero-scroll-line {
+	display: block;
+	width: 2px;
+	height: 28px;
+	border-radius: 999px;
+	animation: hero-scroll-line 2s ease-in-out infinite;
+}
+
+.hero-grid-overlay {
+	background-image:
+		linear-gradient(to right, var(--hero-grid-color) 1px, transparent 1px),
+		linear-gradient(to bottom, var(--hero-grid-color) 1px, transparent 1px);
+	background-size: 40px 40px;
+}
+
+.hero-mesh-overlay {
+	background-image: radial-gradient(var(--hero-mesh-color) 1px, transparent 1px);
+	background-size: 20px 20px;
+}
+
+@keyframes hero-explore-ring {
+	0% {
+		transform: scale(1);
+		opacity: 0.55;
+	}
+
+	100% {
+		transform: scale(1.4);
+		opacity: 0;
+	}
+}
+
+.hero-explore-ring {
+	position: absolute;
+	inset: -4px;
+	border-radius: 999px;
+	border: 1.5px solid transparent;
+	pointer-events: none;
+	animation: hero-explore-ring 2s ease-out infinite;
+}
+
+.hero-explore-btn:hover {
+	background: color-mix(in srgb, var(--hero-explore-color) 12%, transparent);
+}
+
+/* ── Responsive typography — mobile overrides ────────────────────────────── */
+/* Reduces fixed-weight heading roles on narrow screens.                      */
+/* Variable-weight roles (body-*, caption, meta, label) are small enough      */
+/* to need no reduction.                                                       */
+@media (max-width: 767px) {
+	.type-display {
+		font-size: 36px;
+		letter-spacing: -0.02em;
+		line-height: 1.05;
+	}
+
+	.type-heading {
+		font-size: 24px;
+	}
+
+	.type-heading-sm {
+		font-size: 20px;
+	}
+
+	.type-title {
+		font-size: 18px;
+	}
+
+	.type-price-lg {
+		font-size: 26px;
+	}
+
+	.type-body-xl {
+		font-size: 16px;
+	}
+}
+
+/* ── Responsive section spacing ──────────────────────────────────────────── */
+/* Used by resolveSpacing() in spacing.ts. Plain CSS classes (no @utility)    */
+/* so the @media override is guaranteed to win in the cascade.                */
+
+.pt-sp-none {
+	padding-top: 0;
+}
+
+.pt-sp-xs {
+	padding-top: 12px;
+}
+
+.pt-sp-sm {
+	padding-top: 24px;
+}
+
+.pt-sp-md {
+	padding-top: 48px;
+}
+
+.pt-sp-lg {
+	padding-top: 56px;
+}
+
+.pt-sp-xl {
+	padding-top: 72px;
+}
+
+.pb-sp-none {
+	padding-bottom: 0;
+}
+
+.pb-sp-xs {
+	padding-bottom: 12px;
+}
+
+.pb-sp-sm {
+	padding-bottom: 24px;
+}
+
+.pb-sp-md {
+	padding-bottom: 48px;
+}
+
+.pb-sp-lg {
+	padding-bottom: 56px;
+}
+
+.pb-sp-xl {
+	padding-bottom: 72px;
+}
+
+@media (min-width: 768px) {
+	.pt-sp-xs {
+		padding-top: 16px;
+	}
+
+	.pt-sp-sm {
+		padding-top: 32px;
+	}
+
+	.pt-sp-md {
+		padding-top: 64px;
+	}
+
+	.pt-sp-lg {
+		padding-top: 80px;
+	}
+
+	.pt-sp-xl {
+		padding-top: 100px;
+	}
+
+	.pb-sp-xs {
+		padding-bottom: 16px;
+	}
+
+	.pb-sp-sm {
+		padding-bottom: 32px;
+	}
+
+	.pb-sp-md {
+		padding-bottom: 64px;
+	}
+
+	.pb-sp-lg {
+		padding-bottom: 80px;
+	}
+
+	.pb-sp-xl {
+		padding-bottom: 100px;
+	}
+}
+
+/* ── Responsive spacer heights ───────────────────────────────────────────── */
+/* Used by SpacerBlock instead of inline style={{ height }}.                  */
+
+.spacer-xs {
+	height: 10px;
+}
+
+.spacer-sm {
+	height: 20px;
+}
+
+.spacer-md {
+	height: 32px;
+}
+
+.spacer-lg {
+	height: 48px;
+}
+
+.spacer-xl {
+	height: 64px;
+}
+
+.spacer-2xl {
+	height: 80px;
+}
+
+@media (min-width: 768px) {
+	.spacer-xs {
+		height: 16px;
+	}
+
+	.spacer-sm {
+		height: 32px;
+	}
+
+	.spacer-md {
+		height: 48px;
+	}
+
+	.spacer-lg {
+		height: 64px;
+	}
+
+	.spacer-xl {
+		height: 96px;
+	}
+
+	.spacer-2xl {
+		height: 128px;
+	}
+}
+/* ── Payment Methods block ──────────────────────────────────────────────────
+   Logos rest muted and fill with their brand color (--hover-color, set inline
+   per item) on hover/focus. Preset glyphs paint with currentColor; uploaded
+   custom logos are raster/SVG images, so they go grayscale → full color
+   instead. The name shows as a CSS-only tooltip so the block stays an RSC. */
+.pay-logo-item {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	outline: none;
+}
+
+.pay-logo {
+	display: inline-flex;
+	align-items: center;
+	color: var(--text-muted);
+	transition: color 0.2s ease;
+}
+
+.pay-logo-item:hover .pay-logo,
+.pay-logo-item:focus-visible .pay-logo {
+	color: var(--hover-color, var(--text-primary));
+}
+
+.pay-logo-img {
+	filter: grayscale(1) opacity(0.65);
+	transition: filter 0.2s ease;
+}
+
+.pay-logo-item:hover .pay-logo-img,
+.pay-logo-item:focus-visible .pay-logo-img {
+	filter: none;
+}
+
+.pay-logo-tip {
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 50%;
+	z-index: 20;
+	transform: translate(-50%, 4px);
+	padding: 4px 10px;
+	border: 1px solid var(--border-default);
+	border-radius: 6px;
+	background: var(--bg-raised);
+	color: var(--text-primary);
+	font-size: 12px;
+	line-height: 1.2;
+	white-space: nowrap;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.pay-logo-item:hover .pay-logo-tip,
+.pay-logo-item:focus-visible .pay-logo-tip {
+	opacity: 1;
+	transform: translate(-50%, 0);
+}
+
+/* ── Offer / Inquiry tabs ───────────────────────────────────────────────────
+   Tab strip and the active form's card read as one panel: no gap, and the
+   shared edge loses its border + rounding. Plain classes, not Tailwind
+   utilities — unlayered .radius / .block-panel rules would beat them. */
+.form-tabs__list {
+	border-bottom-width: 0;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.form-tabs__panel > .block-panel {
+	border-top-width: 0;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+/* Hero Columns sidebar with "No Spacing Between Blocks": stacked bordered
+   blocks would show a doubled 2px line where they meet. Pulling each block
+   after the first up by one border width makes the two borders coincide. */
+.hero-sidebar-tight > * + * {
+	margin-top: -1px;
+}
+
+/* With a rounded theme the joined edges must be square, otherwise the corners
+   of adjacent blocks leave notches at the seam. Each block is a wrapper div
+   (renderTemplateBlock) around the actual card, hence the second level. */
+/* General page-builder blocks (e.g. Icon List) nest the card deeper:
+   wrapper > section > div > .block-panel, so match those paths explicitly
+   rather than every descendant (inputs/buttons inside must stay rounded). */
+.hero-sidebar-tight > :not(:first-child) > *,
+.hero-sidebar-tight > :not(:first-child) > * > .block-panel,
+.hero-sidebar-tight > :not(:first-child) > * > * > .block-panel {
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+.hero-sidebar-tight > :not(:last-child) > *,
+.hero-sidebar-tight > :not(:last-child) > * > .block-panel,
+.hero-sidebar-tight > :not(:last-child) > * > * > .block-panel {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}

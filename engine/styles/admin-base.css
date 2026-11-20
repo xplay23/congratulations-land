@@ -1,0 +1,136 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Domainer Platform — Admin base styles
+   CSS custom properties + typography utility classes for all admin pages.
+   Loaded globally in (payload)/layout.tsx before all other admin styles.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── CSS custom properties ────────────────────────────────────────────────── */
+
+:root {
+  /* Nav width — read by Payload's grid-template-columns */
+  --nav-width: 240px;
+
+  /* Font */
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* ── Admin semantic colors — adapt per theme ─────────────────────────── */
+  --adm-color-muted:  #bcbcc6; /* bumped from zinc-400 for readability on #131313 */
+
+  /* ── Custom admin card surface — separate from Payload's --theme-elevation-* */
+  --adm-card-bg:      #131313;                  /* sidebar tone, dark & quiet */
+  --adm-card-border:  rgba(255, 255, 255, 0.09); /* slightly warm-neutral edge */
+
+  /* ── Gold accent — Help page section numbers + service price pills ───── */
+  --gold:               #e6a557;
+  --gold-soft:          rgba(230, 165, 87, 0.08);
+  --gold-border:        rgba(230, 165, 87, 0.18);
+
+  /* ── Help page dimmed text tiers ─────────────────────────────────────── */
+  --help-text3:         #6e6e6e;  /* eyebrows, meta, captions */
+  --help-text4:         #4a4a4a;  /* dash markers, faintest UI */
+  --help-border-strong: rgba(255, 255, 255, 0.18); /* inline link underlines */
+
+  /* ── Compact UI type scale — forms, nav, list views, dashboard cards ───── */
+  /* Change a value here → updates everywhere: adm-* classes + aui-* components */
+  --adm-fs-title:   24px;
+  --adm-fs-heading: 18px;
+  --adm-fs-body-lg: 15px;
+  --adm-fs-body:    14px;
+  --adm-fs-caption: 13px;
+  --adm-fs-badge:   12px;
+  --adm-fs-label:   11px;
+  --adm-fs-mono:    14px;
+
+  /* ── Content page type scale — full-page reading views (Help, Analytics) ── */
+  /* Sizes below 16px reuse compact UI vars above (same px, different role).   */
+  --adm-fs-page-h1:    32px;   /* H1 page title */
+  --adm-fs-section-h2: 22px;   /* H2 section title */
+  --adm-fs-lead:       17px;   /* intro paragraph below H1 */
+  --adm-fs-card-h3:    16px;   /* H3 card / item title */
+  --adm-fs-meta:       13.5px; /* card CTA links, fine print */
+
+  /* ── Admin border radius ─────────────────────────────────────────────── */
+  --adm-radius-sm: 6px;   /* inputs, selects, small elements */
+  --adm-radius:    8px;   /* buttons, tabs, badges */
+  --adm-radius-md: 10px;  /* wizard inputs, info callouts, skip banners */
+  --adm-radius-lg: 12px;  /* cards, modals, panels */
+  --adm-radius-pill: 9999px; /* pills, tags */
+
+  /* ── Admin interactive colors ─────────────────────────────────────────── */
+  /* Single source of truth — CSS files reference these vars, TSX uses C.* */
+  --adm-color-blue:          #3b82f6;  /* focus rings, tabs, checkboxes, inputs */
+  --adm-color-blue-cta:      #2563eb;  /* solid CTA button bg — one per page max */
+  --adm-color-blue-cta-hover:#1d4fcc;  /* CTA button hover */
+  --adm-color-green:         #10b981;  /* success states */
+  --adm-color-red:           #ef4444;  /* danger/error states */
+  --adm-color-amber:         #f59e0b;  /* warning states */
+}
+
+[data-theme=light] {
+  --adm-color-muted:    #71717a;                   /* zinc-500 — passes WCAG AA on white */
+  --adm-card-bg:        var(--theme-elevation-50); /* use Payload's light elevation */
+  --adm-card-border:    rgba(0, 0, 0, 0.09);
+  --gold:               #9a6200; /* darkened for contrast on light backgrounds */
+  --gold-soft:          rgba(154, 98, 0, 0.1);
+  --gold-border:        rgba(154, 98, 0, 0.22);
+  --help-text3:         #6b7280;
+  --help-text4:         #9ca3af;
+  --help-border-strong: rgba(0, 0, 0, 0.2);
+}
+
+/* ── Admin type utility classes ───────────────────────────────────────────── */
+/* Font-size via variables — color, opacity, margin always set inline/contextually. */
+
+.adm-title   { font-size: var(--adm-fs-title);   font-weight: 800; letter-spacing: -0.02em; }
+.adm-heading { font-size: var(--adm-fs-heading);  font-weight: 700; }
+.adm-body    { font-size: var(--adm-fs-body);     line-height: 1.5; }
+.adm-body-lg { font-size: var(--adm-fs-body-lg); line-height: 1.75; }
+.adm-caption { font-size: var(--adm-fs-caption);  line-height: 1.4; }
+.adm-label   { font-size: var(--adm-fs-label);    font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.adm-badge   { font-size: var(--adm-fs-badge);    font-weight: 600; letter-spacing: 0.04em; }
+.adm-mono    { font-size: var(--adm-fs-mono);     font-family: monospace; line-height: 1.6; }
+
+/* ── Admin page layout primitives ────────────────────────────────────────── */
+
+/* Page shell — outermost div of every custom admin page */
+.adm-page {
+  padding: 32px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .adm-page {
+    padding: 16px;
+  }
+}
+
+/* Reading column — stack inside .adm-page to constrain section width */
+.adm-page-col {
+  max-width: 960px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Horizontal-scroll utility ────────────────────────────────────────────── */
+/* Wrap any row/table that can't reflow (tabs strips, wide tables) so it       */
+/* scrolls within its own box on narrow screens instead of being clipped by   */
+/* the admin shell's `overflow: hidden` (see admin-layout.css).               */
+.aui-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.aui-scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Group-header-to-first-field gap ─────────────────────────────────────── */
+/* A group field's label sits flush against its first child field (no gap by  */
+/* default) — used on messenger-settings' whatsapp/telegram groups so the     */
+/* "Enabled" checkbox isn't crammed under the group title. Matches Payload's  */
+/* own `.group-field--top-level` padding (base(2) = --base * 2) so the gap    */
+/* below the title equals the gap above it.                                  */
+.messenger-enabled-field {
+  margin-top: calc(var(--base) * 2);
+}

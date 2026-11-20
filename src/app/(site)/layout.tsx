@@ -1,4 +1,4 @@
-import "./globals.css";
+import "../globals.css";
 import { LanguageProvider } from "@/components/LanguageContext";
 import { PricingProvider } from "@/components/PricingContext";
 import { SiteHeader } from "@/components/SiteHeader";
