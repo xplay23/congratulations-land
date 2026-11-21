@@ -11,6 +11,7 @@ import {
   loadDecorationAssets,
   sanitizeBookText,
 } from "./pdf-assets";
+import { getStorybookRuntimeConfig } from "./config";
 import type { Lang, LayoutMode, StorybookResult } from "@/lib/types";
 
 const A4_PORTRAIT: [number, number] = [595.28, 841.89];
@@ -59,14 +60,18 @@ function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: numbe
   return lines;
 }
 
-async function embedImageFile(pdf: PDFDocument, filePath: string): Promise<PDFImage> {
+async function embedImageFile(
+  pdf: PDFDocument,
+  filePath: string,
+  jpegQuality = 92
+): Promise<PDFImage> {
   const bytes = fs.readFileSync(filePath);
   const ext = path.extname(filePath).toLowerCase();
   if (ext === ".jpg" || ext === ".jpeg") {
     return pdf.embedJpg(bytes);
   }
   const jpgBytes = await sharp(bytes)
-    .jpeg({ quality: 92, chromaSubsampling: "4:4:4", mozjpeg: true })
+    .jpeg({ quality: jpegQuality, chromaSubsampling: "4:4:4", mozjpeg: true })
     .toBuffer();
   return pdf.embedJpg(jpgBytes);
 }
@@ -102,13 +107,15 @@ function drawDoubleFrame(
 function drawPageWatermark(
   page: PDFPage,
   fontBold: PDFFont,
-  lang: Lang
+  lang: Lang,
+  customLabel?: string
 ): void {
   const { width, height } = page.getSize();
   const label =
-    lang === "uk"
+    customLabel?.trim() ||
+    (lang === "uk"
       ? "VIDEOVITANNYA • ЗРАЗОК • НЕ ДЛЯ ДРУКУ"
-      : "VIDEOVITANNYA • ОБРАЗЕЦ • НЕ ДЛЯ ПЕЧАТИ";
+      : "VIDEOVITANNYA • ОБРАЗЕЦ • НЕ ДЛЯ ПЕЧАТИ");
   page.drawText(label, {
     x: width * 0.14,
     y: height * 0.22,
@@ -170,6 +177,10 @@ export async function buildStorybookPdf(params: {
   outPath: string;
 }): Promise<void> {
   const { result, layoutMode, lang, cleanDir, previewDir, mode, outPath } = params;
+  const sbConfig = await getStorybookRuntimeConfig();
+  const pdfJpegQuality = sbConfig.pdf.jpegQuality;
+  const watermarkLabel = sbConfig.pdf.watermarkText[lang];
+
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
 
@@ -178,7 +189,7 @@ export async function buildStorybookPdf(params: {
   const fontBold = await pdf.embedFont(bold, { subset: true });
   const fontItalic = await pdf.embedFont(italic, { subset: true });
 
-  const assets = await loadDecorationAssets();
+  const assets = await loadDecorationAssets(sbConfig.pdf, sbConfig.cacheVersion);
   const vignetteImg = await pdf.embedPng(assets.cornerVignette);
   const wreathImg = assets.dedicationWreath
     ? await pdf.embedPng(assets.dedicationWreath)
@@ -212,7 +223,7 @@ export async function buildStorybookPdf(params: {
   let isPortraitCoverArt = false;
   let coverImg: PDFImage | null = null;
   if (fs.existsSync(coverImgPath)) {
-    coverImg = await embedImageFile(pdf, coverImgPath);
+    coverImg = await embedImageFile(pdf, coverImgPath, pdfJpegQuality);
     isPortraitCoverArt = coverImg.height > coverImg.width * 1.15;
   }
 
@@ -335,7 +346,7 @@ export async function buildStorybookPdf(params: {
     sy -= 18;
   }
 
-  if (mode === "preview") drawPageWatermark(coverPage, fontBold, lang);
+  if (mode === "preview") drawPageWatermark(coverPage, fontBold, lang, watermarkLabel);
 
   // 2. Dedication / Wish Page (with illustrated botanical & celestial wreath)
   if (result.dedication || layoutMode === "classic") {
@@ -431,7 +442,7 @@ export async function buildStorybookPdf(params: {
       color: BRONZE_HEAD,
     });
 
-    if (mode === "preview") drawPageWatermark(titlePage, fontBold, lang);
+    if (mode === "preview") drawPageWatermark(titlePage, fontBold, lang, watermarkLabel);
   }
 
   // 3. Story pages
@@ -456,7 +467,7 @@ export async function buildStorybookPdf(params: {
       const yPos = (ph - box) / 2;
 
       if (fs.existsSync(imgPath)) {
-        const img = await embedImageFile(pdf, imgPath);
+        const img = await embedImageFile(pdf, imgPath, pdfJpegQuality);
         artPage.drawImage(img, { x: xPos, y: yPos, width: box, height: box });
       } else {
         artPage.drawRectangle({
@@ -511,7 +522,7 @@ export async function buildStorybookPdf(params: {
         borderColor: GOLD_PRIMARY,
         borderWidth: 1.6,
       });
-      if (mode === "preview") drawPageWatermark(artPage, fontBold, lang);
+      if (mode === "preview") drawPageWatermark(artPage, fontBold, lang, watermarkLabel);
 
       // Page B: Cream Typography page with double gold frame, chapter flourish & botanical vignette
       const textPage = pdf.addPage(A4_PORTRAIT);
@@ -587,14 +598,14 @@ export async function buildStorybookPdf(params: {
         color: rgb(0.5, 0.44, 0.36),
       });
 
-      if (mode === "preview") drawPageWatermark(textPage, fontBold, lang);
+      if (mode === "preview") drawPageWatermark(textPage, fontBold, lang, watermarkLabel);
     } else {
       // Panoramic Spread (Landscape A4: full-bleed artwork + smart-placed styled parchment plaque)
       const spread = pdf.addPage(A4_LANDSCAPE);
       const [sw, sh] = A4_LANDSCAPE;
 
       if (fs.existsSync(imgPath)) {
-        const img = await embedImageFile(pdf, imgPath);
+        const img = await embedImageFile(pdf, imgPath, pdfJpegQuality);
         const scale = Math.max(sw / img.width, sh / img.height);
         const drawW = img.width * scale;
         const drawH = img.height * scale;
@@ -727,7 +738,7 @@ export async function buildStorybookPdf(params: {
         color: rgb(0.46, 0.4, 0.32),
       });
 
-      if (mode === "preview") drawPageWatermark(spread, fontBold, lang);
+      if (mode === "preview") drawPageWatermark(spread, fontBold, lang, watermarkLabel);
     }
   }
 

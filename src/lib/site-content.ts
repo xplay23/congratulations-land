@@ -22,7 +22,9 @@ export interface DemoStorybookItem {
   childName: string;
   ageGroup: AgeGroup;
   artStyle: ArtStyle;
+  artStyleLabel?: BilingualText;
   layoutMode: LayoutMode;
+  layoutLabel?: BilingualText;
   companionLabel?: string;
   coverImage: string;
   pdfUrl: string;

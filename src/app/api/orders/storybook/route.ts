@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { countSessionPreviewOrders, createOrder } from "@/lib/db";
-import { FAMILY_RELATION_OPTIONS } from "@/lib/i18n";
 import {
   getDynamicPriceKopiykas,
   getPlatformLimits,
@@ -8,8 +7,9 @@ import {
 } from "@/lib/settings";
 import { attachSessionCookie, getOrCreateSessionId } from "@/lib/session";
 import { deleteUploadFile } from "@/lib/storage";
+import { getStorybookRuntimeConfig } from "@/lib/storybook/config";
 import { runStorybookPipeline } from "@/lib/storybook/pipeline";
-import type { CompanionGender, StorybookOrderPayload } from "@/lib/types";
+import type { CompanionGender, LayoutMode, StorybookOrderPayload } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
@@ -89,17 +89,25 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const sbConfig = await getStorybookRuntimeConfig();
+
     const matchedFamilyOption = companionRelation
-      ? FAMILY_RELATION_OPTIONS.find(
+      ? sbConfig.familyRelations.find(
           (f) =>
-            f.en.toLowerCase() === companionRelation.toLowerCase() ||
-            f.id.toLowerCase() === companionRelation.toLowerCase()
+            f.promptEn.toLowerCase() === companionRelation.toLowerCase() ||
+            f.slug.toLowerCase() === companionRelation.toLowerCase() ||
+            f.label.uk.toLowerCase() === companionRelation.toLowerCase() ||
+            f.label.ru.toLowerCase() === companionRelation.toLowerCase()
         )
       : undefined;
 
     let companionGender: CompanionGender | undefined;
     if (companionType !== "none") {
-      if (matchedFamilyOption) {
+      if (
+        matchedFamilyOption &&
+        (matchedFamilyOption.impliedGender === "male" ||
+          matchedFamilyOption.impliedGender === "female")
+      ) {
         companionGender = matchedFamilyOption.impliedGender;
       } else if (body.companionGender === "male" || body.companionGender === "female") {
         companionGender = body.companionGender;
@@ -111,36 +119,70 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const enabledStyles = sbConfig.styles.filter((s) => s.enabled);
+    const defaultStyle =
+      enabledStyles.find((s) => s.isDefault) || enabledStyles[0] || sbConfig.styles[0];
+    const requestedStyle = String(body.artStyle || "").trim();
+    const resolvedArtStyle =
+      enabledStyles.find((s) => s.slug === requestedStyle)?.slug ||
+      defaultStyle?.slug ||
+      "watercolor";
+
+    const enabledLayouts = sbConfig.layouts.filter((l) => l.enabled);
+    const defaultLayout =
+      enabledLayouts.find((l) => l.isDefault) || enabledLayouts[0] || sbConfig.layouts[0];
+    const resolvedLayoutMode: LayoutMode =
+      enabledLayouts.find((l) => l.code === body.layoutMode)?.code ||
+      defaultLayout?.code ||
+      "classic";
+
+    const enabledAges = sbConfig.ageGroups.filter((a) => a.enabled);
+    const defaultAge =
+      enabledAges.find((a) => a.isDefault) || enabledAges[0] || sbConfig.ageGroups[0];
+    const requestedAge = String(body.ageGroup || "").trim();
+    const resolvedAgeGroup =
+      enabledAges.find((a) => a.code === requestedAge)?.code ||
+      defaultAge?.code ||
+      "6-8";
+
+    const enabledTones = sbConfig.tones.filter((t) => t.enabled);
+    const requestedTone = String(body.tone || "").trim();
+    const resolvedTone =
+      enabledTones.find((t) => t.slug === requestedTone)?.slug ||
+      enabledTones[0]?.slug ||
+      "magical";
+
+    const enabledVolumes = sbConfig.pageVolumes.filter((v) => v.enabled);
+    const requestedPages = Math.round(Number(body.pageCount || sbConfig.defaultPageCount));
+    const resolvedPageCount =
+      enabledVolumes.find((v) => v.pages === requestedPages)?.pages ||
+      enabledVolumes.find((v) => v.isDefault)?.pages ||
+      sbConfig.defaultPageCount ||
+      Math.min(16, Math.max(4, requestedPages));
+
     const payload: StorybookOrderPayload = {
       lang,
       childName,
       childNameVocative: body.childNameVocative?.trim() || undefined,
       gender: body.gender,
-      ageGroup:
-        body.ageGroup === "2-3" || body.ageGroup === "4-5" ? body.ageGroup : "6-8",
+      ageGroup: resolvedAgeGroup,
       photoUploadId: body.photoUploadId || undefined,
       parentalConsent: Boolean(body.parentalConsent),
       hairColor: body.hairColor?.trim() || undefined,
       eyeColor: body.eyeColor?.trim() || undefined,
       hasGlasses: Boolean(body.hasGlasses),
-      layoutMode: body.layoutMode === "panorama" ? "panorama" : "classic",
-      artStyle:
-        body.artStyle === "3d_pixar" ||
-        body.artStyle === "folk_storybook" ||
-        body.artStyle === "pencil_gouache" ||
-        body.artStyle === "2d_animation" ||
-        body.artStyle === "claymation"
-          ? body.artStyle
-          : "watercolor",
-      tone:
-        body.tone === "cozy" ||
-        body.tone === "adventure" ||
-        body.tone === "funny"
-          ? body.tone
-          : "magical",
-      setting: String(body.setting || "").trim() || "Засніжений ліс чудес",
-      plotIdea: String(body.plotIdea || "").trim() || "Пошук чарівного світла",
-      pageCount: Math.min(8, Math.max(4, Number(body.pageCount || 6))),
+      layoutMode: resolvedLayoutMode,
+      artStyle: resolvedArtStyle,
+      tone: resolvedTone,
+      setting:
+        String(body.setting || "").trim() ||
+        sbConfig.settings.find((s) => s.enabled)?.promptValue[lang] ||
+        "Засніжений ліс чудес",
+      plotIdea:
+        String(body.plotIdea || "").trim() ||
+        sbConfig.plots.find((p) => p.enabled)?.promptValue[lang] ||
+        "Пошук чарівного світла",
+      pageCount: resolvedPageCount,
       companionType,
       companionSpecies: companionSpecies || undefined,
       companionRelation: companionRelation || undefined,

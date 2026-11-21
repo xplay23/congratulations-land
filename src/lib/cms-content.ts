@@ -11,6 +11,7 @@ import {
   type DemoStorybookItem,
   type DemoVideoItem,
 } from "@/lib/site-content";
+import { getStorybookRuntimeConfig } from "@/lib/storybook/config";
 import type { ArtStyle, Lang, LayoutMode, ServiceId } from "@/lib/types";
 
 export interface CmsPricingTier {
@@ -1449,6 +1450,12 @@ export async function getCmsShowcases(
             staticSb.subtitle,
             staticSb.subtitle
           );
+          const sbConfig = await getStorybookRuntimeConfig().catch(() => null);
+          const artStyleSlug = asString(doc.artStyle, staticSb.artStyle) as ArtStyle;
+          const layoutModeVal = asString(doc.layoutMode, staticSb.layoutMode) as LayoutMode;
+          const styleMatch = sbConfig?.styles.find((s) => s.slug === artStyleSlug);
+          const layoutMatch = sbConfig?.layouts.find((l) => l.code === layoutModeVal);
+
           storybooks.push({
             id: demoLang,
             orderId: staticSb.orderId,
@@ -1457,15 +1464,11 @@ export async function getCmsShowcases(
             title: titleBi[demoLang] || titleBi[locale],
             subtitle: subtitleBi[demoLang] || subtitleBi[locale],
             childName: asString(doc.recipientName, staticSb.childName),
-            ageGroup: (asString(doc.age, staticSb.ageGroup) as
-              | "2-3"
-              | "4-5"
-              | "6-8"),
-            artStyle: (asString(doc.artStyle, staticSb.artStyle) as ArtStyle),
-            layoutMode: (asString(
-              doc.layoutMode,
-              staticSb.layoutMode
-            ) as LayoutMode),
+            ageGroup: asString(doc.age, staticSb.ageGroup),
+            artStyle: artStyleSlug,
+            artStyleLabel: styleMatch ? styleMatch.title : undefined,
+            layoutMode: layoutModeVal,
+            layoutLabel: layoutMatch ? layoutMatch.label : undefined,
             companionLabel:
               asString(doc.companionLabel) || staticSb.companionLabel,
             coverImage: posterUrl || staticSb.coverImage,

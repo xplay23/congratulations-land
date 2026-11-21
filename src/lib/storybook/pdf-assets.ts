@@ -3,6 +3,7 @@ import path from "node:path";
 import type { PDFFont } from "pdf-lib";
 import sharp from "sharp";
 import { getStoragePaths } from "@/lib/storage";
+import type { StorybookPdfConfig } from "./config-shared";
 import { createCornerVignetteBuffer } from "./watermark";
 
 export interface DecorationAssets {
@@ -18,27 +19,51 @@ export interface DecorationAssets {
   } | null;
 }
 
-let cachedAssets: DecorationAssets | null = null;
+let cachedAssets: { version: number; assets: DecorationAssets } | null = null;
 
 /**
- * Loads transparent-background storybook decoration PNGs from `assets/decorations/`
- * and prepares mirrored corner variants for book covers.
+ * Loads transparent-background storybook decoration PNGs from CMS uploads (if set)
+ * with automatic fallback to `assets/decorations/`, and prepares mirrored corner variants.
  */
-export async function loadDecorationAssets(): Promise<DecorationAssets> {
-  if (cachedAssets) return cachedAssets;
+export async function loadDecorationAssets(
+  pdfConfig?: StorybookPdfConfig,
+  cacheVersion = 0
+): Promise<DecorationAssets> {
+  if (cachedAssets && cachedAssets.version === cacheVersion) {
+    return cachedAssets.assets;
+  }
 
   const { DECORATIONS_DIR } = getStoragePaths();
-  const readIfExists = (file: string): Buffer | null => {
-    const p = path.join(DECORATIONS_DIR, file);
+  const readCustomOrDefault = (
+    customPath: string | undefined,
+    defaultFile: string
+  ): Buffer | null => {
+    if (customPath && fs.existsSync(customPath)) {
+      return fs.readFileSync(customPath);
+    }
+    const p = path.join(DECORATIONS_DIR, defaultFile);
     return fs.existsSync(p) ? fs.readFileSync(p) : null;
   };
 
   const cornerVignette =
-    readIfExists("corner_vignette.png") || (await createCornerVignetteBuffer());
-  const dedicationWreath = readIfExists("dedication_wreath.png");
-  const chapterDivider = readIfExists("chapter_divider.png");
-  const coverBackdrop = readIfExists("cover_backdrop.png");
-  const rawCorner = readIfExists("cover_corner.png");
+    readCustomOrDefault(pdfConfig?.decorCornerVignettePath, "corner_vignette.png") ||
+    (await createCornerVignetteBuffer());
+  const dedicationWreath = readCustomOrDefault(
+    pdfConfig?.decorDedicationWreathPath,
+    "dedication_wreath.png"
+  );
+  const chapterDivider = readCustomOrDefault(
+    pdfConfig?.decorChapterDividerPath,
+    "chapter_divider.png"
+  );
+  const coverBackdrop = readCustomOrDefault(
+    pdfConfig?.decorCoverBackdropPath,
+    "cover_backdrop.png"
+  );
+  const rawCorner = readCustomOrDefault(
+    pdfConfig?.decorCoverCornerPath,
+    "cover_corner.png"
+  );
 
   let coverCorners: DecorationAssets["coverCorners"] = null;
   if (rawCorner) {
@@ -51,14 +76,15 @@ export async function loadDecorationAssets(): Promise<DecorationAssets> {
     coverCorners = { tl: resized, tr, bl, br };
   }
 
-  cachedAssets = {
+  const assets: DecorationAssets = {
     cornerVignette,
     dedicationWreath,
     chapterDivider,
     coverBackdrop,
     coverCorners,
   };
-  return cachedAssets;
+  cachedAssets = { version: cacheVersion, assets };
+  return assets;
 }
 
 /**

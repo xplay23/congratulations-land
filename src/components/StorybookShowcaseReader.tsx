@@ -33,8 +33,10 @@ export function StorybookShowcaseReader({
   const book =
     items.find((b) => b.id === selectedBookId) ?? items[0];
 
-  const styleLabel = ART_STYLE_META[book.artStyle]?.label[lang] || book.artStyle;
-  const layoutLabel = LAYOUT_META[book.layoutMode]?.label[lang] || book.layoutMode;
+  const styleLabel =
+    book.artStyleLabel?.[lang] || ART_STYLE_META[book.artStyle]?.label[lang] || book.artStyle;
+  const layoutLabel =
+    book.layoutLabel?.[lang] || LAYOUT_META[book.layoutMode]?.label[lang] || book.layoutMode;
   const pdfViewerUrl = `${book.pdfUrl}#view=FitH&navpanes=0`;
 
   return (

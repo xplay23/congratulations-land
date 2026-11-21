@@ -10,6 +10,11 @@ import * as LucideIcons from 'lucide-react'
 // Full Lucide name (PascalCase) — rendered dynamically via LucideIcons[name].
 
 const ICON_GROUPS: Record<string, string[]> = {
+  'Storybook & Magic': [
+    'Sparkles', 'Wand2', 'Moon', 'Sun', 'Smile', 'Rocket', 'Waves',
+    'Footprints', 'PawPrint', 'Snowflake', 'Crown', 'Castle', 'TreePine',
+    'Gift', 'Music', 'Flower2', 'Flame', 'Anchor', 'Feather', 'BookHeart',
+  ],
   'Actions & UI': [
     'Search', 'Filter', 'Star', 'Heart', 'Bookmark', 'Bell',
     'Settings', 'Sliders', 'LayoutGrid', 'List', 'ArrowRight', 'Check',

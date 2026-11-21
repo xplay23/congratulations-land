@@ -7,9 +7,9 @@ export const AIPrompts: GlobalConfig = {
   admin: {
     group: { ru: "Настройки", uk: "Налаштування", en: "Settings" },
     description: {
-      ru: "Редактируемые шаблоны промптов для контента, перевода, сказок PDF, видео-реплик и ИИ-помощника. Поддерживают {{переменные}}.",
-      uk: "Редаговані шаблони промптів для контенту, перекладу, казок PDF, відео-реплік та ШІ-помічника. Підтримують {{змінні}}.",
-      en: "Editable prompt templates for content, translation, PDF storybooks, video TTS scripts, and website assistant.",
+      ru: "Редактируемые шаблоны промптов для контента, перевода, видео-реплик и ИИ-помощника (промпты и стили сказок PDF находятся в разделе «Производство» → «Конструктор сказок» и «Стили сказок»).",
+      uk: "Редаговані шаблони промптів для контенту, перекладу, відео-реплік та ШІ-помічника (промпти й стилі казок PDF знаходяться у розділі «Виробництво» → «Конструктор казок» та «Стилі казок»).",
+      en: "Editable prompt templates for content, translation, video TTS scripts, and website assistant (PDF storybook prompts & styles live under Production).",
     },
   },
   hooks: {

@@ -9,16 +9,10 @@ export type ServiceId =
 export type OrderStatus = "draft" | "generating" | "preview_ready" | "paid" | "failed";
 
 export type ChildGender = "girl" | "boy";
-export type AgeGroup = "2-3" | "4-5" | "6-8";
+export type AgeGroup = string;
 export type LayoutMode = "classic" | "panorama";
-export type ArtStyle =
-  | "watercolor"
-  | "3d_pixar"
-  | "folk_storybook"
-  | "pencil_gouache"
-  | "2d_animation"
-  | "claymation";
-export type StoryTone = "cozy" | "magical" | "adventure" | "funny";
+export type ArtStyle = string;
+export type StoryTone = string;
 export type CompanionType = "none" | "pet" | "family" | "friend";
 export type CompanionGender = "male" | "female";
 

@@ -10,6 +10,13 @@ import {
 } from "@/lib/openai-client";
 import { resolveUploadPath } from "@/lib/storage";
 import type { AiCostTracker } from "@/lib/ai-cost";
+import {
+  getStorybookRuntimeConfig,
+  resolveMediumTranslationRule,
+  resolveNegativeRules,
+  resolveStorybookStyle,
+  type StorybookStyleConfig,
+} from "./config";
 import { createWatermarkedPreviewImage } from "./watermark";
 import type {
   LayoutMode,
@@ -109,21 +116,10 @@ async function saveImageResponseToFile(
   throw new Error("Image response contained neither b64_json nor url");
 }
 
-function getMediumTranslationRule(artStyle: StorybookOrderPayload["artStyle"]): string {
-  switch (artStyle) {
-    case "3d_pixar":
-      return "Translate the subject completely into a stylized 3D animated theatrical feature film character (smooth stylized CGI skin and proportions, expressive large eyes, sculpted hair, clean smooth render without noisy paper/canvas grain).";
-    case "claymation":
-      return "Translate the subject completely into a charming handcrafted stop-motion claymation miniature puppet (smooth matte sculpted plasticine head and hands, glossy bead-like doll eyes, simple sculpted nose and rosy cheeks — NEVER photorealistic human skin or photo face paste).";
-    default:
-      return "Translate the subject 100% into a flat 2D hand-drawn storybook illustration matching the exact art style (stylized 2D illustrated face, eyes, hair, and garments — ZERO photorealistic skin, ZERO pores, ZERO photographic lighting or real-world fabric macro, ZERO canvas weave or wavy halftone ripple).";
-  }
-}
-
 function buildIllustrationPrompt(params: {
   scenePrompt: string;
   visualBible: StoryVisualBible;
-  artStyle: StorybookOrderPayload["artStyle"];
+  styleConfig: StorybookStyleConfig;
   layoutMode: LayoutMode;
   textZone?: "left" | "right";
   isCover?: boolean;
@@ -136,7 +132,7 @@ function buildIllustrationPrompt(params: {
   const {
     scenePrompt,
     visualBible,
-    artStyle,
+    styleConfig,
     layoutMode,
     textZone,
     isCover,
@@ -191,10 +187,7 @@ function buildIllustrationPrompt(params: {
     );
   }
 
-  const antiRipple =
-    artStyle === "3d_pixar" || artStyle === "claymation"
-      ? "Clean smooth render without noisy canvas grain or wavy halftone artifacts."
-      : "Clean smooth matte illustration finish: NO canvas weave, NO corduroy bump, NO diagonal wavy hatching, NO noisy halftone ripple, NO photorealistic skin or photo collage.";
+  const antiRipple = resolveNegativeRules(styleConfig);
 
   parts.push(
     `CRITICAL RULES: Single continuous seamless full-bleed artwork only. ${antiRipple} NO book fold, NO central crease, NO split screens, NO collage panels, NO borders or frames, NO letters or text inside the image.`
@@ -214,7 +207,10 @@ export async function generateCanonicalAnchor(params: {
   costTracker?: AiCostTracker;
 }): Promise<string> {
   const anchorPath = path.join(params.cleanDir, "anchor.png");
-  const { imageClient: client, config } = await getCmsOpenAIRuntime();
+  const [{ imageClient: client, config }, sbConfig] = await Promise.all([
+    getCmsOpenAIRuntime(),
+    getStorybookRuntimeConfig(),
+  ]);
 
   if (!client) {
     await renderDemoArt(
@@ -230,7 +226,8 @@ export async function generateCanonicalAnchor(params: {
   const imageModel = config.storybookImageModel;
   const quality = config.storybookImageQuality;
   const uploadPath = resolveUploadPath(params.payload.photoUploadId);
-  const mediumRule = getMediumTranslationRule(params.payload.artStyle);
+  const styleCfg = resolveStorybookStyle(sbConfig, params.payload.artStyle);
+  const mediumRule = resolveMediumTranslationRule(styleCfg);
 
   const anchorPrompt = [
     `Create a warm children's storybook canonical character reference portrait sheet (relaxed waist-up three-quarter portrait on a clean soft warm cream backdrop).`,
@@ -293,7 +290,10 @@ export async function generateCompanionAnchor(params: {
   if (!uploadPath) return null;
 
   const compAnchorPath = path.join(params.cleanDir, "companion_anchor.png");
-  const { imageClient: client, config } = await getCmsOpenAIRuntime();
+  const [{ imageClient: client, config }, sbConfig] = await Promise.all([
+    getCmsOpenAIRuntime(),
+    getStorybookRuntimeConfig(),
+  ]);
 
   if (!client) {
     await renderDemoArt(
@@ -308,7 +308,8 @@ export async function generateCompanionAnchor(params: {
 
   const imageModel = config.storybookImageModel;
   const quality = config.storybookImageQuality;
-  const mediumRule = getMediumTranslationRule(params.payload.artStyle);
+  const styleCfg = resolveStorybookStyle(sbConfig, params.payload.artStyle);
+  const mediumRule = resolveMediumTranslationRule(styleCfg);
   const authoritativeFacts = [
     params.payload.companionType === "pet" && params.payload.companionSpecies
       ? `species=${params.payload.companionSpecies}`
@@ -433,7 +434,9 @@ async function verifyAndRepairSceneImage(params: {
     const dataUrl = `data:image/png;base64,${imgBuf.toString("base64")}`;
     const directorModel = config.storybookDirectorModel;
     const directorEffort = config.storybookDirectorReasoningEffort;
-    const qaPromptCustom = config.prompts["storybook-vision-qa"]?.trim();
+    const sbConfig = await getStorybookRuntimeConfig();
+    const qaPromptCustom =
+      sbConfig.prompts.visionQa?.trim() || config.prompts["storybook-vision-qa"]?.trim();
     const qaChecklist =
       qaPromptCustom ||
       `Check for ANY major defect in these 4 categories:
@@ -506,6 +509,7 @@ async function renderSingleBookPage(params: {
   page: StoryPageItem;
   payload: StorybookOrderPayload;
   visualBible: StoryVisualBible;
+  styleConfig: StorybookStyleConfig;
   anchorPath: string;
   companionAnchorPath: string | null;
   cleanDir: string;
@@ -513,7 +517,17 @@ async function renderSingleBookPage(params: {
   client: OpenAI | null;
   costTracker?: AiCostTracker;
 }): Promise<StoryPageItem> {
-  const { page, payload, visualBible, anchorPath, companionAnchorPath, cleanDir, previewDir, client } = params;
+  const {
+    page,
+    payload,
+    visualBible,
+    styleConfig,
+    anchorPath,
+    companionAnchorPath,
+    cleanDir,
+    previewDir,
+    client,
+  } = params;
   const size: "1024x1024" | "1536x1024" =
     payload.layoutMode === "panorama" ? "1536x1024" : "1024x1024";
   const cleanFile = `page_${page.pageNumber}.png`;
@@ -533,7 +547,7 @@ async function renderSingleBookPage(params: {
     const prompt = buildIllustrationPrompt({
       scenePrompt: page.imagePrompt,
       visualBible,
-      artStyle: payload.artStyle,
+      styleConfig,
       layoutMode: payload.layoutMode,
       textZone: page.textZone,
       shotType: page.shotType,
@@ -586,8 +600,15 @@ export async function generatePreviewBookIllustrations(params: {
   coverPreviewFile: string;
   pages: StoryPageItem[];
 }> {
-  const { imageClient: client } = await getCmsOpenAIRuntime();
-  const limit = Math.max(1, params.previewPageLimit ?? PREVIEW_ILLUSTRATED_PAGES);
+  const [{ imageClient: client }, sbConfig] = await Promise.all([
+    getCmsOpenAIRuntime(),
+    getStorybookRuntimeConfig(),
+  ]);
+  const styleConfig = resolveStorybookStyle(sbConfig, params.payload.artStyle);
+  const limit = Math.max(
+    1,
+    params.previewPageLimit ?? sbConfig.previewPagesCount ?? PREVIEW_ILLUSTRATED_PAGES
+  );
   const previewIndices = params.pages
     .map((p, idx) => ({ p, idx }))
     .filter(({ p }) => p.pageNumber <= limit)
@@ -604,7 +625,7 @@ export async function generatePreviewBookIllustrations(params: {
   const coverFullPrompt = buildIllustrationPrompt({
     scenePrompt: params.coverPrompt,
     visualBible: params.visualBible,
-    artStyle: params.payload.artStyle,
+    styleConfig,
     layoutMode: "classic",
     isCover: true,
   });
@@ -644,6 +665,7 @@ export async function generatePreviewBookIllustrations(params: {
         page: params.pages[idx],
         payload: params.payload,
         visualBible: params.visualBible,
+        styleConfig,
         anchorPath: params.anchorPath,
         companionAnchorPath: params.companionAnchorPath,
         cleanDir: params.cleanDir,
@@ -684,7 +706,11 @@ export async function generateRemainingBookIllustrations(params: {
   ) => void;
   costTracker?: AiCostTracker;
 }): Promise<StoryPageItem[]> {
-  const { imageClient: client } = await getCmsOpenAIRuntime();
+  const [{ imageClient: client }, sbConfig] = await Promise.all([
+    getCmsOpenAIRuntime(),
+    getStorybookRuntimeConfig(),
+  ]);
+  const styleConfig = resolveStorybookStyle(sbConfig, params.payload.artStyle);
   const updatedPages: StoryPageItem[] = params.pages.map((p) => ({ ...p }));
 
   const pendingIndices = updatedPages
@@ -714,6 +740,7 @@ export async function generateRemainingBookIllustrations(params: {
         page: updatedPages[idx],
         payload: params.payload,
         visualBible: params.visualBible,
+        styleConfig,
         anchorPath: params.anchorPath,
         companionAnchorPath: params.companionAnchorPath,
         cleanDir: params.cleanDir,
@@ -749,7 +776,11 @@ export async function regenerateSinglePageIllustration(params: {
   previewDir: string;
   costTracker?: AiCostTracker;
 }): Promise<StoryPageItem> {
-  const { imageClient: client } = await getCmsOpenAIRuntime();
+  const [{ imageClient: client }, sbConfig] = await Promise.all([
+    getCmsOpenAIRuntime(),
+    getStorybookRuntimeConfig(),
+  ]);
+  const styleConfig = resolveStorybookStyle(sbConfig, params.payload.artStyle);
   const nextRevision = (params.page.imageRevision || 1) + 1;
   const cleanFile = `page_${params.page.pageNumber}_r${nextRevision}.png`;
   const previewFile = `page_${params.page.pageNumber}_r${nextRevision}_preview.jpg`;
@@ -772,7 +803,7 @@ export async function regenerateSinglePageIllustration(params: {
     const fullPrompt = buildIllustrationPrompt({
       scenePrompt: updatedPrompt,
       visualBible: params.visualBible,
-      artStyle: params.payload.artStyle,
+      styleConfig,
       layoutMode: params.payload.layoutMode,
       textZone: params.page.textZone,
       shotType: params.page.shotType,

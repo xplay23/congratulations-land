@@ -26,11 +26,13 @@ import {
   MessageSquareQuote,
   Navigation,
   PanelBottom,
+  Palette,
   PlaySquare,
   Settings,
   Sparkles,
   UserPen,
   Users,
+  Wand2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { tAdmin, useAdminLang, type AdminLang } from "@engine/lib/admin-i18n";
@@ -112,6 +114,16 @@ function getMainMenu(lang: AdminLang): Array<NavItem | NavGroup> {
           label: tAdmin(lang, "Ассеты пайплайна", "Асети пайплайну"),
           href: "/admin/collections/pipeline-assets",
           icon: FolderOpen,
+        },
+        {
+          label: tAdmin(lang, "Стили сказок", "Стилі казок"),
+          href: "/admin/collections/storybook-styles",
+          icon: Palette,
+        },
+        {
+          label: tAdmin(lang, "Конструктор сказок", "Конструктор казок"),
+          href: "/admin/globals/storybook-config",
+          icon: Wand2,
         },
       ],
     },

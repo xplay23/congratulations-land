@@ -109,7 +109,7 @@
 ### Итоговая навигация `/admin`
 - **Операции (Custom Views):** `Дашборд`, `Заказы`
 - **Каталог:** `Услуги`, `Вариации`, `Примеры`, `Отзывы`
-- **Производство:** `Видео-шаблоны`, `Ассеты пайплайна`
+- **Производство:** `Видео-шаблоны`, `Ассеты пайплайна`, `Стили сказок`, `Конструктор сказок`
 - **Контент:** `Страницы`, `Шаблоны → Главная страница`, `Статьи`, `Рубрики`, `Авторы`, `Медиа`
 - **Система → Пользователи / Настройки:** `Общие`, `Меню шапки`, `Меню футера`, `ИИ (Контент)`, `ИИ-сказки`, `ElevenLabs`, `Промпты`, `Лимиты`, `Курсы и маржа`
 
@@ -163,4 +163,27 @@
    - Идемпотентный сидер `npm run seed:video` ([scripts/seed-video-template.ts](file:///g:/WwW/work/gifts-project/scripts/seed-video-template.ts)) переносит все 29 ассетов и шаблон `st-nicholas-room` («Святой Николай — Теплая резиденция») с привязкой к вариации; `assemble_pilot.py` сохранён как legacy-fallback.
    - **Проверено живым E2E (19/19 PASS):** публичный конфиг и защита `403`/`401`, приватный `Range 206` стрим ассетов, извлечение кадров (`first` и `04b`), ElevenLabs с `language_code` `uk`/`ru`, быстрый рендер шота `04b` (`1.27s`), полный живой заказ `real_ffmpeg_elevenlabs` с автоудалением фото и zero-code 2-й шаблон с новым полем `hobby`.
 
-**Следующий шаг:** адаптация справочников и конструктора сказок PDF в Payload CMS, затем `src/styles/tokens.css` + редизайн (`DESIGN.md`).
+---
+
+## 6. Адаптация сказок PDF в Payload CMS (Готово)
+
+**Итог:** все художественные стили, справочники формы заказа `/create/storybook`, системные промпты пайплайна и оформление PDF перенесены в Payload CMS под группу **`Производство`** — новые стили, миры, сюжеты, настроения, возрастные группы, объёмы страниц и пресеты добавляются и тестируются из `/admin` без правок кода.
+
+### Сущности, песочница стиля и интеграция
+1. **`StorybookStyles` (`slug: "storybook-styles"`, группа `Производство`):**
+   - **Витрина (UA / RU):** `TranslateLocaleButton`, `title`, `slug` (`SlugField`), `badge`, `description`, `previewImage` (`Media`) + `fallbackImageUrl`, `enabled`, `isDefault`, `sortOrder`.
+   - **Промпт и рендер:** `stylePrompt` (EN, идёт в `visualBible.styleLock`), `mediumPreset` (`2d_illustration` | `3d_animation` | `claymation_stopmotion` | `custom` — автоподстановка правил перевода фото и `antiRipple` в [illustrator.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/illustrator.ts)), опциональные `mediumRuleOverride` и `negativeRulesOverride`.
+   - **Тест стиля ([StorybookStyleTester](file:///g:/WwW/work/gifts-project/engine/components/admin/StorybookStyleTester/index.tsx)):** песочница с 4 контрольными сценами (или своим промптом), выбором формата (`1536x1024`, `1024x1024`, `1024x1536`), генерацией тест-кадра по текущему несохранённому промпту ([POST /api/admin/storybook-styles/test-image](file:///g:/WwW/work/gifts-project/src/app/api/admin/storybook-styles/test-image/route.ts)) и кнопкой в 1 клик «Установить как превью стиля» ([POST /api/admin/storybook-styles/promote-preview](file:///g:/WwW/work/gifts-project/src/app/api/admin/storybook-styles/promote-preview/route.ts)).
+2. **`StorybookConfig` (`slug: "storybook-config"`, группа `Производство`):** 5 вкладок + `TranslateLocaleButton` (расширен поддержкой локализованных полей внутри `array`):
+   - **Вёрстка, возраст и объём:** режимы вёрстки (`classic`/`panorama` с превью из `Media`), возрастные группы (с `wordRange` и `writerNote` для [writer.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/writer.ts)), `previewPagesCount` и варианты объёма книги (`pageVolumes`).
+   - **Настроения, миры и сюжеты:** `tones` (с `IconPickerField`, дополнено группой `Storybook & Magic` + `promptHint`), `settings` и `plots` (с `IconPickerField` и **опциональными картинками-превью `previewImage`**, которые рендерятся карточкой с лайтбоксом, если заданы), и `presets` (для кнопки «Случайная комбинация» и URL-пресетов `?preset=...`, `?style=...`, `?setting=...`, `?plot=...`, `?tone=...`).
+   - **Герой и спутники:** `hairSwatches` и `eyeSwatches` (через `SiteColorPickerField`), `petSpecies`, `familyRelations` (с режимами пола `female`/`male`/`ask`) и `toyPresets`.
+   - **Промпты пайплайна:** 5 перенесённых системных промптов (`beats`, `draft`, `proofread`, `director`, `visionQa`) — мигрированы из `ai-prompts` с сохранением правок.
+   - **PDF и декор:** локализованный `pdfWatermarkText`, `pdfJpegQuality` (`70–98`) и 5 опциональных PNG-ассетов (`decorCornerVignette`, `decorChapterDivider`, `decorDedicationWreath`, `decorCoverCorner`, `decorCoverBackdrop`) с автоматическим fallback на `assets/decorations/` в [pdf-assets.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/pdf-assets.ts) и [pdf.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/pdf.ts).
+3. **Runtime-резолвер, витрина и сидер:**
+   - [src/lib/storybook/config-shared.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/config-shared.ts) + [src/lib/storybook/config.ts](file:///g:/WwW/work/gifts-project/src/lib/storybook/config.ts) с 30-секундным кэшем и мгновенной кросс-бандловой инвалидацией (`storybookConfig` в [cms-cache.ts](file:///g:/WwW/work/gifts-project/src/lib/cms-cache.ts));
+   - [GET /api/config/storybook](file:///g:/WwW/work/gifts-project/src/app/api/config/storybook/route.ts), динамическая валидация в [POST /api/orders/storybook](file:///g:/WwW/work/gifts-project/src/app/api/orders/storybook/route.ts), динамический конструктор [src/app/(site)/create/storybook/page.tsx](file:///g:/WwW/work/gifts-project/src/app/(site)/create/storybook/page.tsx) и резолв названий стилей в [StorybookShowcaseReader.tsx](file:///g:/WwW/work/gifts-project/src/components/StorybookShowcaseReader.tsx);
+   - Добавлен `access: { read: () => true }` в [Media.ts](file:///g:/WwW/work/gifts-project/engine/collections/Media.ts) и относительные `/media/...` URL для надёжного публичного доступа;
+   - Идемпотентный сидер `npm run seed:storybook` ([scripts/seed-storybook.ts](file:///g:/WwW/work/gifts-project/scripts/seed-storybook.ts)) переносит 6 стилей, 2 вёрстки с превью в `Media`, все справочники и 5 системных промптов и очищает 11 мигрированных дублей из `ai-prompts`.
+
+**Следующий шаг:** деплой на продакшн (VPS / Docker / webhook / Email), затем `src/styles/tokens.css` (остаток Этапа В) и полная переработка визуального дизайна (`DESIGN.md`).

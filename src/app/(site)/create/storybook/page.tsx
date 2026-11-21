@@ -1,37 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as LucideIcons from "lucide-react";
 import {
   ArrowLeft,
   ArrowRight,
   Ban,
   BookOpen,
   Check,
-  Compass,
-  Cpu,
-  Footprints,
   Glasses,
-  Heart,
-  Home,
   Loader2,
-  Map,
-  Moon,
   PawPrint,
   Pencil,
-  Rocket,
-  Shield,
   ShieldAlert,
   Shuffle,
   SlidersHorizontal,
-  Smile,
-  Snowflake,
   Sparkles,
   Upload,
   UserCheck,
   Users,
-  Wand2,
-  Waves,
   X,
   ZoomIn,
 } from "lucide-react";
@@ -45,20 +33,10 @@ import {
   type LightboxItem,
 } from "@/components/VisualOptionCards";
 import {
-  ART_STYLE_META,
-  EYE_SWATCHES,
-  FAMILY_RELATION_OPTIONS,
-  HAIR_SWATCHES,
-  LAYOUT_META,
-  PET_SPECIES_OPTIONS,
-  PLOT_OPTIONS,
-  SETTING_OPTIONS,
-  STORYBOOK_PRESETS,
-  TONE_LABELS,
-  TONE_SUBTITLES,
-  TOY_PRESETS,
-  type CuratedOption,
-} from "@/lib/i18n";
+  buildStaticStorybookPublicConfig,
+  normalizeStorybookIconName,
+  type StorybookPublicConfig,
+} from "@/lib/storybook/config-shared";
 import type {
   AgeGroup,
   ArtStyle,
@@ -70,49 +48,15 @@ import type {
   StoryTone,
 } from "@/lib/types";
 
-function renderOptionIcon(icon: CuratedOption["icon"]) {
-  const cls = "h-5 w-5 text-amber-300 shrink-0";
-  switch (icon) {
-    case "wand":
-      return <Wand2 className={cls} />;
-    case "rocket":
-      return <Rocket className={cls} />;
-    case "waves":
-      return <Waves className={cls} />;
-    case "paw":
-      return <Footprints className={cls} />;
-    case "cpu":
-      return <Cpu className={cls} />;
-    case "home":
-      return <Home className={cls} />;
-    case "snowflake":
-      return <Snowflake className={cls} />;
-    case "compass":
-      return <Compass className={cls} />;
-    case "heart":
-      return <Heart className={cls} />;
-    case "shield":
-      return <Shield className={cls} />;
-    case "map":
-      return <Map className={cls} />;
-    case "sparkles":
-    default:
-      return <Sparkles className={cls} />;
+function renderDynamicIcon(iconName: string | undefined, fallback = "Sparkles") {
+  const normalized = normalizeStorybookIconName(iconName, fallback);
+  const IconComp = (
+    LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>
+  )[normalized];
+  if (IconComp) {
+    return <IconComp className="h-5 w-5 text-amber-300 shrink-0" />;
   }
-}
-
-function renderToneIcon(tone: StoryTone) {
-  const cls = "h-5 w-5 text-amber-300 shrink-0";
-  switch (tone) {
-    case "cozy":
-      return <Moon className={cls} />;
-    case "magical":
-      return <Sparkles className={cls} />;
-    case "adventure":
-      return <Compass className={cls} />;
-    case "funny":
-      return <Smile className={cls} />;
-  }
+  return <Sparkles className="h-5 w-5 text-amber-300 shrink-0" />;
 }
 
 function SectionHeading({
@@ -143,6 +87,9 @@ export default function CreateStorybookPage() {
   const isUk = lang === "uk";
   const sbEnabled = pricing.services.storybook?.enabled ?? true;
 
+  const initialConfig = useMemo(() => buildStaticStorybookPublicConfig(), []);
+  const [sbConfig, setSbConfig] = useState<StorybookPublicConfig>(initialConfig);
+
   useEffect(() => {
     setAssistantContext("storybook");
   }, [setAssistantContext]);
@@ -171,7 +118,11 @@ export default function CreateStorybookPage() {
   const [childName, setChildName] = useState("");
   const [childNameVocative, setChildNameVocative] = useState("");
   const [gender, setGender] = useState<ChildGender | null>(null);
-  const [ageGroup, setAgeGroup] = useState<AgeGroup>("6-8");
+  const [ageGroup, setAgeGroup] = useState<AgeGroup>(
+    initialConfig.ageGroups.find((a) => a.isDefault)?.code ||
+      initialConfig.ageGroups[0]?.code ||
+      "6-8"
+  );
   const [photoUploadId, setPhotoUploadId] = useState<string | undefined>();
   const [photoName, setPhotoName] = useState<string>("");
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
@@ -181,17 +132,29 @@ export default function CreateStorybookPage() {
   const [hasGlasses, setHasGlasses] = useState(false);
 
   // Step 2 (both preselected!)
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>("classic");
-  const [artStyle, setArtStyle] = useState<ArtStyle>("watercolor");
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(
+    initialConfig.layouts.find((lm) => lm.isDefault)?.code || "classic"
+  );
+  const [artStyle, setArtStyle] = useState<ArtStyle>(
+    initialConfig.styles.find((s) => s.isDefault)?.slug ||
+      initialConfig.styles[0]?.slug ||
+      "watercolor"
+  );
 
   // Step 3 (card selection + custom only when chosen)
   const [presetIdx, setPresetIdx] = useState(0);
-  const [tone, setTone] = useState<StoryTone>(STORYBOOK_PRESETS[0].tone);
-  const [settingChoice, setSettingChoice] = useState<string>(SETTING_OPTIONS[0].id);
+  const [tone, setTone] = useState<StoryTone>(
+    initialConfig.presets[0]?.toneSlug || initialConfig.tones[0]?.slug || "magical"
+  );
+  const [settingChoice, setSettingChoice] = useState<string>(
+    initialConfig.presets[0]?.settingSlug || initialConfig.settings[0]?.slug || "fantasy"
+  );
   const [customSetting, setCustomSetting] = useState<string>("");
-  const [plotChoice, setPlotChoice] = useState<string>(PLOT_OPTIONS[0].id);
+  const [plotChoice, setPlotChoice] = useState<string>(
+    initialConfig.presets[0]?.plotSlug || initialConfig.plots[0]?.slug || "mystery_treasure"
+  );
   const [customPlot, setCustomPlot] = useState<string>("");
-  const [pageCount, setPageCount] = useState<number>(6);
+  const [pageCount, setPageCount] = useState<number>(initialConfig.defaultPageCount || 6);
 
   // Step 4 (optional)
   const [companionType, setCompanionType] = useState<CompanionType>("none");
@@ -212,24 +175,106 @@ export default function CreateStorybookPage() {
   const [favoriteToy, setFavoriteToy] = useState("");
   const [dedication, setDedication] = useState("");
 
+  useEffect(() => {
+    let active = true;
+    fetch("/api/config/storybook", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: StorybookPublicConfig | null) => {
+        if (!active || !data || !Array.isArray(data.styles) || data.styles.length === 0) {
+          return;
+        }
+        setSbConfig(data);
+
+        const params =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search)
+            : null;
+        const presetParam = params?.get("preset")?.trim();
+        const styleParam = params?.get("style")?.trim();
+        const settingParam = params?.get("setting")?.trim();
+        const plotParam = params?.get("plot")?.trim();
+        const toneParam = params?.get("tone")?.trim();
+
+        const matchedPreset = presetParam
+          ? data.presets.find((p) => p.slug === presetParam)
+          : undefined;
+
+        const defaultStyle =
+          data.styles.find((s) => s.slug === (styleParam || matchedPreset?.styleSlug)) ||
+          data.styles.find((s) => s.isDefault) ||
+          data.styles[0];
+        if (defaultStyle) setArtStyle(defaultStyle.slug);
+
+        const defaultLayout =
+          data.layouts.find((lm) => lm.isDefault) || data.layouts[0];
+        if (defaultLayout) setLayoutMode(defaultLayout.code);
+
+        const defaultAge =
+          data.ageGroups.find((a) => a.isDefault) || data.ageGroups[0];
+        if (defaultAge) setAgeGroup(defaultAge.code);
+
+        const defaultVol =
+          data.pageVolumes.find((v) => v.isDefault)?.pages || data.defaultPageCount;
+        if (defaultVol) setPageCount(defaultVol);
+
+        const nextTone =
+          toneParam ||
+          matchedPreset?.toneSlug ||
+          data.presets[0]?.toneSlug ||
+          data.tones[0]?.slug;
+        if (nextTone && data.tones.some((t) => t.slug === nextTone)) {
+          setTone(nextTone);
+        }
+
+        const nextSetting =
+          settingParam ||
+          matchedPreset?.settingSlug ||
+          data.presets[0]?.settingSlug ||
+          data.settings[0]?.slug;
+        if (nextSetting && data.settings.some((s) => s.slug === nextSetting)) {
+          setSettingChoice(nextSetting);
+        }
+
+        const nextPlot =
+          plotParam ||
+          matchedPreset?.plotSlug ||
+          data.presets[0]?.plotSlug ||
+          data.plots[0]?.slug;
+        if (nextPlot && data.plots.some((p) => p.slug === nextPlot)) {
+          setPlotChoice(nextPlot);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const resolvedSetting =
     settingChoice === "custom"
       ? customSetting.trim()
-      : SETTING_OPTIONS.find((s) => s.id === settingChoice)?.value[bookLang] ||
-        SETTING_OPTIONS[0].value[bookLang];
+      : sbConfig.settings.find((s) => s.slug === settingChoice)?.promptValue[bookLang] ||
+        sbConfig.settings[0]?.promptValue[bookLang] ||
+        "";
 
   const resolvedPlot =
     plotChoice === "custom"
       ? customPlot.trim()
-      : PLOT_OPTIONS.find((p) => p.id === plotChoice)?.value[bookLang] ||
-        PLOT_OPTIONS[0].value[bookLang];
+      : sbConfig.plots.find((p) => p.slug === plotChoice)?.promptValue[bookLang] ||
+        sbConfig.plots[0]?.promptValue[bookLang] ||
+        "";
 
   const applyPreset = (idx: number) => {
-    const p = STORYBOOK_PRESETS[idx % STORYBOOK_PRESETS.length];
-    setPresetIdx(idx % STORYBOOK_PRESETS.length);
-    setTone(p.tone);
-    setSettingChoice(p.settingId);
-    setPlotChoice(p.plotId);
+    if (sbConfig.presets.length === 0) return;
+    const p = sbConfig.presets[idx % sbConfig.presets.length];
+    setPresetIdx(idx % sbConfig.presets.length);
+    if (sbConfig.tones.some((t) => t.slug === p.toneSlug)) setTone(p.toneSlug);
+    if (sbConfig.settings.some((s) => s.slug === p.settingSlug)) setSettingChoice(p.settingSlug);
+    if (sbConfig.plots.some((pl) => pl.slug === p.plotSlug)) setPlotChoice(p.plotSlug);
+    if (p.styleSlug && sbConfig.styles.some((st) => st.slug === p.styleSlug)) {
+      setArtStyle(p.styleSlug);
+    }
   };
 
   const handleBookLangChange = (next: Lang) => {
@@ -337,21 +382,33 @@ export default function CreateStorybookPage() {
     companionType === "pet"
       ? petSpeciesChoice === "custom"
         ? customPetSpecies.trim()
-        : PET_SPECIES_OPTIONS.find((p) => p.id === petSpeciesChoice)?.en || ""
+        : sbConfig.petSpecies.find((p) => p.slug === petSpeciesChoice)?.promptEn || ""
       : "";
+
+  const selectedFamilyOption =
+    companionType === "family" && familyRelationChoice !== "custom"
+      ? sbConfig.familyRelations.find((f) => f.slug === familyRelationChoice)
+      : undefined;
+
+  const familyNeedsGenderChoice =
+    companionType === "family" &&
+    (familyRelationChoice === "custom" || selectedFamilyOption?.impliedGender === "ask");
 
   const resolvedFamilyRelation =
     companionType === "family"
       ? familyRelationChoice === "custom"
         ? customFamilyRelation.trim()
-        : FAMILY_RELATION_OPTIONS.find((f) => f.id === familyRelationChoice)?.en || ""
+        : selectedFamilyOption?.promptEn || ""
       : "";
 
   const resolvedCompanionGender: CompanionGender | undefined =
     companionType === "none"
       ? undefined
-      : companionType === "family" && familyRelationChoice !== "custom"
-      ? FAMILY_RELATION_OPTIONS.find((f) => f.id === familyRelationChoice)?.impliedGender
+      : companionType === "family" &&
+        selectedFamilyOption &&
+        (selectedFamilyOption.impliedGender === "male" ||
+          selectedFamilyOption.impliedGender === "female")
+      ? selectedFamilyOption.impliedGender
       : companionGender || undefined;
 
   const validateStep4 = (): boolean => {
@@ -392,7 +449,7 @@ export default function CreateStorybookPage() {
         );
         return false;
       }
-      if (familyRelationChoice === "custom" && !companionGender) {
+      if (familyNeedsGenderChoice && !companionGender) {
         setErrorField("companionGender");
         setError(
           isUk
@@ -762,54 +819,30 @@ export default function CreateStorybookPage() {
               </div>
             </div>
 
-            {/* Row 3: Full-width symmetric 3-column Age Group */}
+            {/* Row 3: Full-width Age Group */}
             <div>
               <SectionHeading title={isUk ? "Вікова група" : "Возрастная группа"} />
-              <div className="grid grid-cols-3 gap-3">
-                {(
-                  [
-                    {
-                      age: "2-3",
-                      uk: "Малюк",
-                      ru: "Малыш",
-                      hintUk: "Короткі речення",
-                      hintRu: "Короткие фразы",
-                    },
-                    {
-                      age: "4-5",
-                      uk: "Дошкільня",
-                      ru: "Дошкольник",
-                      hintUk: "Яскрава історія",
-                      hintRu: "Яркая история",
-                    },
-                    {
-                      age: "6-8",
-                      uk: "Школяр",
-                      ru: "Школьник",
-                      hintUk: "Розгорнута казка",
-                      hintRu: "Развёрнутая сказка",
-                    },
-                  ] as const
-                ).map((item) => {
-                  const active = ageGroup === item.age;
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {sbConfig.ageGroups.map((item) => {
+                  const active = ageGroup === item.code;
                   return (
                     <button
-                      key={item.age}
+                      key={item.code}
                       type="button"
-                      onClick={() => setAgeGroup(item.age)}
+                      onClick={() => setAgeGroup(item.code)}
                       className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition ${
                         active
                           ? "border-amber-400 bg-amber-400/15 text-amber-100"
                           : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
                       }`}
                     >
-                      <AgeBadgeVisual age={item.age} />
+                      <AgeBadgeVisual age={item.code} />
                       <div>
                         <div className="text-sm font-bold">
-                          {item.age} {isUk ? "р." : "л."} • {isUk ? item.uk : item.ru}
+                          {item.code} {isUk ? "р." : "л."} • {item.label[lang]}
                         </div>
                         <div className="text-[11px] text-slate-400">
-                          {isUk ? item.hintUk : item.hintRu}
+                          {item.hint[lang]}
                         </div>
                       </div>
                     </button>
@@ -912,14 +945,15 @@ export default function CreateStorybookPage() {
                         {isUk ? "Колір волосся" : "Цвет волос"}
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        {HAIR_SWATCHES.map((s) => {
-                          const label = isUk ? s.uk : s.ru;
-                          const active = hairColor === label;
+                        {sbConfig.hairSwatches.map((s) => {
+                          const label = s.label[lang];
+                          const val = s.promptEn || label;
+                          const active = hairColor === val || hairColor === label;
                           return (
                             <button
-                              key={s.id}
+                              key={s.slug}
                               type="button"
-                              onClick={() => setHairColor(active ? "" : label)}
+                              onClick={() => setHairColor(active ? "" : val)}
                               className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-xs font-medium transition ${
                                 active
                                   ? "border-amber-400 bg-amber-400/20 text-amber-100"
@@ -943,14 +977,15 @@ export default function CreateStorybookPage() {
                         {isUk ? "Колір очей" : "Цвет глаз"}
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        {EYE_SWATCHES.map((s) => {
-                          const label = isUk ? s.uk : s.ru;
-                          const active = eyeColor === label;
+                        {sbConfig.eyeSwatches.map((s) => {
+                          const label = s.label[lang];
+                          const val = s.promptEn || label;
+                          const active = eyeColor === val || eyeColor === label;
                           return (
                             <button
-                              key={s.id}
+                              key={s.slug}
                               type="button"
-                              onClick={() => setEyeColor(active ? "" : label)}
+                              onClick={() => setEyeColor(active ? "" : val)}
                               className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-xs font-medium transition ${
                                 active
                                   ? "border-amber-400 bg-amber-400/20 text-amber-100"
@@ -1018,20 +1053,23 @@ export default function CreateStorybookPage() {
             <div>
               <SectionHeading
                 title={isUk ? "Режим верстки" : "Режим вёрстки"}
-                badge={isUk ? "1 з 2" : "1 из 2"}
+                badge={
+                  isUk
+                    ? `1 з ${sbConfig.layouts.length}`
+                    : `1 из ${sbConfig.layouts.length}`
+                }
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                {(["classic", "panorama"] as const).map((mode) => {
-                  const meta = LAYOUT_META[mode];
-                  const selected = layoutMode === mode;
+                {sbConfig.layouts.map((meta) => {
+                  const selected = layoutMode === meta.code;
                   return (
                     <div
-                      key={mode}
+                      key={meta.code}
                       role="button"
                       tabIndex={0}
-                      onClick={() => setLayoutMode(mode)}
+                      onClick={() => setLayoutMode(meta.code)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") setLayoutMode(mode);
+                        if (e.key === "Enter" || e.key === " ") setLayoutMode(meta.code);
                       }}
                       className={`group cursor-pointer overflow-hidden rounded-2xl border text-left transition-colors duration-200 ${
                         selected
@@ -1041,7 +1079,7 @@ export default function CreateStorybookPage() {
                     >
                       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
                         <img
-                          src={meta.previewImage}
+                          src={meta.previewImageUrl}
                           alt={meta.label[lang]}
                           className="h-full w-full object-cover scale-[1.01] transform-gpu will-change-transform transition-transform duration-300 ease-out group-hover:scale-[1.1]"
                         />
@@ -1056,9 +1094,9 @@ export default function CreateStorybookPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setLightbox({
-                              src: meta.previewImage,
+                              src: meta.previewImageUrl,
                               title: meta.label[lang],
-                              desc: meta.desc[lang],
+                              desc: meta.description[lang],
                             });
                           }}
                           className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
@@ -1076,7 +1114,7 @@ export default function CreateStorybookPage() {
                           )}
                         </div>
                         <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                          {meta.desc[lang]}
+                          {meta.description[lang]}
                         </p>
                       </div>
                     </div>
@@ -1088,20 +1126,23 @@ export default function CreateStorybookPage() {
             <div>
               <SectionHeading
                 title={isUk ? "Художній стиль" : "Художественный стиль"}
-                badge={isUk ? "1 з 6" : "1 из 6"}
+                badge={
+                  isUk
+                    ? `1 з ${sbConfig.styles.length}`
+                    : `1 из ${sbConfig.styles.length}`
+                }
               />
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {(Object.keys(ART_STYLE_META) as ArtStyle[]).map((styleKey) => {
-                  const meta = ART_STYLE_META[styleKey];
-                  const selected = artStyle === styleKey;
+                {sbConfig.styles.map((meta) => {
+                  const selected = artStyle === meta.slug;
                   return (
                     <div
-                      key={styleKey}
+                      key={meta.slug}
                       role="button"
                       tabIndex={0}
-                      onClick={() => setArtStyle(styleKey)}
+                      onClick={() => setArtStyle(meta.slug)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") setArtStyle(styleKey);
+                        if (e.key === "Enter" || e.key === " ") setArtStyle(meta.slug);
                       }}
                       className={`group cursor-pointer overflow-hidden rounded-2xl border text-left transition-colors duration-200 ${
                         selected
@@ -1111,8 +1152,8 @@ export default function CreateStorybookPage() {
                     >
                       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
                         <img
-                          src={meta.previewImage}
-                          alt={meta.label[lang]}
+                          src={meta.previewImageUrl}
+                          alt={meta.title[lang]}
                           className="h-full w-full object-cover scale-[1.01] transform-gpu will-change-transform transition-transform duration-300 ease-out group-hover:scale-[1.1]"
                         />
                         {selected && (
@@ -1126,9 +1167,9 @@ export default function CreateStorybookPage() {
                           onClick={(e) => {
                             e.stopPropagation();
                             setLightbox({
-                              src: meta.previewImage,
-                              title: meta.label[lang],
-                              desc: meta.desc[lang],
+                              src: meta.previewImageUrl,
+                              title: meta.title[lang],
+                              desc: meta.description[lang],
                             });
                           }}
                           className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
@@ -1137,8 +1178,15 @@ export default function CreateStorybookPage() {
                         </button>
                       </div>
                       <div className="p-4">
-                        <div className="font-bold text-white">{meta.label[lang]}</div>
-                        <p className="mt-1 text-xs text-slate-300">{meta.desc[lang]}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-white">{meta.title[lang]}</span>
+                          {meta.badge && (
+                            <span className="rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                              {meta.badge[lang]}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-300">{meta.description[lang]}</p>
                       </div>
                     </div>
                   );
@@ -1186,30 +1234,34 @@ export default function CreateStorybookPage() {
               </button>
             </div>
 
-            {/* 1. Tone: 4x1 */}
+            {/* 1. Tone */}
             <div>
               <SectionHeading
                 title={isUk ? "Настрій та ритм читання" : "Настроение и ритм чтения"}
-                badge={isUk ? "1 з 4" : "1 из 4"}
+                badge={
+                  isUk
+                    ? `1 з ${sbConfig.tones.length}`
+                    : `1 из ${sbConfig.tones.length}`
+                }
               />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {(Object.keys(TONE_LABELS) as StoryTone[]).map((tKey) => {
-                  const active = tone === tKey;
+                {sbConfig.tones.map((tOpt) => {
+                  const active = tone === tOpt.slug;
                   return (
                     <button
-                      key={tKey}
+                      key={tOpt.slug}
                       type="button"
-                      onClick={() => setTone(tKey)}
+                      onClick={() => setTone(tOpt.slug)}
                       className={`flex flex-col items-start gap-2 rounded-xl border p-3.5 text-left transition ${
                         active
                           ? "border-amber-400 bg-amber-400/15 text-amber-100"
                           : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
                       }`}
                     >
-                      {renderToneIcon(tKey)}
-                      <div className="text-xs font-bold">{TONE_LABELS[tKey][lang]}</div>
+                      {renderDynamicIcon(tOpt.icon, "Sparkles")}
+                      <div className="text-xs font-bold">{tOpt.label[lang]}</div>
                       <div className="text-[11px] leading-snug text-slate-400">
-                        {TONE_SUBTITLES[tKey][lang]}
+                        {tOpt.subtitle[lang]}
                       </div>
                     </button>
                   );
@@ -1217,34 +1269,68 @@ export default function CreateStorybookPage() {
               </div>
             </div>
 
-            {/* 2. World / Genre Setting: balanced 4x2 = 8 cards */}
+            {/* 2. World / Genre Setting */}
             <div>
               <SectionHeading
                 title={isUk ? "Світ та жанр казки" : "Мир и жанр сказки"}
-                badge={isUk ? "7 світів або свій" : "7 миров или свой"}
+                badge={
+                  isUk
+                    ? `${sbConfig.settings.length} світів або свій`
+                    : `${sbConfig.settings.length} миров или свой`
+                }
               />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {SETTING_OPTIONS.map((opt) => {
-                  const active = settingChoice === opt.id;
+                {sbConfig.settings.map((opt) => {
+                  const active = settingChoice === opt.slug;
                   return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setSettingChoice(opt.id)}
-                      className={`flex flex-col items-start gap-2 rounded-xl border p-3.5 text-left transition ${
+                    <div
+                      key={opt.slug}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSettingChoice(opt.slug)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") setSettingChoice(opt.slug);
+                      }}
+                      className={`group cursor-pointer overflow-hidden rounded-xl border text-left transition ${
                         active
                           ? "border-amber-400 bg-amber-400/15 text-amber-100"
                           : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
                       }`}
                     >
-                      {renderOptionIcon(opt.icon)}
-                      <div className="text-xs font-bold leading-snug">
-                        {opt.title[lang]}
+                      {opt.previewImageUrl && (
+                        <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
+                          <img
+                            src={opt.previewImageUrl}
+                            alt={opt.title[lang]}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <button
+                            type="button"
+                            aria-label={isUk ? "Збільшити світ" : "Увеличить мир"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLightbox({
+                                src: opt.previewImageUrl!,
+                                title: opt.title[lang],
+                                desc: opt.description[lang],
+                              });
+                            }}
+                            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white hover:bg-amber-400 hover:text-[#0b1020]"
+                          >
+                            <ZoomIn className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="flex flex-col items-start gap-2 p-3.5">
+                        {!opt.previewImageUrl && renderDynamicIcon(opt.icon, "Sparkles")}
+                        <div className="text-xs font-bold leading-snug">
+                          {opt.title[lang]}
+                        </div>
+                        <div className="text-[11px] leading-snug text-slate-400">
+                          {opt.description[lang]}
+                        </div>
                       </div>
-                      <div className="text-[11px] leading-snug text-slate-400">
-                        {opt.desc[lang]}
-                      </div>
-                    </button>
+                    </div>
                   );
                 })}
 
@@ -1291,34 +1377,70 @@ export default function CreateStorybookPage() {
               )}
             </div>
 
-            {/* 3. Universal Plot Arcs: balanced 3x2 = 6 cards */}
+            {/* 3. Universal Plot Arcs */}
             <div>
               <SectionHeading
                 title={isUk ? "Головна сюжетна лінія" : "Главная сюжетная линия"}
-                badge={isUk ? "5 ідей або своя" : "5 идей или своя"}
+                badge={
+                  isUk
+                    ? `${sbConfig.plots.length} ідей або своя`
+                    : `${sbConfig.plots.length} идей или своя`
+                }
               />
               <div className="grid gap-3 sm:grid-cols-3">
-                {PLOT_OPTIONS.map((opt) => {
-                  const active = plotChoice === opt.id;
+                {sbConfig.plots.map((opt) => {
+                  const active = plotChoice === opt.slug;
                   return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setPlotChoice(opt.id)}
-                      className={`flex items-start gap-3 rounded-xl border p-3.5 text-left transition ${
+                    <div
+                      key={opt.slug}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPlotChoice(opt.slug)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") setPlotChoice(opt.slug);
+                      }}
+                      className={`group cursor-pointer overflow-hidden rounded-xl border text-left transition ${
                         active
                           ? "border-amber-400 bg-amber-400/15 text-amber-100"
                           : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
                       }`}
                     >
-                      <span className="mt-0.5">{renderOptionIcon(opt.icon)}</span>
-                      <div>
-                        <div className="text-xs font-bold">{opt.title[lang]}</div>
-                        <div className="mt-1 text-[11px] leading-snug text-slate-400">
-                          {opt.desc[lang]}
+                      {opt.previewImageUrl && (
+                        <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
+                          <img
+                            src={opt.previewImageUrl}
+                            alt={opt.title[lang]}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <button
+                            type="button"
+                            aria-label={isUk ? "Збільшити сюжет" : "Увеличить сюжет"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLightbox({
+                                src: opt.previewImageUrl!,
+                                title: opt.title[lang],
+                                desc: opt.description[lang],
+                              });
+                            }}
+                            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white hover:bg-amber-400 hover:text-[#0b1020]"
+                          >
+                            <ZoomIn className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-3 p-3.5">
+                        {!opt.previewImageUrl && (
+                          <span className="mt-0.5">{renderDynamicIcon(opt.icon, "Compass")}</span>
+                        )}
+                        <div>
+                          <div className="text-xs font-bold">{opt.title[lang]}</div>
+                          <div className="mt-1 text-[11px] leading-snug text-slate-400">
+                            {opt.description[lang]}
+                          </div>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
 
@@ -1368,38 +1490,34 @@ export default function CreateStorybookPage() {
               )}
             </div>
 
-            {/* 4. Volume: 3x1 symmetric */}
+            {/* 4. Volume */}
             <div>
               <SectionHeading title={isUk ? "Обсяг книги" : "Объём книги"} />
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { n: 4, price: getStorybookPrice(4), uk: "~3 хв читання", ru: "~3 мин чтения" },
-                  { n: 6, price: getStorybookPrice(6), uk: "~5 хв (оптимум)", ru: "~5 мин (оптимум)" },
-                  { n: 8, price: getStorybookPrice(8), uk: "~7 хв (довга)", ru: "~7 мин (длинная)" },
-                ].map((item) => (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {sbConfig.pageVolumes.map((item) => (
                   <button
-                    key={item.n}
+                    key={item.pages}
                     type="button"
-                    onClick={() => setPageCount(item.n)}
+                    onClick={() => setPageCount(item.pages)}
                     className={`rounded-xl border px-3 py-3 text-center transition ${
-                      pageCount === item.n
+                      pageCount === item.pages
                         ? "border-amber-400 bg-amber-400/20 text-amber-100"
                         : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
                     }`}
                   >
                     <div className="text-sm font-bold">
-                      {item.n} {isUk ? "стор." : "стр."} · {item.price} ₴
+                      {item.pages} {isUk ? "стор." : "стр."} · {getStorybookPrice(item.pages)} ₴
                     </div>
                     <div className="mt-0.5 text-[11px] text-slate-400">
-                      {isUk ? item.uk : item.ru}
+                      {item.readingTimeLabel[lang]}
                     </div>
                   </button>
                 ))}
               </div>
               <p className="mt-2 text-[11px] text-slate-400">
                 {isUk
-                  ? "Спочатку безкоштовне прев'ю (обкладинка, перші 2 сторінки з ілюстраціями та весь текст). Решта ілюстрацій домальовується після оплати (безпечний холд Plata by mono)."
-                  : "Сначала бесплатное превью (обложка, первые 2 страницы с иллюстрациями и весь текст). Остальные иллюстрации дорисовываются после оплаты (безопасный холд Plata by mono)."}
+                  ? `Спочатку безкоштовне прев'ю (обкладинка, перші ${sbConfig.previewPagesCount} сторінки з ілюстраціями та весь текст). Решта ілюстрацій домальовується після оплати (безпечний холд Plata by mono).`
+                  : `Сначала бесплатное превью (обложка, первые ${sbConfig.previewPagesCount} страницы с иллюстрациями и весь текст). Остальные иллюстрации дорисовываются после оплаты (безопасный холд Plata by mono).`}
               </p>
             </div>
 
@@ -1522,14 +1640,14 @@ export default function CreateStorybookPage() {
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        {PET_SPECIES_OPTIONS.map((sp) => {
-                          const active = petSpeciesChoice === sp.id;
+                        {sbConfig.petSpecies.map((sp) => {
+                          const active = petSpeciesChoice === sp.slug;
                           return (
                             <button
-                              key={sp.id}
+                              key={sp.slug}
                               type="button"
                               onClick={() => {
-                                setPetSpeciesChoice(sp.id);
+                                setPetSpeciesChoice(sp.slug);
                                 if (errorField === "companionSpecies") {
                                   setErrorField(null);
                                   setError(null);
@@ -1541,7 +1659,7 @@ export default function CreateStorybookPage() {
                                   : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
                               }`}
                             >
-                              {isUk ? sp.uk : sp.ru}
+                              {sp.label[lang]}
                             </button>
                           );
                         })}
@@ -1652,15 +1770,19 @@ export default function CreateStorybookPage() {
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                        {FAMILY_RELATION_OPTIONS.map((rel) => {
-                          const active = familyRelationChoice === rel.id;
+                        {sbConfig.familyRelations.map((rel) => {
+                          const active = familyRelationChoice === rel.slug;
                           return (
                             <button
-                              key={rel.id}
+                              key={rel.slug}
                               type="button"
                               onClick={() => {
-                                setFamilyRelationChoice(rel.id);
-                                setCompanionGender(rel.impliedGender);
+                                setFamilyRelationChoice(rel.slug);
+                                setCompanionGender(
+                                  rel.impliedGender === "male" || rel.impliedGender === "female"
+                                    ? rel.impliedGender
+                                    : null
+                                );
                                 if (
                                   errorField === "companionRelation" ||
                                   errorField === "companionGender"
@@ -1675,7 +1797,7 @@ export default function CreateStorybookPage() {
                                   : "border-white/10 bg-white/5 text-slate-300 hover:border-white/25"
                               }`}
                             >
-                              {isUk ? rel.uk : rel.ru}
+                              {rel.label[lang]}
                             </button>
                           );
                         })}
@@ -1721,7 +1843,7 @@ export default function CreateStorybookPage() {
                       )}
                     </div>
 
-                    {familyRelationChoice === "custom" && (
+                    {familyNeedsGenderChoice && (
                       <div
                         className={
                           errorField === "companionGender"
@@ -2004,8 +2126,8 @@ export default function CreateStorybookPage() {
                   </span>
                 </button>
 
-                {TOY_PRESETS.map((tp) => {
-                  const val = isUk ? tp.uk : tp.ru;
+                {sbConfig.toyPresets.map((tp) => {
+                  const val = tp.label[lang];
                   const active = toyChoice === "preset" && favoriteToy === val;
                   return (
                     <button
@@ -2036,7 +2158,11 @@ export default function CreateStorybookPage() {
                   onClick={() => {
                     if (toyChoice !== "custom") {
                       setToyChoice("custom");
-                      if (TOY_PRESETS.some((tp) => tp.uk === favoriteToy || tp.ru === favoriteToy)) {
+                      if (
+                        sbConfig.toyPresets.some(
+                          (tp) => tp.label.uk === favoriteToy || tp.label.ru === favoriteToy
+                        )
+                      ) {
                         setFavoriteToy("");
                       }
                     }

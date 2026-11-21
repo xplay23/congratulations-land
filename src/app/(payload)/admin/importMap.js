@@ -38,11 +38,13 @@ import { RangeNumberField as RangeNumberField_070d2a67dbc4d6b6c3dd4c04cfb18567 }
 import { default as default_99a035d0161c56f05a23c4aa5c8d7783 } from 'engine/components/admin/VideoTimelineStudio/BulkRevoiceButton'
 import { default as default_3d80403671eec2045f0475225edcb0f9 } from 'engine/components/admin/VideoTimelineStudio'
 import { default as default_e03d933121a8f3718a647b734a067878 } from 'engine/components/admin/VideoTimelineStudio/VideoTemplateTestRender'
+import { default as default_9d7736f215e9593a9ccdab95e734b752 } from 'engine/components/admin/StorybookStyleTester'
 import { default as default_ef6c86855fb93b444604e4a0e662004c } from 'engine/components/admin/PostAiButtons'
 import { PostSidebarStatusDivider as PostSidebarStatusDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
 import { PostSidebarCategoriesTagsDivider as PostSidebarCategoriesTagsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
 import { default as default_902c65040a5d334f05e103fe626ad0dc } from 'engine/components/admin/TagsField'
 import { PostSidebarVisualIdentityDivider as PostSidebarVisualIdentityDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
+import { SiteColorPickerField as SiteColorPickerField_32b72469c22c2af7a55bb596b03c4873 } from 'engine/components/admin/SiteColorPickerField'
 import { TranslateLocaleButton as TranslateLocaleButton_a64619c38c03ea6a432b77aa94a631c7 } from 'engine/components/admin/TranslateLocaleButton'
 import { SiteContactsDivider as SiteContactsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
 import { SiteFooterDivider as SiteFooterDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
@@ -122,11 +124,13 @@ export const importMap = {
   "engine/components/admin/VideoTimelineStudio/BulkRevoiceButton#default": default_99a035d0161c56f05a23c4aa5c8d7783,
   "engine/components/admin/VideoTimelineStudio#default": default_3d80403671eec2045f0475225edcb0f9,
   "engine/components/admin/VideoTimelineStudio/VideoTemplateTestRender#default": default_e03d933121a8f3718a647b734a067878,
+  "engine/components/admin/StorybookStyleTester#default": default_9d7736f215e9593a9ccdab95e734b752,
   "engine/components/admin/PostAiButtons#default": default_ef6c86855fb93b444604e4a0e662004c,
   "engine/components/admin/SectionDivider#PostSidebarStatusDivider": PostSidebarStatusDivider_b0ed66b01863cfbecfa9693eae7558a9,
   "engine/components/admin/SectionDivider#PostSidebarCategoriesTagsDivider": PostSidebarCategoriesTagsDivider_b0ed66b01863cfbecfa9693eae7558a9,
   "engine/components/admin/TagsField#default": default_902c65040a5d334f05e103fe626ad0dc,
   "engine/components/admin/SectionDivider#PostSidebarVisualIdentityDivider": PostSidebarVisualIdentityDivider_b0ed66b01863cfbecfa9693eae7558a9,
+  "engine/components/admin/SiteColorPickerField#SiteColorPickerField": SiteColorPickerField_32b72469c22c2af7a55bb596b03c4873,
   "engine/components/admin/TranslateLocaleButton#TranslateLocaleButton": TranslateLocaleButton_a64619c38c03ea6a432b77aa94a631c7,
   "engine/components/admin/SectionDivider#SiteContactsDivider": SiteContactsDivider_b0ed66b01863cfbecfa9693eae7558a9,
   "engine/components/admin/SectionDivider#SiteFooterDivider": SiteFooterDivider_b0ed66b01863cfbecfa9693eae7558a9,

@@ -6,6 +6,7 @@ interface CacheVersions {
   limits: number;
   aiRates: number;
   aiConfig: number;
+  storybookConfig: number;
 }
 
 declare global {
@@ -21,7 +22,11 @@ function getVersions(): CacheVersions {
       limits: 0,
       aiRates: 0,
       aiConfig: 0,
+      storybookConfig: 0,
     };
+  }
+  if (typeof globalThis.__videovitannyaCacheVersions.storybookConfig !== "number") {
+    globalThis.__videovitannyaCacheVersions.storybookConfig = 0;
   }
   return globalThis.__videovitannyaCacheVersions;
 }
@@ -46,6 +51,10 @@ export function getAiConfigCacheVersion(): number {
   return getVersions().aiConfig;
 }
 
+export function getStorybookConfigCacheVersion(): number {
+  return getVersions().storybookConfig;
+}
+
 export function invalidatePricingCache(): void {
   getVersions().pricing += 1;
 }
@@ -60,6 +69,10 @@ export function invalidateAiRatesCache(): void {
 
 export function invalidateAiConfigCache(): void {
   getVersions().aiConfig += 1;
+}
+
+export function invalidateStorybookConfigCache(): void {
+  getVersions().storybookConfig += 1;
 }
 
 export function invalidateCmsContentCache(paths: string[] = []): void {

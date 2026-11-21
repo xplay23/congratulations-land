@@ -13,6 +13,7 @@ import { Users } from "./engine/collections/Users";
 import { Media } from "./engine/collections/Media";
 import { PipelineAssets } from "./engine/collections/PipelineAssets";
 import { VideoTemplates } from "./engine/collections/VideoTemplates";
+import { StorybookStyles } from "./engine/collections/StorybookStyles";
 import { Pages } from "./engine/collections/Pages";
 import { Services } from "./engine/collections/Services";
 import { ServiceVariations } from "./engine/collections/ServiceVariations";
@@ -23,6 +24,7 @@ import { Authors } from "./engine/collections/Authors";
 import { Posts } from "./engine/collections/Posts";
 
 import { HomeTemplate } from "./engine/globals/HomeTemplate";
+import { StorybookConfig } from "./engine/globals/StorybookConfig";
 import { SiteSettings } from "./engine/globals/SiteSettings";
 import { HeaderNav } from "./engine/globals/HeaderNav";
 import { FooterNav } from "./engine/globals/FooterNav";
@@ -90,6 +92,7 @@ export default buildConfig({
     ServiceVariations,
     VideoTemplates,
     PipelineAssets,
+    StorybookStyles,
     Showcases,
     Reviews,
     Posts,
@@ -100,6 +103,7 @@ export default buildConfig({
   ],
   globals: [
     HomeTemplate,
+    StorybookConfig,
     SiteSettings,
     HeaderNav,
     FooterNav,

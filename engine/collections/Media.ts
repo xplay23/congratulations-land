@@ -11,6 +11,9 @@ export const Media: CollectionConfig = {
     useAsTitle: "filename",
     group: { ru: "Контент", uk: "Контент", en: "Content" },
   },
+  access: {
+    read: () => true,
+  },
   upload: {
     staticDir: path.resolve(process.cwd(), "public", "media"),
   },

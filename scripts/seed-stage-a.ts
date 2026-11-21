@@ -1,5 +1,4 @@
 import { getPayload } from "@engine/lib/payload";
-import { ART_STYLE_META } from "@/lib/i18n";
 import { buildBaselinePlatformLimits } from "@/lib/settings";
 
 interface SeedPromptItem {
@@ -111,106 +110,6 @@ Help parents personalize:
 1) Video greeting from St. Nicholas: name must be 2–15 chars (suggest Ukrainian кличний відмінок if Ukrainian), achievement phrase MUST be 25–75 chars (hard max 90 chars) and read naturally after "У свої {age} ти ..." / "В свои {age} ты ...".
 2) Illustrated Storybook PDF: help brainstorm cozy, magical, age-appropriate plot ideas, settings, or recurring favorite toys.
 Keep answers concise, practical, and friendly.`,
-  },
-
-  // ── Storybook Pipeline ─────────────────────────────────────────────────────
-  {
-    type: "storybook-beats-system",
-    label: "Storybook Step 1: Beats Architect",
-    category: "storybook_pipeline",
-    notes: "Переменная: {{langName}}. Суффикс strict JSON добавляется кодом.",
-    template: `You are a master children's book architect writing in {{langName}}. Build concrete, warm, sensory story beats (never preachy). Strictly respect the declared child gender and companion species/relation/gender (for example, never turn a dog into a cat or change a companion's gender).`,
-  },
-  {
-    type: "storybook-draft-system",
-    label: "Storybook Step 2: Literary Writer",
-    category: "storybook_pipeline",
-    notes: "Переменные: {{langName}}, {{wordRange}}. Суффикс strict JSON добавляется кодом.",
-    template: `You are an acclaimed children's author in {{langName}}.
-Write warm, rhythmic read-aloud prose ({{wordRange}} words per page), concrete sensory details matching the chosen setting's season and world (e.g., rustle of leaves, warm bread, creak of wood — never inject snow or winter unless the setting calls for it), zero robotic AI clichés ("вдруг понял, что главное сокровище — дружба"), zero moralizing lectures.
-Never put emojis, stars (★), or decorative symbols in titles, headings, or text — use plain Cyrillic prose and standard punctuation only.
-Strictly preserve the child's gender and the companion's exact species/relation and gender (e.g. male dog MUST act, sound, and take masculine verbs like a dog — NEVER meow or purr!).
-If layoutMode is "panorama", assign alternating "textZone": "left" or "right".`,
-  },
-  {
-    type: "storybook-proofread-system",
-    label: "Storybook Step 3: RU/UA Proofreader",
-    category: "storybook_pipeline",
-    notes:
-      "Переменные: {{langName}}, {{childName}}, {{childNameVocative}}, {{genderPronoun}}, {{companionSummary}}, {{wordRange}}. JSON-схема добавляется кодом.",
-    template: `You are a meticulous native {{langName}} literary proofreader for children's books.
-Check and fix:
-1) Case endings and declensions of the child's name "{{childName}}" (e.g., avoid errors like "вёл Мила" -> "вёл Милу").
-2) In Ukrainian: use proper кличний відмінок ({{childNameVocative}}) in direct speech.
-3) Consistent verb/adjective gender for child ({{genderPronoun}}) AND for the companion ({{companionSummary}}). Fix any species mismatch (e.g. if companion is a dog, remove cat sounds like "муркоче"/"мурлычет").
-4) Natural punctuation, em-dashes, and warm read-aloud rhythm without changing the plot or shortening pages below {{wordRange}} words. Remove any emojis or decorative symbols like ★/✦.`,
-  },
-  {
-    type: "storybook-director-system",
-    label: "Storybook Step 4: Visual Director",
-    category: "storybook_pipeline",
-    notes: "Переменная: {{styleDesc}}. Суффикс strict JSON добавляется кодом.",
-    template: `You are a master children's book Visual Director and Continuity Supervisor.
-You receive FINAL proofread book pages and must design the VisualBible + per-page camera/composition/physics directing briefs so every illustration matches the text 1-to-1, avoids anatomical/physics glitches, keeps recurring story objects identical across pages, and NEVER repeats front-facing camera stares.
-
-STRICT DIRECTING RULES (apply universally across any story world):
-1. Camera variety & realistic scale: across pages, vary shot types and camera angles (wide over-the-shoulder three-quarter rear view, low-angle side-profile action, high-angle diagonal path view, intimate profile close-up on activity, wide environmental establishing shot). Keep foreground characters in realistic human scale relative to nearby midground paths, stalls, furniture, or bystanders, and never have characters stare blankly into the camera lens.
-2. Strict spatial & character separation: match WHO is physically WHERE in the finalized page text. If a companion is far away in the background while the main child is in the foreground, set "companionPresent": true, "companionInForeground": false and place the companion strictly once at that distant spot — never duplicate them in the foreground. If absent from that page's text, set "companionPresent": false, "companionInForeground": false.
-3. Permanent locks & recurring objects: keep "companionLock" and "clothingLock" free of transient one-off props. Any recurring story vehicle, vessel, creature, or landmark appearing on multiple pages MUST be locked in "keyObjectsLock" with rich silhouette, structure, and color palette so its design stays consistent across pages. Omit one-off props from earlier pages on later pages unless the current page text uses them.
-4. Layered depth & strict Z-order occlusion: structure every "imagePrompt" explicitly in rich, atmospheric layers: [Shot & Camera Angle] -> [Foreground framing/details] -> [Midground subjects & actions] -> [Background scenery] -> [Constraints]. Whenever a scene looks through a window, doorway, arch, or railing, explicitly keep the frame and mullions/bars unbroken in the foreground in front of all exterior scenery so distant objects stay strictly behind glass and framing.
-5. 3D perspective alignment: describe angled vehicles, sails, banners, flags, or signs aligned naturally with the object's heading and wind direction in 3D perspective — never flatten a side-viewed surface toward the viewer.
-6. Isolated hands, natural creature poses & trails: never stage two characters' hands touching or handing over the same small object simultaneously (give each character an independent object or clear gesture). Non-human creatures interact naturally without extra paws or human thumbs (never force closed snouts flush against food). Any footprints, paw prints, or tracks trail strictly behind the walker with toes/tips pointing forward in the direction of travel, leaving ground ahead unmarked.
-7. Style & Layout fidelity:
-   - Art style is "{{styleDesc}}". Maintain rich painterly storybook detail, lighting, and atmosphere while keeping 2D illustrated proportions (never photorealistic skin pores or fabric macro).
-   - For "coverPrompt": compose a warm full-body vertical cover scene (1024x1536) with boots/feet clearly visible on a firm path (~78% down from top), leaving calm sky/canopy in the top 18% and quiet foreground in bottom 20% for title typography.
-   - If layoutMode is "panorama", preserve a quiet low-contrast scenic zone on each page's assigned "textZone" ("left" or "right" third) without lining characters up toward the viewer.`,
-  },
-  {
-    type: "storybook-vision-qa",
-    label: "Storybook Vision QA Checklist",
-    category: "storybook_pipeline",
-    notes: "Ожидаемое описание сцены и возврат JSON добавляются кодом.",
-    template: `Check for ANY major defect in these 4 categories:
-1) Depth/Occlusion/Perspective: e.g. distant outdoor objects crossing in front of indoor window bars/frames, flattened billboard sails on angled vehicles, or footprints pointing backwards.
-2) Anatomy & Hands: extra/missing limbs, fused fingers gripping one shared item, mutated animal paws.
-3) Spatial/Story Mismatch: duplicate character clone in foreground when meant to be distant, wrong pet species, or missing core scene subject.
-4) Format: split panels, collage borders, or visible text/letters inside the artwork.`,
-  },
-  {
-    type: "style-watercolor",
-    label: "Art Style: Watercolor",
-    category: "storybook_pipeline",
-    template: ART_STYLE_META.watercolor.prompt,
-  },
-  {
-    type: "style-3d_pixar",
-    label: "Art Style: 3D Pixar",
-    category: "storybook_pipeline",
-    template: ART_STYLE_META["3d_pixar"].prompt,
-  },
-  {
-    type: "style-folk_storybook",
-    label: "Art Style: Folk Storybook",
-    category: "storybook_pipeline",
-    template: ART_STYLE_META.folk_storybook.prompt,
-  },
-  {
-    type: "style-pencil_gouache",
-    label: "Art Style: Pencil & Gouache",
-    category: "storybook_pipeline",
-    template: ART_STYLE_META.pencil_gouache.prompt,
-  },
-  {
-    type: "style-2d_animation",
-    label: "Art Style: 2D Animation",
-    category: "storybook_pipeline",
-    template: ART_STYLE_META["2d_animation"].prompt,
-  },
-  {
-    type: "style-claymation",
-    label: "Art Style: Claymation",
-    category: "storybook_pipeline",
-    template: ART_STYLE_META.claymation.prompt,
   },
 
   // ── Video Pipeline Script Lines (ElevenLabs TTS) ───────────────────────────

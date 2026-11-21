@@ -16,6 +16,11 @@ function renderPromptVars(
   return out;
 }
 import { ART_STYLE_META, TONE_LABELS } from "@/lib/i18n";
+import {
+  getStorybookRuntimeConfig,
+  resolveStorybookStyle,
+  type StorybookRuntimeConfig,
+} from "./config";
 import type { AiCostTracker } from "@/lib/ai-cost";
 import type { PhotoVisualPassports } from "./vision";
 import type {
@@ -34,7 +39,12 @@ export interface WrittenStoryDraft {
   writerNotes: string[];
 }
 
-function getWordRangeByAge(ageGroup: StorybookOrderPayload["ageGroup"]): string {
+function getWordRangeByAge(
+  ageGroup: StorybookOrderPayload["ageGroup"],
+  sbConfig?: StorybookRuntimeConfig
+): string {
+  const fromCms = sbConfig?.ageGroups.find((a) => a.code === ageGroup)?.wordRange?.trim();
+  if (fromCms) return fromCms;
   switch (ageGroup) {
     case "2-3":
       return "25–40";
@@ -116,7 +126,10 @@ function buildCompanionSummary(
   return parts.join("; ");
 }
 
-function buildDemoStory(payload: StorybookOrderPayload): WrittenStoryDraft {
+function buildDemoStory(
+  payload: StorybookOrderPayload,
+  sbConfig?: StorybookRuntimeConfig
+): WrittenStoryDraft {
   const isUk = payload.lang === "uk";
   const name = payload.childName.trim();
   const voc = payload.childNameVocative?.trim() || name;
@@ -139,7 +152,10 @@ function buildDemoStory(payload: StorybookOrderPayload): WrittenStoryDraft {
     : "лесной огонёк";
   const requestedToy = payload.favoriteToy?.trim() || "";
   const toy = requestedToy || (isUk ? "теплий ліхтарик" : "тёплый фонарик");
-  const styleDesc = ART_STYLE_META[payload.artStyle].prompt;
+  const styleDesc = sbConfig
+    ? resolveStorybookStyle(sbConfig, payload.artStyle).stylePrompt
+    : ART_STYLE_META[payload.artStyle]?.prompt ||
+      ART_STYLE_META.watercolor.prompt;
 
   const visualBible: StoryVisualBible = {
     characterLock: `Consistent young child ${name} (${buildAppearanceSummary(payload)})`,
@@ -290,7 +306,10 @@ export async function generateThreeStepStory(
   visionPassports?: PhotoVisualPassports,
   costTracker?: AiCostTracker
 ): Promise<WrittenStoryDraft> {
-  const { writerClient, directorClient, config } = await getCmsOpenAIRuntime();
+  const [{ writerClient, directorClient, config }, sbConfig] = await Promise.all([
+    getCmsOpenAIRuntime(),
+    getStorybookRuntimeConfig(),
+  ]);
   const client = writerClient;
   const dirClient = directorClient ?? writerClient;
   if (!client || !dirClient) {
@@ -298,7 +317,7 @@ export async function generateThreeStepStory(
     onProgress?.("story_draft", 24);
     onProgress?.("story_proofread", 32);
     onProgress?.("story_director", 40);
-    return buildDemoStory(payload);
+    return buildDemoStory(payload, sbConfig);
   }
 
   const writerModel = config.storybookWriterModel;
@@ -306,11 +325,19 @@ export async function generateThreeStepStory(
   const directorModel = config.storybookDirectorModel;
   const directorEffort = config.storybookDirectorReasoningEffort;
   const langName = payload.lang === "uk" ? "Ukrainian (Українська)" : "Russian (Русский)";
-  const wordRange = getWordRangeByAge(payload.ageGroup);
-  const toneLabel = TONE_LABELS[payload.tone][payload.lang];
-  const styleDesc =
-    config.prompts[`style-${payload.artStyle}`]?.trim() ||
-    ART_STYLE_META[payload.artStyle].prompt;
+  const ageCfg = sbConfig.ageGroups.find((a) => a.code === payload.ageGroup);
+  const wordRange = getWordRangeByAge(payload.ageGroup, sbConfig);
+  const ageWriterNote = ageCfg?.writerNote?.trim() ? ` (${ageCfg.writerNote.trim()})` : "";
+  const toneCfg = sbConfig.tones.find((t) => t.slug === payload.tone);
+  const toneBaseLabel =
+    toneCfg?.label[payload.lang] ||
+    TONE_LABELS[payload.tone]?.[payload.lang] ||
+    payload.tone;
+  const toneLabel = toneCfg?.promptHint?.trim()
+    ? `${toneBaseLabel} (${toneCfg.promptHint.trim()})`
+    : toneBaseLabel;
+  const resolvedStyle = resolveStorybookStyle(sbConfig, payload.artStyle);
+  const styleDesc = resolvedStyle.stylePrompt;
   const hasCompanion = payload.companionType !== "none";
   const appearanceSummary = buildAppearanceSummary(
     payload,
@@ -327,7 +354,7 @@ export async function generateThreeStepStory(
 
   const defaultBeatsSystem = `You are a master children's book architect writing in ${langName}. Build concrete, warm, sensory story beats (never preachy). Strictly respect the declared child gender and companion species/relation/gender (for example, never turn a dog into a cat or change a companion's gender).`;
   const customBeatsSystem = renderPromptVars(
-    config.prompts["storybook-beats-system"],
+    sbConfig.prompts.beatsSystem || config.prompts["storybook-beats-system"],
     { langName }
   );
   const beatsSystemPrompt = `${customBeatsSystem || defaultBeatsSystem}\nReturn strict JSON only.`;
@@ -345,7 +372,7 @@ export async function generateThreeStepStory(
         {
           role: "user",
           content: `Create a ${payload.pageCount}-page story beat outline for:
-- Child: ${payload.childName} (vocative if UA: ${payload.childNameVocative || payload.childName}), ${appearanceSummary}
+- Child: ${payload.childName} (vocative if UA: ${payload.childNameVocative || payload.childName}), ${appearanceSummary}${ageWriterNote}
 - Tone: ${toneLabel}
 - Setting: ${payload.setting}
 - Plot idea: ${payload.plotIdea}
@@ -374,7 +401,7 @@ Never put emojis, stars (★), or decorative symbols in titles, headings, or tex
 Strictly preserve the child's gender and the companion's exact species/relation and gender (e.g. male dog MUST act, sound, and take masculine verbs like a dog — NEVER meow or purr!).
 If layoutMode is "panorama", assign alternating "textZone": "left" or "right".`;
   const customDraftSystem = renderPromptVars(
-    config.prompts["storybook-draft-system"],
+    sbConfig.prompts.draftSystem || config.prompts["storybook-draft-system"],
     { langName, wordRange }
   );
   const draftSystemPrompt = `${customDraftSystem || defaultDraftSystem}\nReturn strict JSON only.`;
@@ -435,7 +462,7 @@ Check and fix:
 3) Consistent verb/adjective gender for child (${payload.gender === "girl" ? "feminine" : "masculine"}) AND for the companion (${companionSummary}). Fix any species mismatch (e.g. if companion is a dog, remove cat sounds like "муркоче"/"мурлычет").
 4) Natural punctuation, em-dashes, and warm read-aloud rhythm without changing the plot or shortening pages below ${wordRange} words. Remove any emojis or decorative symbols like ★/✦.`;
   const customProofSystem = renderPromptVars(
-    config.prompts["storybook-proofread-system"],
+    sbConfig.prompts.proofreadSystem || config.prompts["storybook-proofread-system"],
     {
       langName,
       childName: payload.childName,
@@ -510,7 +537,7 @@ STRICT DIRECTING RULES (apply universally across any story world):
    - For "coverPrompt": compose a warm full-body vertical cover scene (1024x1536) with boots/feet clearly visible on a firm path (~78% down from top), leaving calm sky/canopy in the top 18% and quiet foreground in bottom 20% for title typography.
    - If layoutMode is "panorama", preserve a quiet low-contrast scenic zone on each page's assigned "textZone" ("left" or "right" third) without lining characters up toward the viewer.`;
   const customDirectorSystem = renderPromptVars(
-    config.prompts["storybook-director-system"],
+    sbConfig.prompts.directorSystem || config.prompts["storybook-director-system"],
     { styleDesc }
   );
   const directorSystemPrompt = `${customDirectorSystem || defaultDirectorSystem}\n8. Return strict JSON only (English prompts, zero text/letters inside images).`;
@@ -651,7 +678,10 @@ export async function rewriteSinglePageText(params: {
   instruction: string;
   costTracker?: AiCostTracker;
 }): Promise<{ heading: string; text: string }> {
-  const { writerClient: client, config } = await getCmsOpenAIRuntime();
+  const [{ writerClient: client, config }, sbConfig] = await Promise.all([
+    getCmsOpenAIRuntime(),
+    getStorybookRuntimeConfig(),
+  ]);
   if (!client) {
     return {
       heading: params.currentHeading,
@@ -662,7 +692,7 @@ export async function rewriteSinglePageText(params: {
   const writerModel = config.storybookWriterModel;
   const writerEffort = config.storybookWriterReasoningEffort;
   const langName = params.lang === "uk" ? "Ukrainian (Українська)" : "Russian (Русский)";
-  const wordRange = getWordRangeByAge(params.ageGroup);
+  const wordRange = getWordRangeByAge(params.ageGroup, sbConfig);
 
   const res = await withOpenAIRetry("rewrite_page", () =>
     client.chat.completions.create({

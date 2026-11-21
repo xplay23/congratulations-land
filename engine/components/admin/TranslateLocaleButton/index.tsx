@@ -125,12 +125,21 @@ function setNestedValue(
   cur[parts[parts.length - 1]] = value;
 }
 
-function collectLocalizedPathsFromConfig(
+interface ArrayFieldMeta {
+  arrayPath: string;
+  children: Array<{ path: string; isRichText: boolean }>;
+}
+
+function collectLocalizedMetaFromConfig(
   fields: unknown[] | undefined,
   prefix = ""
-): Array<{ path: string; isRichText: boolean }> {
-  if (!Array.isArray(fields)) return [];
-  const out: Array<{ path: string; isRichText: boolean }> = [];
+): {
+  scalar: Array<{ path: string; isRichText: boolean }>;
+  arrays: ArrayFieldMeta[];
+} {
+  const scalar: Array<{ path: string; isRichText: boolean }> = [];
+  const arrays: ArrayFieldMeta[] = [];
+  if (!Array.isArray(fields)) return { scalar, arrays };
 
   for (const raw of fields) {
     if (typeof raw !== "object" || raw === null) continue;
@@ -144,11 +153,20 @@ function collectLocalizedPathsFromConfig(
       name &&
       f.localized === true
     ) {
-      out.push({ path: nextPath, isRichText: type === "richText" });
+      scalar.push({ path: nextPath, isRichText: type === "richText" });
+    } else if (type === "array" && name && Array.isArray(f.fields)) {
+      const sub = collectLocalizedMetaFromConfig(f.fields, "");
+      if (sub.scalar.length > 0) {
+        arrays.push({ arrayPath: nextPath, children: sub.scalar });
+      }
     } else if (type === "group" && Array.isArray(f.fields)) {
-      out.push(...collectLocalizedPathsFromConfig(f.fields, nextPath));
+      const sub = collectLocalizedMetaFromConfig(f.fields, nextPath);
+      scalar.push(...sub.scalar);
+      arrays.push(...sub.arrays);
     } else if ((type === "row" || type === "collapsible") && Array.isArray(f.fields)) {
-      out.push(...collectLocalizedPathsFromConfig(f.fields, prefix));
+      const sub = collectLocalizedMetaFromConfig(f.fields, prefix);
+      scalar.push(...sub.scalar);
+      arrays.push(...sub.arrays);
     } else if (type === "tabs" && Array.isArray(f.tabs)) {
       for (const tab of f.tabs as Array<Record<string, unknown>>) {
         const tabPrefix =
@@ -157,17 +175,17 @@ function collectLocalizedPathsFromConfig(
               ? `${prefix}.${tab.name}`
               : tab.name
             : prefix;
-        out.push(
-          ...collectLocalizedPathsFromConfig(
-            tab.fields as unknown[] | undefined,
-            tabPrefix
-          )
+        const sub = collectLocalizedMetaFromConfig(
+          tab.fields as unknown[] | undefined,
+          tabPrefix
         );
+        scalar.push(...sub.scalar);
+        arrays.push(...sub.arrays);
       }
     }
   }
 
-  return out;
+  return { scalar, arrays };
 }
 
 export function TranslateLocaleButton() {
@@ -189,12 +207,13 @@ export function TranslateLocaleButton() {
     | { fields?: unknown[] }
     | undefined;
 
-  const discovered = collectLocalizedPathsFromConfig(docConfig?.fields);
+  const discovered = collectLocalizedMetaFromConfig(docConfig?.fields);
   const fieldMetaMap = new Map<string, boolean>();
-  for (const item of discovered) {
+  for (const item of discovered.scalar) {
     fieldMetaMap.set(item.path, item.isRichText);
   }
-  if (fieldMetaMap.size === 0) {
+  const arrayFieldsMeta = discovered.arrays;
+  if (fieldMetaMap.size === 0 && arrayFieldsMeta.length === 0) {
     for (const p of DEFAULT_TRANSLATABLE_FIELDS) {
       fieldMetaMap.set(p, p === "content");
     }
@@ -208,6 +227,20 @@ export function TranslateLocaleButton() {
     return null;
   };
 
+  function extractTextVal(
+    val: unknown,
+    isRichText: boolean
+  ): { text: string; isRich: boolean } | null {
+    if (isRichText || isLexicalValue(val)) {
+      const html = lexicalToHtml(val);
+      return html.trim() ? { text: html, isRich: true } : null;
+    }
+    if (typeof val === "string" && val.trim()) {
+      return { text: val, isRich: false };
+    }
+    return null;
+  }
+
   async function extractFromCurrentForm(): Promise<{
     plainFields: Record<string, string>;
     richTextPaths: Set<string>;
@@ -216,16 +249,28 @@ export function TranslateLocaleButton() {
     const richTextPaths = new Set<string>();
 
     for (const [path, isRichText] of fieldMetaMap.entries()) {
-      const val = getDataByPath<unknown>(path);
-      if (isRichText || isLexicalValue(val)) {
-        const html = lexicalToHtml(val);
-        if (html.trim()) {
-          plainFields[path] = html;
-          richTextPaths.add(path);
-        }
-      } else if (typeof val === "string" && val.trim()) {
-        plainFields[path] = val;
+      const extracted = extractTextVal(getDataByPath<unknown>(path), isRichText);
+      if (extracted) {
+        plainFields[path] = extracted.text;
+        if (extracted.isRich) richTextPaths.add(path);
       }
+    }
+
+    for (const arrMeta of arrayFieldsMeta) {
+      const rows = getDataByPath<unknown>(arrMeta.arrayPath);
+      if (!Array.isArray(rows)) continue;
+      rows.forEach((row, idx) => {
+        if (!row || typeof row !== "object") return;
+        for (const child of arrMeta.children) {
+          const fullPath = `${arrMeta.arrayPath}.${idx}.${child.path}`;
+          const val = getNestedValue(row as Record<string, unknown>, child.path);
+          const extracted = extractTextVal(val, child.isRichText);
+          if (extracted) {
+            plainFields[fullPath] = extracted.text;
+            if (extracted.isRich) richTextPaths.add(fullPath);
+          }
+        }
+      });
     }
 
     return { plainFields, richTextPaths };
@@ -249,16 +294,28 @@ export function TranslateLocaleButton() {
     const richTextPaths = new Set<string>();
 
     for (const [path, isRichText] of fieldMetaMap.entries()) {
-      const val = getNestedValue(data, path);
-      if (isRichText || isLexicalValue(val)) {
-        const html = lexicalToHtml(val);
-        if (html.trim()) {
-          plainFields[path] = html;
-          richTextPaths.add(path);
-        }
-      } else if (typeof val === "string" && val.trim()) {
-        plainFields[path] = val;
+      const extracted = extractTextVal(getNestedValue(data, path), isRichText);
+      if (extracted) {
+        plainFields[path] = extracted.text;
+        if (extracted.isRich) richTextPaths.add(path);
       }
+    }
+
+    for (const arrMeta of arrayFieldsMeta) {
+      const rows = getNestedValue(data, arrMeta.arrayPath);
+      if (!Array.isArray(rows)) continue;
+      rows.forEach((row, idx) => {
+        if (!row || typeof row !== "object") return;
+        for (const child of arrMeta.children) {
+          const fullPath = `${arrMeta.arrayPath}.${idx}.${child.path}`;
+          const val = getNestedValue(row as Record<string, unknown>, child.path);
+          const extracted = extractTextVal(val, child.isRichText);
+          if (extracted) {
+            plainFields[fullPath] = extracted.text;
+            if (extracted.isRich) richTextPaths.add(fullPath);
+          }
+        }
+      });
     }
 
     return { plainFields, richTextPaths };
@@ -345,12 +402,65 @@ export function TranslateLocaleButton() {
         }
 
         const patchBody: Record<string, unknown> = {};
+        const arrayPathSet = new Set(arrayFieldsMeta.map((a) => a.arrayPath));
+        const touchedArrays = new Map<
+          string,
+          Array<{ idx: number; subPath: string; value: unknown }>
+        >();
+
         for (const [path, translatedText] of Object.entries(translated)) {
           const isRich = sourceExtracted.richTextPaths.has(path);
           const nextValue = isRich
             ? htmlToLexical(translatedText)
             : translatedText;
-          setNestedValue(patchBody, path, nextValue);
+
+          let matchedArray: string | null = null;
+          for (const arrPath of arrayPathSet) {
+            if (path.startsWith(`${arrPath}.`)) {
+              matchedArray = arrPath;
+              break;
+            }
+          }
+
+          if (matchedArray) {
+            const rest = path.slice(matchedArray.length + 1);
+            const dot = rest.indexOf(".");
+            const idx = Number(dot === -1 ? rest : rest.slice(0, dot));
+            const subPath = dot === -1 ? "" : rest.slice(dot + 1);
+            if (Number.isInteger(idx) && idx >= 0 && subPath) {
+              const list = touchedArrays.get(matchedArray) ?? [];
+              list.push({ idx, subPath, value: nextValue });
+              touchedArrays.set(matchedArray, list);
+            }
+          } else {
+            setNestedValue(patchBody, path, nextValue);
+          }
+        }
+
+        if (touchedArrays.size > 0) {
+          const existingRes = await fetch(
+            `${endpoint}?locale=${targetLang}&depth=0`,
+            { cache: "no-store" }
+          );
+          const existingDoc = existingRes.ok
+            ? ((await existingRes.json()) as Record<string, unknown>)
+            : {};
+
+          for (const [arrPath, updates] of touchedArrays.entries()) {
+            const baseArr = getNestedValue(existingDoc, arrPath);
+            const cloned = Array.isArray(baseArr)
+              ? baseArr.map((row) =>
+                  row && typeof row === "object"
+                    ? { ...(row as Record<string, unknown>) }
+                    : {}
+                )
+              : [];
+            for (const u of updates) {
+              while (cloned.length <= u.idx) cloned.push({});
+              setNestedValue(cloned[u.idx], u.subPath, u.value);
+            }
+            setNestedValue(patchBody, arrPath, cloned);
+          }
         }
 
         const patchRes = await fetch(`${endpoint}?locale=${targetLang}`, {
