@@ -12,6 +12,8 @@ import {
   Coins,
   FileCode2,
   FileText,
+  Film,
+  FolderOpen,
   FolderTree,
   Gauge,
   Gift,
@@ -95,6 +97,21 @@ function getMainMenu(lang: AdminLang): Array<NavItem | NavGroup> {
           label: tAdmin(lang, "Отзывы", "Відгуки"),
           href: "/admin/collections/reviews",
           icon: MessageSquareQuote,
+        },
+      ],
+    },
+    {
+      label: tAdmin(lang, "Производство", "Виробництво"),
+      items: [
+        {
+          label: tAdmin(lang, "Видео-шаблоны", "Відео-шаблони"),
+          href: "/admin/collections/video-templates",
+          icon: Film,
+        },
+        {
+          label: tAdmin(lang, "Ассеты пайплайна", "Асети пайплайну"),
+          href: "/admin/collections/pipeline-assets",
+          icon: FolderOpen,
         },
       ],
     },

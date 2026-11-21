@@ -11,6 +11,16 @@ import { deleteUploadFile, getOrderDirs, resolveUploadPath } from "@/lib/storage
 import { AiCostTracker } from "@/lib/ai-cost";
 import { getCmsAiConfig, type CmsAiRuntimeConfig } from "@/lib/cms-ai-config";
 import { getCmsVariationBySlug } from "@/lib/cms-content";
+import { synthesizeElevenLabsBuffer } from "@/lib/video/elevenlabs";
+import {
+  buildAssembleManifestFromTemplate,
+  getVideoTemplateById,
+  getVideoTemplateBySlug,
+  runAssembleVideoScript,
+  type VideoTemplateDoc,
+} from "@/lib/video/manifest-builder";
+import { parseTimelineConfig } from "@/lib/video/template-schema";
+import { buildTemplateVars, interpolateVideoText } from "@/lib/video/template-vars";
 import type { VideoOrderPayload, VideoResult } from "@/lib/types";
 
 const execFileAsync = promisify(execFile);
@@ -32,7 +42,7 @@ function applyVideoTemplate(
   return out;
 }
 
-function buildVideoScriptLines(
+function buildLegacyVideoScriptLines(
   payload: VideoOrderPayload,
   prompts?: Record<string, string>
 ) {
@@ -92,89 +102,11 @@ function buildVideoScriptLines(
   };
 }
 
-const FALLBACK_PREMADE_VOICE_ID = "pqHfZKP75CvOlQylNhV4"; // Bill - Wise, Mature, Balanced (premade)
-
-async function callElevenLabsTts(
-  apiKey: string,
-  voiceId: string,
-  modelId: string,
-  text: string,
-  stability = 0.5,
-  similarityBoost = 0.78
-): Promise<Response> {
-  return fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
-    {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: modelId,
-        voice_settings: {
-          stability,
-          similarity_boost: similarityBoost,
-        },
-      }),
-    }
-  );
-}
-
-async function synthesizeElevenLabsMp3(
-  text: string,
-  outPath: string,
-  cmsConfig?: CmsAiRuntimeConfig
-): Promise<void> {
-  const cfg = cmsConfig || (await getCmsAiConfig());
-  const apiKey = cfg.elevenLabsApiKey?.trim();
-  if (!apiKey) {
-    throw new Error("ELEVENLABS_API_KEY is not configured");
-  }
-  const voiceId = cfg.elevenLabsVoiceId?.trim() || "NOpBlnGInO9m6vDvFkFC";
-  const modelId = cfg.elevenLabsModelId?.trim() || "eleven_v4";
-  const stability = cfg.elevenLabsStability ?? 0.5;
-  const similarityBoost = cfg.elevenLabsSimilarityBoost ?? 0.78;
-
-  let res = await callElevenLabsTts(
-    apiKey,
-    voiceId,
-    modelId,
-    text,
-    stability,
-    similarityBoost
-  );
-  if (res.status === 402 && voiceId !== FALLBACK_PREMADE_VOICE_ID) {
-    console.warn(
-      `[elevenlabs] Voice ${voiceId} requires paid plan (402); falling back to premade voice ${FALLBACK_PREMADE_VOICE_ID}`
-    );
-    res = await callElevenLabsTts(
-      apiKey,
-      FALLBACK_PREMADE_VOICE_ID,
-      modelId,
-      text,
-      stability,
-      similarityBoost
-    );
-  }
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`ElevenLabs TTS failed (${res.status}): ${errText.slice(0, 200)}`);
-  }
-
-  const buf = Buffer.from(await res.arrayBuffer());
-  fs.writeFileSync(outPath, buf);
-}
-
 async function createWatermarkedPreviewVideo(
   cleanMp4Path: string,
-  previewMp4Path: string,
-  lang: VideoOrderPayload["lang"]
+  previewMp4Path: string
 ): Promise<void> {
-  const watermarkText = lang === "uk" ? "VIDEOVITANNYA PREVIEW" : "VIDEOVITANNYA PREVIEW";
-  // Escaping ':' and quotes for ffmpeg drawtext filter
+  const watermarkText = "VIDEOVITANNYA PREVIEW";
   const vf = [
     "scale=640:360",
     `drawtext=text='${watermarkText}':fontcolor=white@0.42:fontsize=34:x=(w-text_w)/2:y=(h-text_h)/2:box=1:boxcolor=black@0.22:boxborderw=10`,
@@ -202,12 +134,192 @@ async function createWatermarkedPreviewVideo(
   ]);
 }
 
+function collectAllUploadIds(payload: VideoOrderPayload): string[] {
+  const ids = new Set<string>();
+  if (payload.photoUploadId) ids.add(payload.photoUploadId);
+  if (payload.uploads) {
+    for (const id of Object.values(payload.uploads)) {
+      if (id) ids.add(id);
+    }
+  }
+  return Array.from(ids);
+}
+
+function deleteAllOrderUploads(payload: VideoOrderPayload): void {
+  for (const id of collectAllUploadIds(payload)) {
+    deleteUploadFile(id);
+  }
+}
+
+async function runTemplateVideoPipeline(opts: {
+  orderId: string;
+  payload: VideoOrderPayload;
+  template: VideoTemplateDoc;
+  voiceIdOverride?: string;
+  baseCmsConfig: CmsAiRuntimeConfig;
+  costTracker: AiCostTracker;
+}): Promise<VideoResult> {
+  const { orderId, payload, template, voiceIdOverride, baseCmsConfig, costTracker } = opts;
+  const { clean, preview, base } = getOrderDirs(orderId);
+  const timeline = parseTimelineConfig(template.timelineConfig);
+
+  const fields: Record<string, string> = {
+    gender: payload.gender,
+    childName: payload.childName,
+    ...(payload.childNameVocative
+      ? { childNameVocative: payload.childNameVocative }
+      : {}),
+    age: payload.age,
+    achievement: payload.achievement,
+    ...(payload.fields || {}),
+  };
+  const vars = buildTemplateVars({ lang: payload.lang, fields });
+
+  // Resolve all uploaded user photos (EXIF already stripped by /api/uploads)
+  const uploadPaths: Record<string, string> = {};
+  const uploadEntries: Array<[string, string]> = Object.entries(
+    payload.uploads && Object.keys(payload.uploads).length > 0
+      ? payload.uploads
+      : payload.photoUploadId
+      ? { photo: payload.photoUploadId }
+      : {}
+  );
+
+  for (const [key, uploadId] of uploadEntries) {
+    const resolved = resolveUploadPath(uploadId);
+    if (!resolved) {
+      throw new Error(`Uploaded photo for field "${key}" was not found or expired`);
+    }
+    uploadPaths[key] = resolved;
+  }
+
+  const audioDir = path.join(base, "custom_audio");
+  fs.mkdirSync(audioDir, { recursive: true });
+
+  await updateOrderProgress(orderId, "video_tts", 20);
+
+  const hasElevenLabs = Boolean(baseCmsConfig.elevenLabsApiKey?.trim());
+  const effectiveVoiceId =
+    voiceIdOverride?.trim() ||
+    template.elevenLabsVoiceId?.trim() ||
+    baseCmsConfig.elevenLabsVoiceId;
+  const effectiveModelId =
+    template.elevenLabsModelId?.trim() || baseCmsConfig.elevenLabsModelId;
+  const effectiveStability = template.stability ?? baseCmsConfig.elevenLabsStability;
+  const effectiveSimilarity =
+    template.similarityBoost ?? baseCmsConfig.elevenLabsSimilarityBoost;
+
+  const dynamicAudioByLineId: Record<string, string> = {};
+  let modeUsed: VideoResult["modeUsed"] = "real_ffmpeg_demo_audio";
+
+  if (hasElevenLabs) {
+    for (const shot of timeline.shots) {
+      for (const vl of shot.voiceLines[payload.lang] || []) {
+        if (vl.mode !== "dynamic") continue;
+        const rendered = interpolateVideoText(vl.text || "", vars);
+        if (!rendered) continue;
+        const tts = await synthesizeElevenLabsBuffer({
+          text: rendered,
+          languageCode: payload.lang,
+          voiceId: effectiveVoiceId,
+          modelId: effectiveModelId,
+          stability: effectiveStability,
+          similarityBoost: effectiveSimilarity,
+          cmsConfig: baseCmsConfig,
+        });
+        const mp3Path = path.join(audioDir, `dyn_${shot.key}_${vl.id}.mp3`);
+        fs.writeFileSync(mp3Path, tts.buffer);
+        dynamicAudioByLineId[vl.id] = mp3Path;
+        costTracker.addElevenLabsUsage(
+          `video_tts_${vl.id}`,
+          tts.charCount,
+          tts.modelIdUsed
+        );
+        modeUsed = "real_ffmpeg_elevenlabs";
+      }
+    }
+  }
+
+  await updateOrderProgress(orderId, "video_render", 50);
+
+  const { manifest, resolvedScriptLines, personalizedScriptLines } =
+    await buildAssembleManifestFromTemplate({
+      template,
+      timelineOverride: timeline,
+      lang: payload.lang,
+      tag: orderId,
+      fields,
+      uploadPaths,
+      dynamicAudioByLineId,
+    });
+
+  const cleanVideoFile = "video_clean.mp4";
+  const previewVideoFile = "video_preview.mp4";
+  const cleanVideoPath = path.join(clean, cleanVideoFile);
+  const previewVideoPath = path.join(preview, previewVideoFile);
+  const manifestPath = path.join(base, "manifest.json");
+
+  const runRes = await runAssembleVideoScript({
+    manifest,
+    manifestPath,
+    outPath: cleanVideoPath,
+  });
+
+  // Delete ALL uploaded user photos immediately after baking into clean MP4
+  deleteAllOrderUploads(payload);
+
+  await updateOrderProgress(orderId, "video_preview", 85);
+  await createWatermarkedPreviewVideo(cleanVideoPath, previewVideoPath);
+
+  const scriptLinesOut =
+    Object.keys(personalizedScriptLines).length > 0
+      ? personalizedScriptLines
+      : resolvedScriptLines;
+
+  return {
+    scriptLines: scriptLinesOut,
+    cleanVideoFile,
+    previewVideoFile,
+    durationSeconds: runRes.durationSec || undefined,
+    modeUsed,
+  };
+}
+
 export async function runVideoPipeline(
   orderId: string,
   payload: VideoOrderPayload
 ): Promise<void> {
   const costTracker = new AiCostTracker();
   try {
+    const baseCmsConfig = await getCmsAiConfig();
+    const variation = payload.variationSlug
+      ? await getCmsVariationBySlug(payload.variationSlug)
+      : undefined;
+
+    // 1. Prefer CMS VideoTemplate + universal assemble_video.py whenever linked
+    let videoTemplate: VideoTemplateDoc | null = null;
+    if (variation?.videoTemplateId) {
+      videoTemplate = await getVideoTemplateById(variation.videoTemplateId, payload.lang);
+    } else if (variation?.videoTemplateSlug) {
+      videoTemplate = await getVideoTemplateBySlug(variation.videoTemplateSlug, payload.lang);
+    } else if (payload.templateSlug) {
+      videoTemplate = await getVideoTemplateBySlug(payload.templateSlug, payload.lang);
+    }
+
+    if (videoTemplate) {
+      const result = await runTemplateVideoPipeline({
+        orderId,
+        payload,
+        template: videoTemplate,
+        voiceIdOverride: variation?.elevenLabsVoiceIdOverride,
+        baseCmsConfig,
+        costTracker,
+      });
+      await completeOrderGeneration(orderId, result);
+      return;
+    }
+
+    // 2. Legacy fallback to assemble_pilot.py (kept for backward compatibility)
     const { clean, preview, base } = getOrderDirs(orderId);
     const pilotRoot = getPilotRoot();
     const assembleScript = path.join(pilotRoot, "scripts", "assemble_pilot.py");
@@ -220,11 +332,6 @@ export async function runVideoPipeline(
     if (!photoPath) {
       throw new Error("Uploaded child photo was not found or expired");
     }
-
-    const baseCmsConfig = await getCmsAiConfig();
-    const variation = payload.variationSlug
-      ? await getCmsVariationBySlug(payload.variationSlug)
-      : undefined;
 
     const effectivePrompts: Record<string, string> = {
       ...baseCmsConfig.prompts,
@@ -243,7 +350,7 @@ export async function runVideoPipeline(
       prompts: effectivePrompts,
     };
 
-    const lines = buildVideoScriptLines(payload, cmsConfig.prompts);
+    const lines = buildLegacyVideoScriptLines(payload, cmsConfig.prompts);
     const audioDir = path.join(base, "custom_audio");
     fs.mkdirSync(audioDir, { recursive: true });
 
@@ -255,39 +362,21 @@ export async function runVideoPipeline(
     const line03Filename = payload.lang === "ru" ? "line_03_v2.mp3" : "line_03.mp3";
 
     if (hasElevenLabs) {
-      await synthesizeElevenLabsMp3(
-        lines.line03,
-        path.join(audioDir, line03Filename),
-        cmsConfig
-      );
-      costTracker.addElevenLabsUsage(
-        "video_tts_line03",
-        lines.line03.length,
-        cmsConfig.elevenLabsModelId
-      );
-      await synthesizeElevenLabsMp3(
-        lines.line04b,
-        path.join(audioDir, "line_04b.mp3"),
-        cmsConfig
-      );
-      costTracker.addElevenLabsUsage(
-        "video_tts_line04b",
-        lines.line04b.length,
-        cmsConfig.elevenLabsModelId
-      );
-      await synthesizeElevenLabsMp3(
-        lines.line07_1,
-        path.join(audioDir, "line_07_1.mp3"),
-        cmsConfig
-      );
-      costTracker.addElevenLabsUsage(
-        "video_tts_line07_1",
-        lines.line07_1.length,
-        cmsConfig.elevenLabsModelId
-      );
+      for (const [step, text, fileName] of [
+        ["video_tts_line03", lines.line03, line03Filename],
+        ["video_tts_line04b", lines.line04b, "line_04b.mp3"],
+        ["video_tts_line07_1", lines.line07_1, "line_07_1.mp3"],
+      ] as const) {
+        const tts = await synthesizeElevenLabsBuffer({
+          text,
+          languageCode: payload.lang,
+          cmsConfig,
+        });
+        fs.writeFileSync(path.join(audioDir, fileName), tts.buffer);
+        costTracker.addElevenLabsUsage(step, tts.charCount, tts.modelIdUsed);
+      }
       modeUsed = "real_ffmpeg_elevenlabs";
     } else {
-      // Fallback to verified pre-synthesized pilot voice samples so FFmpeg/Pillow assembly still runs end-to-end
       const srcAudioDir =
         payload.lang === "uk"
           ? path.join(pilotRoot, "audio_ua")
@@ -334,11 +423,10 @@ export async function runVideoPipeline(
         timeout: 180_000,
       }
     );
-    // Child photo is already baked into shot 04b of clean MP4 — delete original upload immediately
-    deleteUploadFile(payload.photoUploadId);
+    deleteAllOrderUploads(payload);
 
     await updateOrderProgress(orderId, "video_preview", 85);
-    await createWatermarkedPreviewVideo(cleanVideoPath, previewVideoPath, payload.lang);
+    await createWatermarkedPreviewVideo(cleanVideoPath, previewVideoPath);
 
     const result: VideoResult = {
       scriptLines: lines,
@@ -356,6 +444,6 @@ export async function runVideoPipeline(
     await costTracker.flushToOrder(orderId).catch((e) => {
       console.error(`[video:${orderId}] cost flush error:`, e);
     });
-    deleteUploadFile(payload.photoUploadId);
+    deleteAllOrderUploads(payload);
   }
 }

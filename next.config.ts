@@ -7,6 +7,9 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   cacheComponents: false,
+  experimental: {
+    proxyClientMaxBodySize: "100mb",
+  },
   serverExternalPackages: [
     "sharp",
     "pdf-lib",

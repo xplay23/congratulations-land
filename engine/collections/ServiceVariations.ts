@@ -202,6 +202,23 @@ export const ServiceVariations: CollectionConfig = {
           label: { ru: "Пайплайн и озвучка", uk: "Пайплайн та озвучка", en: "Pipeline & Voice" },
           fields: [
             {
+              name: "videoTemplate",
+              type: "relationship",
+              relationTo: "video-templates",
+              label: {
+                ru: "Видео-шаблон (студия таймлайна)",
+                uk: "Відео-шаблон (студія таймлайну)",
+                en: "Video Template (Timeline Studio)",
+              },
+              admin: {
+                description: {
+                  ru: "Если выбран — форма заказа, таймлайн, футажи и озвучка берутся целиком из этого шаблона. Иначе используется legacy-сборщик ниже.",
+                  uk: "Якщо вибрано — форма замовлення, таймлайн, футажі та озвучка беруться цілком із цього шаблону. Інакше використовується legacy-збирач нижче.",
+                  en: "When set, order form, timeline, clips and TTS come entirely from this Video Template.",
+                },
+              },
+            },
+            {
               type: "row",
               fields: [
                 {

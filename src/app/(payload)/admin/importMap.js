@@ -32,6 +32,12 @@ import { MetaTitleComponent as MetaTitleComponent_a8a977ebc872c5d5ea7ee689724c08
 import { MetaDescriptionComponent as MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { MetaImageComponent as MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
 import { PreviewComponent as PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860 } from '@payloadcms/plugin-seo/client'
+import { ElevenLabsVoiceField as ElevenLabsVoiceField_3f417cfd480a31f8872987aa14b494da } from 'engine/components/admin/ElevenLabsVoiceField'
+import { default as default_f51d9389221521e4c4df848425b42aa9 } from 'engine/components/admin/HiddenModelField/ElevenLabsModel'
+import { RangeNumberField as RangeNumberField_070d2a67dbc4d6b6c3dd4c04cfb18567 } from 'engine/components/admin/RangeNumberField'
+import { default as default_99a035d0161c56f05a23c4aa5c8d7783 } from 'engine/components/admin/VideoTimelineStudio/BulkRevoiceButton'
+import { default as default_3d80403671eec2045f0475225edcb0f9 } from 'engine/components/admin/VideoTimelineStudio'
+import { default as default_e03d933121a8f3718a647b734a067878 } from 'engine/components/admin/VideoTimelineStudio/VideoTemplateTestRender'
 import { default as default_ef6c86855fb93b444604e4a0e662004c } from 'engine/components/admin/PostAiButtons'
 import { PostSidebarStatusDivider as PostSidebarStatusDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
 import { PostSidebarCategoriesTagsDivider as PostSidebarCategoriesTagsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
@@ -60,10 +66,7 @@ import { StorybookImageApiKeyField as StorybookImageApiKeyField_e0f37c72d1744088
 import { default as default_0b4b9502ebe7124f5d24783479aceaf8 } from 'engine/components/admin/HiddenModelField/StorybookImageModel'
 import { ElevenLabsConnectionDivider as ElevenLabsConnectionDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
 import { ElevenLabsApiKeyField as ElevenLabsApiKeyField_e0f37c72d17440881a43f945eb95ce79 } from 'engine/components/admin/SecretKeyField'
-import { default as default_f51d9389221521e4c4df848425b42aa9 } from 'engine/components/admin/HiddenModelField/ElevenLabsModel'
-import { ElevenLabsVoiceField as ElevenLabsVoiceField_3f417cfd480a31f8872987aa14b494da } from 'engine/components/admin/ElevenLabsVoiceField'
 import { ElevenLabsVoiceSettingsDivider as ElevenLabsVoiceSettingsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
-import { RangeNumberField as RangeNumberField_070d2a67dbc4d6b6c3dd4c04cfb18567 } from 'engine/components/admin/RangeNumberField'
 import { default as default_db91b7b69d58731c5679cb56c50fea8c } from 'engine/components/admin/PromptRowLabel'
 import { PlatformLimitsDivider as PlatformLimitsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
 import { AiEconomicsDivider as AiEconomicsDivider_b0ed66b01863cfbecfa9693eae7558a9 } from 'engine/components/admin/SectionDivider'
@@ -113,6 +116,12 @@ export const importMap = {
   "@payloadcms/plugin-seo/client#MetaDescriptionComponent": MetaDescriptionComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#MetaImageComponent": MetaImageComponent_a8a977ebc872c5d5ea7ee689724c0860,
   "@payloadcms/plugin-seo/client#PreviewComponent": PreviewComponent_a8a977ebc872c5d5ea7ee689724c0860,
+  "engine/components/admin/ElevenLabsVoiceField#ElevenLabsVoiceField": ElevenLabsVoiceField_3f417cfd480a31f8872987aa14b494da,
+  "engine/components/admin/HiddenModelField/ElevenLabsModel#default": default_f51d9389221521e4c4df848425b42aa9,
+  "engine/components/admin/RangeNumberField#RangeNumberField": RangeNumberField_070d2a67dbc4d6b6c3dd4c04cfb18567,
+  "engine/components/admin/VideoTimelineStudio/BulkRevoiceButton#default": default_99a035d0161c56f05a23c4aa5c8d7783,
+  "engine/components/admin/VideoTimelineStudio#default": default_3d80403671eec2045f0475225edcb0f9,
+  "engine/components/admin/VideoTimelineStudio/VideoTemplateTestRender#default": default_e03d933121a8f3718a647b734a067878,
   "engine/components/admin/PostAiButtons#default": default_ef6c86855fb93b444604e4a0e662004c,
   "engine/components/admin/SectionDivider#PostSidebarStatusDivider": PostSidebarStatusDivider_b0ed66b01863cfbecfa9693eae7558a9,
   "engine/components/admin/SectionDivider#PostSidebarCategoriesTagsDivider": PostSidebarCategoriesTagsDivider_b0ed66b01863cfbecfa9693eae7558a9,
@@ -141,10 +150,7 @@ export const importMap = {
   "engine/components/admin/HiddenModelField/StorybookImageModel#default": default_0b4b9502ebe7124f5d24783479aceaf8,
   "engine/components/admin/SectionDivider#ElevenLabsConnectionDivider": ElevenLabsConnectionDivider_b0ed66b01863cfbecfa9693eae7558a9,
   "engine/components/admin/SecretKeyField#ElevenLabsApiKeyField": ElevenLabsApiKeyField_e0f37c72d17440881a43f945eb95ce79,
-  "engine/components/admin/HiddenModelField/ElevenLabsModel#default": default_f51d9389221521e4c4df848425b42aa9,
-  "engine/components/admin/ElevenLabsVoiceField#ElevenLabsVoiceField": ElevenLabsVoiceField_3f417cfd480a31f8872987aa14b494da,
   "engine/components/admin/SectionDivider#ElevenLabsVoiceSettingsDivider": ElevenLabsVoiceSettingsDivider_b0ed66b01863cfbecfa9693eae7558a9,
-  "engine/components/admin/RangeNumberField#RangeNumberField": RangeNumberField_070d2a67dbc4d6b6c3dd4c04cfb18567,
   "engine/components/admin/PromptRowLabel#default": default_db91b7b69d58731c5679cb56c50fea8c,
   "engine/components/admin/SectionDivider#PlatformLimitsDivider": PlatformLimitsDivider_b0ed66b01863cfbecfa9693eae7558a9,
   "engine/components/admin/SectionDivider#AiEconomicsDivider": AiEconomicsDivider_b0ed66b01863cfbecfa9693eae7558a9,

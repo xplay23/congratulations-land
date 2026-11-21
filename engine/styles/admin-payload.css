@@ -104,3 +104,27 @@ tr[class*=" row-"]:hover td {
 .template-default__wrap:has(.live-preview-window) {
   overflow: visible;
 }
+
+/* ── Symmetric equal-width columns for horizontal field rows ──────────────── */
+@media (min-width: 1025px) {
+  .field-type.row > .row__fields {
+    flex-wrap: nowrap;
+  }
+
+  .field-type.row > .row__fields > * {
+    flex: 1 1 0% !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+}
+
+/* ── Row checkboxes — align vertically with sibling labeled inputs ────────── */
+.field-type.row:has(.field-type:not(.checkbox)) > .row__fields > .field-type.checkbox {
+  padding-top: 26px;
+}
+
+.field-type.row:has(.field-type:not(.checkbox)) > .row__fields > .field-type.checkbox .checkbox-input {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}

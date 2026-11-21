@@ -11,6 +11,8 @@ import { en } from "@payloadcms/translations/languages/en";
 
 import { Users } from "./engine/collections/Users";
 import { Media } from "./engine/collections/Media";
+import { PipelineAssets } from "./engine/collections/PipelineAssets";
+import { VideoTemplates } from "./engine/collections/VideoTemplates";
 import { Pages } from "./engine/collections/Pages";
 import { Services } from "./engine/collections/Services";
 import { ServiceVariations } from "./engine/collections/ServiceVariations";
@@ -86,6 +88,8 @@ export default buildConfig({
     Pages,
     Services,
     ServiceVariations,
+    VideoTemplates,
+    PipelineAssets,
     Showcases,
     Reviews,
     Posts,

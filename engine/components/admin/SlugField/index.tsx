@@ -176,8 +176,9 @@ export function SlugField({
   }
 
   return (
-    <div style={{ marginBottom: "16px" }}>
+    <div className="field-type text" style={{ marginBottom: "16px" }}>
       <div
+        className="field-label"
         style={{
           fontSize: "13px",
           fontWeight: 600,
@@ -194,6 +195,8 @@ export function SlugField({
           onChange={handleChange}
           style={{
             flex: 1,
+            minWidth: 0,
+            height: "40px",
             padding: "8px 10px",
             borderRadius: "4px",
             border: "1px solid var(--theme-border-color)",
@@ -201,6 +204,7 @@ export function SlugField({
             color: "var(--theme-text)",
             fontSize: "13px",
             fontFamily: "monospace",
+            boxSizing: "border-box",
           }}
         />
         <button
@@ -208,7 +212,8 @@ export function SlugField({
           onClick={handleSync}
           title="Re-sync slug from title"
           style={{
-            padding: "8px 10px",
+            height: "40px",
+            padding: "0 10px",
             borderRadius: "4px",
             border: "1px solid #555",
             background: locked ? "#1e3a5f" : "#1a2e1a",

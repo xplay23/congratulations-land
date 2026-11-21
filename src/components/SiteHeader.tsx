@@ -106,7 +106,7 @@ export function SiteHeader({ shell }: { shell?: CmsSiteShell }) {
     }`;
 
   const brandName = shell?.siteName || t.brand;
-  const brandTagline = shell?.tagline || t.tagline;
+  const brandTagline = shell ? shell.tagline.trim() : t.tagline;
   const logoUrl = shell?.logoUrl || "/assets/video-gift.svg";
 
   return (

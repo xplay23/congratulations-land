@@ -57,8 +57,9 @@ export interface StorybookOrderPayload {
 
 export interface VideoOrderPayload {
   lang: Lang;
-  character: "st_nicholas";
+  character: string;
   variationSlug?: string;
+  templateSlug?: string;
   childName: string;
   childNameVocative?: string;
   gender: ChildGender;
@@ -66,6 +67,10 @@ export interface VideoOrderPayload {
   achievement: string;
   photoUploadId: string;
   parentalConsent: boolean;
+  /** Dynamic form fields keyed by VideoTemplate formFields[].fieldKey */
+  fields?: Record<string, string>;
+  /** Private uploadIds keyed by photoUploadField.fieldKey (all auto-deleted in finally) */
+  uploads?: Record<string, string>;
 }
 
 export interface StoryPageItem {
@@ -113,11 +118,7 @@ export interface StorybookResult {
 }
 
 export interface VideoResult {
-  scriptLines: {
-    line03: string;
-    line04b: string;
-    line07_1: string;
-  };
+  scriptLines: Record<string, string>;
   previewVideoFile: string;
   cleanVideoFile: string;
   durationSeconds?: number;

@@ -18,7 +18,7 @@ export function ElevenLabsVoiceField({
   field?: {
     label?: string | Record<string, string>;
     required?: boolean;
-    admin?: { description?: string | Record<string, string> };
+    admin?: { description?: string | Record<string, string>; width?: string };
   };
 }) {
   const lang = useAdminLang();
@@ -70,8 +70,18 @@ export function ElevenLabsVoiceField({
   const currentVal = value ?? "";
   const inList = voices.some((v) => v.voiceId === currentVal);
 
+  const width = field?.admin?.width;
+
   return (
-    <div className="field-type text" style={{ marginBottom: "20px" }}>
+    <div
+      className="field-type text"
+      style={{
+        marginBottom: "16px",
+        flex: width ? `1 1 ${width}` : undefined,
+        width,
+        minWidth: width ? "220px" : undefined,
+      }}
+    >
       <FieldLabel
         label={
           field?.label ??

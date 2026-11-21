@@ -109,6 +109,7 @@
 ### Итоговая навигация `/admin`
 - **Операции (Custom Views):** `Дашборд`, `Заказы`
 - **Каталог:** `Услуги`, `Вариации`, `Примеры`, `Отзывы`
+- **Производство:** `Видео-шаблоны`, `Ассеты пайплайна`
 - **Контент:** `Страницы`, `Шаблоны → Главная страница`, `Статьи`, `Рубрики`, `Авторы`, `Медиа`
 - **Система → Пользователи / Настройки:** `Общие`, `Меню шапки`, `Меню футера`, `ИИ (Контент)`, `ИИ-сказки`, `ElevenLabs`, `Промпты`, `Лимиты`, `Курсы и маржа`
 
@@ -140,3 +141,26 @@
    - Удалены `node:sqlite`, `app_state`, `storage/gifts.db*`, `AdminLoginView`, `afterChange`-зеркалирование из `Services`/`PlatformLimits`/`AiEconomics`, чтение SQLite из сидеров `seed-stage-a.ts`/`seed-stage-b.ts` и легаси `PUT /api/admin/settings`.
    - Кастомные экраны `/admin` (`Дашборд`) и `/admin/orders` (`Заказы`) работают напрямую с таблицами `app.*` в PostgreSQL.
    - **Проверено большим E2E-прогоном (94/94 PASS без вызовов OpenAI):** все публичные страницы UA/RU, 10 коллекций + 10 глобалов Payload, мгновенная кросс-бандловая инвалидация кэша, ElevenLabs/LiteLLM+НБУ/Telegram, полный живой видео-пайплайн (`real_ffmpeg_elevenlabs`, автоудаление фото, живой инвойс Plata by mono, `Range 206` HD MP4, Email OTP + `/my-orders`, аналитика и админ-действия); после теста таблицы `app.*` очищены.
+
+
+---
+
+## 5. Видео-студия и конструктор видео-шаблонов в Payload CMS (Готово)
+
+**Итог:** сборка поздравительных видео полностью перенесена под управление Payload CMS — новые персонажи, локации, реплики UA/RU, оверлеи фото/подписи и поля клиентской формы создаются из `/admin` без правок кода, а в коде остался универсальный stateless-движок сборки.
+
+### Сущности, студия и движок
+1. **`PipelineAssets` (`slug: "pipeline-assets"`, группа `Производство`):** приватное хранилище исходников (`storage/pipeline-assets/`, доступ только для авторизованного админа) для `.mp4` футажей, BGM, Ambient и кэшированных статичных `.mp3` реплик с автозамером `durationSec`/`width`/`height`/`fps` через `ffprobe` ([ffprobe.ts](file:///g:/WwW/work/gifts-project/src/lib/video/ffprobe.ts)) и приватным стримингом HTTP `Range` (`206`) ([stream/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/admin/pipeline-assets/[id]/stream/route.ts)).
+2. **`VideoTemplates` (`slug: "video-templates"`, группа `Производство`):** связывается с `ServiceVariations.videoTemplate` и содержит 4 вкладки:
+   - **Основное и звук:** голос ElevenLabs (`ElevenLabsVoiceField`, `stability`, `similarityBoost`), кнопка массовой переозвучки статичных реплик [BulkRevoiceButton](file:///g:/WwW/work/gifts-project/engine/components/admin/VideoTimelineStudio/BulkRevoiceButton.tsx), BGM, Ambient (`none`/`asset`/`extract_from_shot`), `duckingPreset`, разрешение/FPS и `endFade`.
+   - **Форма заказа:** локализуемая карточка персонажа + совет родителям + конструктор `formFields` на 6 доменных блоках ([videoFormFields.ts](file:///g:/WwW/work/gifts-project/engine/blocks/videoFormFields.ts): `genderField`, `textField` с опциональным кличним відмінком, `ageStepperField`, `praisePresetsField`, `photoUploadField`, `selectCardsField`).
+   - **Студия таймлайна (`timelineConfig` JSONB + Zod-валидация в [template-schema.ts](file:///g:/WwW/work/gifts-project/src/lib/video/template-schema.ts)):** интерактивное приложение [VideoTimelineStudio](file:///g:/WwW/work/gifts-project/engine/components/admin/VideoTimelineStudio/index.tsx) с переключателем дорожек `UA | RU`, тестовыми пресетами `Короткий / Средний / Макс`, live-плеером шота (`<video>` + синхронизированный `Web Audio API` + перетаскивание/ресайз оверлея прямо поверх кадра + кнопка FFmpeg-превью шота ~1.3 с), 2-дорожечным Shot-anchored таймлайном (подрезка фиксированных шотов с обоих краёв + жёлтая полоса slip-сдвига окна с live-перемоткой кадра, перетаскивание `offsetSec` реплик) и инспектором с кнопками синтеза/тест-прослушивания ElevenLabs (с передачей `language_code: "uk" | "ru"` в [elevenlabs.ts](file:///g:/WwW/work/gifts-project/src/lib/video/elevenlabs.ts)). Автосинхронизация `usedAssets` в `beforeChange`.
+   - **Тест-рендер:** [VideoTemplateTestRender](file:///g:/WwW/work/gifts-project/engine/components/admin/VideoTimelineStudio/VideoTemplateTestRender.tsx) для сборки и просмотра полного тестового MP4.
+3. **Универсальный stateless Python-сборщик, клиентская форма и полировка UX:**
+   - [assemble_video.py](file:///g:/WwW/work/gifts-project/video-pipeline/scripts/assemble_video.py) (`--manifest manifest.json --out out.mp4 [--only-shot key]`) + [manifest-builder.ts](file:///g:/WwW/work/gifts-project/src/lib/video/manifest-builder.ts) + движок шаблонов/грамматики [template-vars.ts](file:///g:/WwW/work/gifts-project/src/lib/video/template-vars.ts) (`{voc}`, `{agePrefix}`, `{gender:a|b}`, `{?field:then|else}`).
+   - Клиентская форма [DynamicVideoForm.tsx](file:///g:/WwW/work/gifts-project/src/components/DynamicVideoForm.tsx) (авто-мокап оверлея и автокадр 1-го шота как fallback через `/api/config/video-template-frame`), автоматическая сборка `ctaOrderUrl` (`/create/video?service=<slug>`) и наследование цены/заголовка родительской `Services`, динамический вывод персонализированных реплик и отдельный блок совета перед показом на `/orders/[id]`, скрытие пустого слогана в [SiteHeader.tsx](file:///g:/WwW/work/gifts-project/src/components/SiteHeader.tsx), симметричная сетка строк и выравнивание чекбоксов в [admin-payload.css](file:///g:/WwW/work/gifts-project/engine/styles/admin-payload.css).
+   - Динамическая валидация в [api/orders/video/route.ts](file:///g:/WwW/work/gifts-project/src/app/api/orders/video/route.ts) и гарантированное удаление всех загруженных пользовательских фото в `finally` [src/lib/video/pipeline.ts](file:///g:/WwW/work/gifts-project/src/lib/video/pipeline.ts).
+   - Идемпотентный сидер `npm run seed:video` ([scripts/seed-video-template.ts](file:///g:/WwW/work/gifts-project/scripts/seed-video-template.ts)) переносит все 29 ассетов и шаблон `st-nicholas-room` («Святой Николай — Теплая резиденция») с привязкой к вариации; `assemble_pilot.py` сохранён как legacy-fallback.
+   - **Проверено живым E2E (19/19 PASS):** публичный конфиг и защита `403`/`401`, приватный `Range 206` стрим ассетов, извлечение кадров (`first` и `04b`), ElevenLabs с `language_code` `uk`/`ru`, быстрый рендер шота `04b` (`1.27s`), полный живой заказ `real_ffmpeg_elevenlabs` с автоудалением фото и zero-code 2-й шаблон с новым полем `hobby`.
+
+**Следующий шаг:** адаптация справочников и конструктора сказок PDF в Payload CMS, затем `src/styles/tokens.css` + редизайн (`DESIGN.md`).

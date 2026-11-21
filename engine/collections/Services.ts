@@ -162,13 +162,18 @@ export const Services: CollectionConfig = {
                   name: "ctaOrderUrl",
                   type: "text",
                   label: {
-                    ru: "Ссылка конструктора заказа",
-                    uk: "Посилання конструктора замовлення",
-                    en: "Order Constructor URL",
+                    ru: "Ссылка конструктора заказа (авто, опц.)",
+                    uk: "Посилання конструктора замовлення (авто, опц.)",
+                    en: "Order Constructor URL (auto, opt.)",
                   },
                   admin: {
                     width: "65%",
-                    placeholder: "/create/video или /create/storybook",
+                    placeholder: "Оставьте пустым — соберётся автоматически по типу и слагу",
+                    description: {
+                      ru: "Для услуг с типом video ссылка /create/video?service=<slug> подставится автоматически (для storybook — /create/storybook). Заполняйте только если нужен нестандартный URL.",
+                      uk: "Для послуг із типом video посилання /create/video?service=<slug> підставиться автоматично (для storybook — /create/storybook). Заповнюйте лише для нестандартного URL.",
+                      en: "Auto-resolves to /create/video?service=<slug> for video services and /create/storybook for storybooks when empty.",
+                    },
                   },
                 },
               ],

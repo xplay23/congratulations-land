@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/components/LanguageContext";
 import { usePricing } from "@/components/PricingContext";
+import { DynamicVideoForm } from "@/components/DynamicVideoForm";
+import type { PublicVideoTemplateConfig } from "@/lib/video/form-config";
 import {
   GenderAvatar,
   ImageLightbox,
@@ -63,6 +65,7 @@ interface VideoVariationOption {
   demoVideoUrl: string;
   isDefault: boolean;
   priceOverrideUah: number | null;
+  template?: PublicVideoTemplateConfig | null;
 }
 
 export default function CreateVideoPage() {
@@ -75,6 +78,8 @@ export default function CreateVideoPage() {
 
   const [variations, setVariations] = useState<VideoVariationOption[]>([]);
   const [selectedVariationSlug, setSelectedVariationSlug] = useState<string>("");
+  const [serviceTitle, setServiceTitle] = useState<string | null>(null);
+  const [serviceBasePriceUah, setServiceBasePriceUah] = useState<number | null>(null);
 
   useEffect(() => {
     setAssistantContext("video");
@@ -86,12 +91,30 @@ export default function CreateVideoPage() {
       typeof window !== "undefined"
         ? new URLSearchParams(window.location.search).get("variation") || ""
         : "";
-    fetch(`/api/config/video-variations?lang=${lang}`, { cache: "no-store" })
+    const urlService =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("service") || ""
+        : "";
+    const qs = new URLSearchParams({ lang });
+    if (urlService) qs.set("service", urlService);
+    fetch(`/api/config/video-variations?${qs.toString()}`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { variations: [] }))
-      .then((data: { variations?: VideoVariationOption[] }) => {
-        if (!active) return;
-        const list = Array.isArray(data.variations) ? data.variations : [];
-        setVariations(list);
+      .then(
+        (data: {
+          serviceTitle?: string | null;
+          serviceBasePriceUah?: number | null;
+          variations?: VideoVariationOption[];
+        }) => {
+          if (!active) return;
+          setServiceTitle(data.serviceTitle || null);
+          setServiceBasePriceUah(
+            typeof data.serviceBasePriceUah === "number" &&
+              data.serviceBasePriceUah > 0
+              ? data.serviceBasePriceUah
+              : null
+          );
+          const list = Array.isArray(data.variations) ? data.variations : [];
+          setVariations(list);
         if (list.length > 0) {
           const matched =
             (urlVariation &&
@@ -114,10 +137,11 @@ export default function CreateVideoPage() {
   const selectedVariation = variations.find(
     (v) => v.variationSlug === selectedVariationSlug
   );
+  const effectiveBasePrice = serviceBasePriceUah ?? baseVideoPrice;
   const videoPrice =
     selectedVariation?.priceOverrideUah && selectedVariation.priceOverrideUah > 0
       ? selectedVariation.priceOverrideUah
-      : baseVideoPrice;
+      : effectiveBasePrice;
 
   // Gender is unselected by default and required before submitting
   const [videoLang, setVideoLang] = useState<Lang>(lang);
@@ -342,7 +366,8 @@ export default function CreateVideoPage() {
             {isUk ? "Персональне відео • HD 720p" : "Персональное видео • HD 720p"}
           </span>
           <h1 className="font-serif-book text-2xl font-bold text-white sm:text-3xl">
-            {isUk ? "Персональне відеопривітання" : "Персональное видеопоздравление"}
+            {serviceTitle ||
+              (isUk ? "Персональне відеопривітання" : "Персональное видеопоздравление")}
           </h1>
         </div>
         <button
@@ -364,7 +389,7 @@ export default function CreateVideoPage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {variations.map((v) => {
               const active = v.variationSlug === selectedVariationSlug;
-              const vPrice = v.priceOverrideUah ?? baseVideoPrice;
+              const vPrice = v.priceOverrideUah ?? effectiveBasePrice;
               return (
                 <button
                   key={v.variationSlug}
@@ -410,7 +435,23 @@ export default function CreateVideoPage() {
         </div>
       )}
 
-      {/* Character Selection Showcase */}
+      {/* Dynamic CMS-driven VideoTemplate form when linked (default for all new templates) */}
+      {selectedVariation?.template &&
+      selectedVariation.template.formFields.length > 0 ? (
+        <DynamicVideoForm
+          key={`${selectedVariation.variationSlug}:${selectedVariation.template.slug}`}
+          template={selectedVariation.template}
+          variationSlug={selectedVariation.variationSlug}
+          videoPrice={videoPrice}
+          videoLang={videoLang}
+          onLangSwitch={(next) => {
+            setVideoLang(next);
+            setLang(next, { replaceUrlOnly: true });
+          }}
+        />
+      ) : (
+        <>
+      {/* Character Selection Showcase (legacy fallback) */}
       <div className="grid gap-4 rounded-2xl border border-amber-300/35 bg-[#121a30]/95 p-4 sm:grid-cols-[240px_1fr] items-center shadow-lg">
         <div className="group relative aspect-video overflow-hidden rounded-xl border border-amber-300/30 bg-slate-900">
           <img
@@ -939,6 +980,8 @@ export default function CreateVideoPage() {
             : `Собрать видео-превью · ${videoPrice} ₴`}
         </button>
       </form>
+        </>
+      )}
     </div>
   );
 }

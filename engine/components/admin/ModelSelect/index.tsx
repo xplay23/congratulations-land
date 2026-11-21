@@ -266,11 +266,10 @@ export default function ModelSelect({
     label || tAdmin(lang, "Модель", "Модель");
 
   return (
-    <div style={{ marginTop: "6px", marginBottom: "20px" }}>
+    <div style={{ marginBottom: "16px" }}>
       <label
+        className="field-label"
         style={{
-          fontSize: "var(--adm-fs-caption, 13px)",
-          fontWeight: 500,
           display: "block",
           marginBottom: "6px",
           color: "var(--theme-text)",

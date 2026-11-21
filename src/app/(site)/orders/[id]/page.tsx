@@ -52,8 +52,10 @@ interface OrderView {
     coverPreviewUrl?: string;
     previewPdfUrl?: string;
     pages?: SafeStoryPage[];
-    scriptLines?: { line03: string; line04b: string; line07_1: string };
+    scriptLines?: Record<string, string>;
     previewVideoUrl?: string;
+    parentAdviceTitle?: string;
+    parentAdviceText?: string;
   } | null;
   aiEditsUsed: number;
   aiEditsLimit: number;
@@ -918,6 +920,24 @@ export default function OrderPage() {
           </div>
         )}
 
+      {/* Standalone gift advice block — between payment/paid block and video block */}
+      {(order.status === "preview_ready" || order.status === "paid") &&
+        order.productType === "video" && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-300/30 bg-amber-400/10 p-5 text-xs text-amber-100 shadow-lg">
+            <Gift className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+            <span>
+              <strong className="font-semibold text-amber-200">
+                {order.result?.parentAdviceTitle ||
+                  (isUk ? "Порада перед показом дитині:" : "Совет перед показом ребёнку:")}
+              </strong>{" "}
+              {order.result?.parentAdviceText ||
+                (isUk
+                  ? "у відео Миколай показує подарунок у коробці. Рекомендуємо заздалегідь підготувати сюрприз і вручити його дитині одразу після перегляду зі словами, що цей подарунок передав Святий Миколай."
+                  : "в видео Николай показывает подарок в коробке. Рекомендуем заранее подготовить сюрприз и вручить его ребёнку сразу после просмотра видео со словами, что этот подарок передал Святой Николай.")}
+            </span>
+          </div>
+        )}
+
       {/* VIDEO PREVIEW */}
       {(order.status === "preview_ready" || order.status === "paid") &&
         order.productType === "video" &&
@@ -927,6 +947,23 @@ export default function OrderPage() {
           const videoSrc = isPaidVideo
             ? `${order.downloadUrl}&inline=1`
             : order.result.previewVideoUrl;
+
+          const rawLines = order.result.scriptLines || {};
+          const displayLines = (() => {
+            // Backward compatibility for orders that stored all 9 lines from Nicholas template
+            if (
+              rawLines.line_01 &&
+              (rawLines.line_03 || rawLines.line_04b || rawLines.line_07_1)
+            ) {
+              return [rawLines.line_03, rawLines.line_04b, rawLines.line_07_1].filter(
+                (v): v is string => typeof v === "string" && v.trim().length > 0
+              );
+            }
+            return Object.values(rawLines).filter(
+              (v): v is string => typeof v === "string" && v.trim().length > 0
+            );
+          })();
+
           return (
             <div className="space-y-5 rounded-2xl border border-white/10 bg-[#121a30]/95 p-6 shadow-xl">
               <div className="flex items-center gap-2 text-xs text-slate-300">
@@ -955,29 +992,17 @@ export default function OrderPage() {
                 />
               )}
 
-            {order.result.scriptLines && (
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-slate-300 space-y-1.5">
-                <div className="font-bold text-amber-200">
-                  {isUk ? "Персоналізовані репліки:" : "Персонализированные реплики:"}
+              {displayLines.length > 0 && (
+                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-slate-300 space-y-1.5">
+                  <div className="font-bold text-amber-200">
+                    {isUk ? "Персоналізовані репліки:" : "Персонализированные реплики:"}
+                  </div>
+                  {displayLines.map((line, i) => (
+                    <p key={i}>• {line}</p>
+                  ))}
                 </div>
-                <p>• {order.result.scriptLines.line03}</p>
-                <p>• {order.result.scriptLines.line04b}</p>
-                <p>• {order.result.scriptLines.line07_1}</p>
-              </div>
-            )}
-
-            <div className="flex items-start gap-2.5 rounded-xl border border-amber-300/25 bg-amber-400/10 p-4 text-xs text-amber-100">
-              <Gift className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-              <span>
-                <strong className="font-semibold text-amber-200">
-                  {isUk ? "Порада перед показом дитині:" : "Совет перед показом ребёнку:"}
-                </strong>{" "}
-                {isUk
-                  ? "у відео Миколай показує подарунок у коробці. Рекомендуємо заздалегідь підготувати сюрприз і вручити його дитині одразу після перегляду зі словами, що цей подарунок передав Святий Миколай."
-                  : "в видео Николай показывает подарок в коробке. Рекомендуем заранее подготовить сюрприз и вручить его ребёнку сразу после просмотра видео со словами, что этот подарок передал Святой Николай."}
-              </span>
+              )}
             </div>
-          </div>
           );
         })()}
     </div>

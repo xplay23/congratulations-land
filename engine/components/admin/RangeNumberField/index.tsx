@@ -18,7 +18,11 @@ export function RangeNumberField({ field, path }: NumberFieldClientProps) {
   const cfg = field as unknown as RangeFieldConfig & {
     label?: string | Record<string, string>;
     required?: boolean;
-    admin?: { description?: string | Record<string, string>; step?: number };
+    admin?: {
+      description?: string | Record<string, string>;
+      step?: number;
+      width?: string;
+    };
   };
 
   const min = typeof cfg.min === "number" ? cfg.min : 0;
@@ -44,7 +48,15 @@ export function RangeNumberField({ field, path }: NumberFieldClientProps) {
   };
 
   return (
-    <div className="field-type number" style={{ marginBottom: "20px" }}>
+    <div
+      className="field-type number"
+      style={{
+        marginBottom: "16px",
+        flex: cfg.admin?.width ? `1 1 ${cfg.admin.width}` : undefined,
+        width: cfg.admin?.width,
+        minWidth: cfg.admin?.width ? "170px" : undefined,
+      }}
+    >
       <FieldLabel
         label={cfg.label}
         path={fieldPath}
@@ -55,7 +67,8 @@ export function RangeNumberField({ field, path }: NumberFieldClientProps) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "14px",
+          gap: "10px",
+          minHeight: "40px",
         }}
       >
         <input
@@ -67,6 +80,7 @@ export function RangeNumberField({ field, path }: NumberFieldClientProps) {
           onChange={(e) => setValue(clamp(Number(e.target.value)))}
           style={{
             flex: 1,
+            minWidth: "80px",
             cursor: "pointer",
             accentColor: "var(--adm-color-blue, #3b82f6)",
             height: "6px",
@@ -79,14 +93,20 @@ export function RangeNumberField({ field, path }: NumberFieldClientProps) {
           step={step}
           value={numericVal}
           onChange={(e) => handleNumberChange(e.target.value)}
-          className="field-type__input"
           style={{
-            width: "96px",
+            width: "62px",
+            height: "30px",
             flexShrink: 0,
-            fontFamily: "monospace",
-            fontSize: "var(--adm-fs-body, 14px)",
-            textAlign: "right",
-            padding: "7px 10px",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            textAlign: "center",
+            padding: "4px 6px",
+            borderRadius: "6px",
+            border: "1px solid var(--theme-elevation-200)",
+            background: "var(--theme-input-bg, var(--theme-elevation-50))",
+            color: "var(--theme-text)",
+            boxSizing: "border-box",
           }}
         />
       </div>

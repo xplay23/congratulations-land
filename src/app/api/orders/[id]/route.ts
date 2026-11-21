@@ -17,7 +17,8 @@ import { assertSafeId } from "@/lib/storage";
 import { getTelegramBotUsername } from "@/lib/telegram/bot";
 import { triggerStorybookFinalization } from "@/lib/storybook/pipeline";
 import { getAppBaseUrl } from "@/lib/url";
-import type { StorybookResult, VideoResult } from "@/lib/types";
+import { getVideoTemplateBySlug } from "@/lib/video/manifest-builder";
+import type { StorybookResult, VideoOrderPayload, VideoResult } from "@/lib/types";
 
 export async function GET(
   req: NextRequest,
@@ -119,10 +120,24 @@ export async function GET(
         };
       } else {
         const vr = order.result as VideoResult;
+        const vp = order.payload as VideoOrderPayload;
+        let parentAdviceTitle: string | undefined;
+        let parentAdviceText: string | undefined;
+        if (vp?.templateSlug) {
+          const tpl = await getVideoTemplateBySlug(vp.templateSlug, order.lang).catch(
+            () => null
+          );
+          if (tpl) {
+            parentAdviceTitle = tpl.parentAdviceTitle || undefined;
+            parentAdviceText = tpl.parentAdviceText || undefined;
+          }
+        }
         safeResult = {
           scriptLines: vr.scriptLines,
           modeUsed: vr.modeUsed,
           previewVideoUrl: `/api/orders/${order.id}/preview-asset?file=${encodeURIComponent(vr.previewVideoFile)}`,
+          ...(parentAdviceTitle ? { parentAdviceTitle } : {}),
+          ...(parentAdviceText ? { parentAdviceText } : {}),
         };
       }
     }

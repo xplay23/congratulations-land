@@ -279,6 +279,8 @@ export interface CmsServiceVariationItem {
   description: string;
   posterUrl: string;
   demoVideoUrl: string;
+  videoTemplateId?: number | null;
+  videoTemplateSlug?: string;
   pipelineTemplateId: string;
   elevenLabsVoiceIdOverride?: string;
   line03Uk?: string;
@@ -1116,17 +1118,27 @@ export async function getCmsServices(locale: Lang): Promise<CmsServiceItem[]> {
               ? showcaseRaw
               : "none";
 
+          const serviceKey = asString(doc.serviceKey, "custom") as
+            | ServiceId
+            | "custom";
+          const explicitCtaOrderUrl = asString(doc.ctaOrderUrl);
+          const autoCtaOrderUrl =
+            serviceKey === "video"
+              ? slug === "svyatyj-mykolaj"
+                ? "/create/video"
+                : `/create/video?service=${encodeURIComponent(slug)}`
+              : serviceKey === "storybook"
+              ? "/create/storybook"
+              : staticMatch?.constructorHref;
+
           const title = asString(doc.title, staticMatch?.label[locale] || slug);
           return {
             id: String(doc.id ?? slug),
             slug,
-            serviceKey: (asString(doc.serviceKey, "custom") as
-              | ServiceId
-              | "custom"),
+            serviceKey,
             status,
             sortOrder: Number(doc.sortOrder ?? 10),
-            ctaOrderUrl:
-              asString(doc.ctaOrderUrl) || staticMatch?.constructorHref,
+            ctaOrderUrl: explicitCtaOrderUrl || autoCtaOrderUrl,
             showcaseKind,
             coverImageUrl: resolveMediaUrl(
               doc.coverImage,
@@ -1291,46 +1303,64 @@ export async function getCmsServiceVariations(
 
       const mapped: CmsServiceVariationItem[] = (
         res.docs as unknown as Array<Record<string, unknown>>
-      ).map((doc) => ({
-        id: String(doc.id),
-        variationSlug: asString(doc.variationSlug),
-        serviceSlug: relSlug(doc.service) || "svyatyj-mykolaj",
-        enabled: doc.enabled !== false,
-        isDefault: Boolean(doc.isDefault),
-        sortOrder: Number(doc.sortOrder ?? 10),
-        priceOverrideUah:
-          typeof doc.priceOverrideUah === "number" && doc.priceOverrideUah > 0
-            ? Math.round(doc.priceOverrideUah)
-            : null,
-        title: asString(doc.title),
-        shortBadge: asString(doc.shortBadge),
-        description: asString(doc.description),
-        posterUrl: resolveMediaUrl(
-          doc.previewImage,
-          asString(doc.fallbackPosterUrl, "/samples/video-nikolai/poster.jpg")
-        ),
-        demoVideoUrl: resolveMediaUrl(
-          doc.demoVideo,
-          asString(
-            doc.demoVideoUrl,
-            locale === "ru"
-              ? "/samples/video-nikolai/demo_video_ru.mp4"
-              : "/samples/video-nikolai/demo_video_uk.mp4"
-          )
-        ),
-        pipelineTemplateId: asString(
-          doc.pipelineTemplateId,
-          "st_nicholas_room"
-        ),
-        elevenLabsVoiceIdOverride:
-          asString(doc.elevenLabsVoiceIdOverride) || undefined,
-        line03Uk: asString(doc.line03Uk) || undefined,
-        line03Ru: asString(doc.line03Ru) || undefined,
-        line04bUk: asString(doc.line04bUk) || undefined,
-        line04bRu: asString(doc.line04bRu) || undefined,
-        line07Uk: asString(doc.line07Uk) || undefined,
-        line07Ru: asString(doc.line07Ru) || undefined,
-      }));
+      ).map((doc) => {
+        const vtSlug = relSlug(doc.videoTemplate) || undefined;
+        const firstShotPosterFallback = vtSlug
+          ? `/api/config/video-template-frame?templateSlug=${encodeURIComponent(vtSlug)}&shotKey=first`
+          : "/samples/video-nikolai/poster.jpg";
+
+        return {
+          id: String(doc.id),
+          variationSlug: asString(doc.variationSlug),
+          serviceSlug: relSlug(doc.service) || "svyatyj-mykolaj",
+          enabled: doc.enabled !== false,
+          isDefault: Boolean(doc.isDefault),
+          sortOrder: Number(doc.sortOrder ?? 10),
+          priceOverrideUah:
+            typeof doc.priceOverrideUah === "number" && doc.priceOverrideUah > 0
+              ? Math.round(doc.priceOverrideUah)
+              : null,
+          title: asString(doc.title),
+          shortBadge: asString(doc.shortBadge),
+          description: asString(doc.description),
+          posterUrl: resolveMediaUrl(
+            doc.previewImage,
+            asString(doc.fallbackPosterUrl) || firstShotPosterFallback
+          ),
+          demoVideoUrl: resolveMediaUrl(
+            doc.demoVideo,
+            asString(
+              doc.demoVideoUrl,
+              locale === "ru"
+                ? "/samples/video-nikolai/demo_video_ru.mp4"
+                : "/samples/video-nikolai/demo_video_uk.mp4"
+            )
+          ),
+          videoTemplateId: (() => {
+            const vt = doc.videoTemplate;
+            if (!vt) return null;
+            const rawId =
+              typeof vt === "object" && vt !== null && "id" in vt
+                ? (vt as { id: unknown }).id
+                : vt;
+            const n = Number(rawId);
+            return Number.isInteger(n) && n > 0 ? n : null;
+          })(),
+          videoTemplateSlug: vtSlug,
+          pipelineTemplateId: asString(
+            doc.pipelineTemplateId,
+            "st_nicholas_room"
+          ),
+          elevenLabsVoiceIdOverride:
+            asString(doc.elevenLabsVoiceIdOverride) || undefined,
+          line03Uk: asString(doc.line03Uk) || undefined,
+          line03Ru: asString(doc.line03Ru) || undefined,
+          line04bUk: asString(doc.line04bUk) || undefined,
+          line04bRu: asString(doc.line04bRu) || undefined,
+          line07Uk: asString(doc.line07Uk) || undefined,
+          line07Ru: asString(doc.line07Ru) || undefined,
+        };
+      });
 
       return mapped.filter(
         (v) => v.enabled && (!serviceSlug || v.serviceSlug === serviceSlug)
@@ -1678,7 +1708,11 @@ export async function getCmsSiteShell(locale: Lang): Promise<CmsSiteShell> {
 
       return {
         siteName: asString(siteDoc?.siteName, fb.siteName),
-        tagline: asString(siteDoc?.tagline, fb.tagline),
+        tagline: siteDoc
+          ? typeof siteDoc.tagline === "string"
+            ? siteDoc.tagline.trim()
+            : ""
+          : fb.tagline,
         logoUrl: resolveMediaUrl(siteDoc?.logo, fb.logoUrl),
         showSiteNameWithLogo:
           typeof siteDoc?.showSiteNameWithLogo === "boolean"

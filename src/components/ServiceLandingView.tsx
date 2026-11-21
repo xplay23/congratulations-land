@@ -236,7 +236,11 @@ export function ServiceLandingView({
                       )}
                     </div>
                     <Link
-                      href={l(`${item.ctaOrderUrl}?variation=${encodeURIComponent(v.variationSlug)}`)}
+                      href={l(
+                        `${item.ctaOrderUrl || "/create/video"}${
+                          (item.ctaOrderUrl || "").includes("?") ? "&" : "?"
+                        }variation=${encodeURIComponent(v.variationSlug)}`
+                      )}
                       className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                     >
                       {isUk ? "Обрати цей сюжет" : "Выбрать этот сюжет"}
