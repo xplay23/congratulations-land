@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import nextEnv from "@next/env";
+import { loadEnvConfig } from "@next/env";
 import { buildConfig } from "payload";
 import { postgresAdapter } from "@payloadcms/db-postgres";
 import { lexicalEditor } from "@payloadcms/richtext-lexical";
@@ -37,8 +37,6 @@ import { AiEconomics } from "./engine/globals/AiEconomics";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
-
-const { loadEnvConfig } = nextEnv;
 
 // Ensure .env.local is loaded when running Payload CLI (`npx payload ...`)
 if (!process.env.DATABASE_URL || !process.env.PAYLOAD_SECRET) {

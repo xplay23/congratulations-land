@@ -1,5 +1,5 @@
 import type { GlobalConfig } from "payload";
-import { invalidateModelsCache } from "@/app/api/ai/models/route";
+import { invalidateModelsCache } from "@/lib/ai-model-cache";
 import { invalidateCmsAiConfigCache } from "@/lib/cms-ai-config";
 
 const REASONING_EFFORT_OPTIONS = [

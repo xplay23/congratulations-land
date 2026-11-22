@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "@engine/lib/payload";
+import { getCached, setCached } from "@/lib/ai-model-cache";
 
 type ProviderError = { message: string; status: number };
-
-interface ModelsCacheEntry {
-  models: string[];
-  source: "api" | "fallback";
-  note?: string;
-  expiresAt: number;
-}
-
-const modelsCache = new Map<string, ModelsCacheEntry>();
-const CACHE_TTL_MS = 60 * 60 * 1000;
 
 const ELEVENLABS_FALLBACK_MODELS = [
   "eleven_v4",
@@ -21,27 +12,6 @@ const ELEVENLABS_FALLBACK_MODELS = [
   "eleven_turbo_v2_5",
   "eleven_monolingual_v1",
 ];
-
-function getCached(key: string): ModelsCacheEntry | null {
-  const entry = modelsCache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) {
-    modelsCache.delete(key);
-    return null;
-  }
-  return entry;
-}
-
-function setCached(
-  key: string,
-  data: { models: string[]; source: "api" | "fallback"; note?: string }
-): void {
-  modelsCache.set(key, { ...data, expiresAt: Date.now() + CACHE_TTL_MS });
-}
-
-export function invalidateModelsCache(): void {
-  modelsCache.clear();
-}
 
 function extractProviderError(body: unknown, httpStatus: number): ProviderError {
   if (typeof body === "object" && body !== null) {

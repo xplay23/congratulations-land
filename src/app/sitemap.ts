@@ -8,6 +8,8 @@ import {
 } from "@/lib/cms-content";
 import { LEGAL_PAGES } from "@/lib/site-content";
 
+export const dynamic = "force-dynamic";
+
 function getSiteUrl(): string {
   return (
     process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/$/, "") ||

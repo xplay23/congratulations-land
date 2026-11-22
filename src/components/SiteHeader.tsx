@@ -106,7 +106,6 @@ export function SiteHeader({ shell }: { shell?: CmsSiteShell }) {
     }`;
 
   const brandName = shell?.siteName || t.brand;
-  const brandTagline = shell ? shell.tagline.trim() : t.tagline;
   const logoUrl = shell?.logoUrl || "/assets/video-gift.svg";
 
   return (
@@ -124,11 +123,6 @@ export function SiteHeader({ shell }: { shell?: CmsSiteShell }) {
             <span className="font-serif-book text-lg font-bold tracking-wide text-amber-100">
               {brandName}
             </span>
-            {brandTagline && (
-              <p className="hidden text-[11px] text-slate-400 lg:block">
-                {brandTagline}
-              </p>
-            )}
           </div>
         </Link>
 
