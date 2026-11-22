@@ -4,6 +4,7 @@ import { PricingProvider } from "@/components/PricingContext";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CookieConsent } from "@/components/CookieConsent";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import { AiAssistantDrawer } from "@/components/AiAssistantDrawer";
 import { getPricingConfig } from "@/lib/settings";
 import { getServerLocale, makeHomeMetadata } from "@/lib/page-helpers";
@@ -37,6 +38,10 @@ export default async function RootLayout({
             </main>
             <SiteFooter shell={shell} />
             <CookieConsent />
+            <GoogleAnalytics
+              measurementId={process.env.GOOGLE_ANALYTICS_ID}
+              containerId={process.env.GOOGLE_TAG_MANAGER_ID}
+            />
             <AiAssistantDrawer />
           </PricingProvider>
         </LanguageProvider>

@@ -251,9 +251,7 @@ async function main() {
         "Персоналізовані відеопривітання та казки-книги PDF для дітей",
       contactEmail:
         (siteUk.contactEmail as string) || "hello@videovitannya.com.ua",
-      telegramBotUrl:
-        (siteUk.telegramBotUrl as string) ||
-        "https://t.me/skynet_forever_bot",
+      telegramBotUrl: (siteUk.telegramBotUrl as string) || "",
       footerText: hasLexicalContent(siteUk.footerText)
         ? siteUk.footerText
         : textToLexical(
@@ -262,16 +260,7 @@ async function main() {
       copyrightText: hasLexicalContent(siteUk.copyrightText)
         ? siteUk.copyrightText
         : textToLexical("Усі права захищено."),
-      socialLinks:
-        existingSocials.length > 0
-          ? existingSocials
-          : [
-              {
-                platform: "telegram",
-                label: "Telegram-бот",
-                url: "https://t.me/skynet_forever_bot",
-              },
-            ],
+      socialLinks: existingSocials,
     },
   });
 

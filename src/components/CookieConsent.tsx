@@ -6,7 +6,8 @@ import { ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/components/LanguageContext";
 
 export const COOKIE_CONSENT_EVENT = "videovitannya:open-cookies";
-const STORAGE_KEY = "videovitannya-consent";
+export const COOKIE_CONSENT_CHANGED_EVENT = "videovitannya:consent-changed";
+export const COOKIE_CONSENT_STORAGE_KEY = "videovitannya-consent";
 
 export function openCookieSettings() {
   if (typeof window !== "undefined") {
@@ -21,7 +22,7 @@ export function CookieConsent() {
 
   useEffect(() => {
     try {
-      setVisible(!window.localStorage.getItem(STORAGE_KEY));
+      setVisible(!window.localStorage.getItem(COOKIE_CONSENT_STORAGE_KEY));
     } catch {
       setVisible(true);
     }
@@ -33,7 +34,7 @@ export function CookieConsent() {
   const choose = (mode: "necessary" | "all") => {
     try {
       window.localStorage.setItem(
-        STORAGE_KEY,
+        COOKIE_CONSENT_STORAGE_KEY,
         JSON.stringify({
           necessary: true,
           analytics: mode === "all",
@@ -44,6 +45,11 @@ export function CookieConsent() {
     } catch {
       // Consent remains valid in memory if storage is unavailable
     }
+    window.dispatchEvent(
+      new CustomEvent(COOKIE_CONSENT_CHANGED_EVENT, {
+        detail: { analytics: mode === "all" },
+      })
+    );
     setVisible(false);
   };
 

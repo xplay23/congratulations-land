@@ -385,15 +385,17 @@ export default function OrderPage() {
 
           {order.status === "paid" && order.downloadUrl && (
             <>
-              <button
-                type="button"
-                disabled={busyAction === "telegram"}
-                onClick={() => void handleSendToTelegram()}
-                className="inline-flex items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-400/15 px-4 py-3 text-xs font-bold text-sky-200 hover:bg-sky-400/25"
-              >
-                <Send className="h-4 w-4" />
-                {isUk ? "Надіслати в Telegram" : "Отправить в Telegram"}
-              </button>
+              {order.telegramBotEnabled && (
+                <button
+                  type="button"
+                  disabled={busyAction === "telegram"}
+                  onClick={() => void handleSendToTelegram()}
+                  className="inline-flex items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-400/15 px-4 py-3 text-xs font-bold text-sky-200 hover:bg-sky-400/25"
+                >
+                  <Send className="h-4 w-4" />
+                  {isUk ? "Надіслати в Telegram" : "Отправить в Telegram"}
+                </button>
+              )}
 
               <a
                 href={order.downloadUrl}
