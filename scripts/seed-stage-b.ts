@@ -324,8 +324,8 @@ async function seedStageB() {
           shortBadge: "Класичний сюжет · ~47 с",
           description:
             "Затишна зимова кімната з каміном, ялинкою та Книгою добрих справ, де з’являється фото отримувача.",
-          fallbackPosterUrl: "/samples/video-nikolai/poster.jpg",
-          demoVideoUrl: "/samples/video-nikolai/demo_video_uk.mp4",
+          fallbackPosterUrl: "/samples/nicholas_preview.jpg",
+          demoVideoUrl: "/samples/demo_video_uk.mp4",
           pipelineTemplateId: "st_nicholas_room",
         } as never,
       });
