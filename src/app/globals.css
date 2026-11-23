@@ -29,3 +29,51 @@ a[href] {
 button:disabled {
   cursor: not-allowed;
 }
+
+@media (width < 500px) {
+  :root {
+    --text-base: 0.875rem;
+    --spacing: 0.20rem;
+  }
+
+  body {
+    font-size: var(--text-base);
+  }
+
+  .brand-wordmark {
+    display: none;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  button,
+  .site-button {
+    font-size: var(--text-base);
+    padding-inline: calc(var(--spacing) * 3);
+  }
+
+  .icon-button {
+    min-inline-size: max-content;
+  }
+
+  :is(button, .site-button):not(.icon-button, .flex-col):has(> svg) {
+    justify-content: flex-start;
+    text-align: start;
+
+    > svg {
+      order: 1;
+      flex-shrink: 0;
+    }
+
+    > svg:first-of-type {
+      margin-inline-start: auto;
+    }
+  }
+
+  button.flex-col:has(svg) {
+    align-items: flex-start;
+    text-align: start;
+  }
+}

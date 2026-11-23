@@ -474,7 +474,7 @@ export default function CreateVideoPage() {
                   : "Сцена в тёплой резиденции (~49 сек, живая озвучка ElevenLabs и врезка фото в Книгу добрых дел).",
               })
             }
-            className="absolute bottom-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
+            className="icon-button absolute bottom-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
           >
             <ZoomIn className="h-4 w-4" />
           </button>
@@ -678,7 +678,7 @@ export default function CreateVideoPage() {
                 disabled={omitAge || ageNum <= 1}
                 onClick={() => setAgeNum((n) => Math.max(1, n - 1))}
                 aria-label="Decrease age"
-                className="flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
+                className="icon-button flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
               >
                 <Minus className="h-4 w-4" />
               </button>
@@ -710,7 +710,7 @@ export default function CreateVideoPage() {
                 disabled={omitAge || ageNum >= 14}
                 onClick={() => setAgeNum((n) => Math.min(14, n + 1))}
                 aria-label="Increase age"
-                className="flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
+                className="icon-button flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -854,7 +854,7 @@ export default function CreateVideoPage() {
                         setPhotoName("");
                         setPhotoPreviewUrl(null);
                       }}
-                      className="absolute right-1 top-1 rounded-full bg-black/70 p-0.5 text-white hover:bg-rose-600"
+                      className="icon-button absolute right-1 top-1 rounded-full bg-black/70 p-0.5 text-white hover:bg-rose-600"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -862,7 +862,7 @@ export default function CreateVideoPage() {
                 )}
 
                 <label
-                  className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
+                  className={`site-button inline-flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-semibold transition ${
                     errorField === "photo"
                       ? "border-rose-400 bg-rose-500/15 text-rose-100 ring-1 ring-rose-400/40"
                       : "border-amber-300/40 bg-amber-400/15 text-amber-200 hover:bg-amber-400/25"

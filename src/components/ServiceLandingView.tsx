@@ -101,7 +101,7 @@ export function ServiceLandingView({
                   <>
                     <Link
                       href={l(item.ctaOrderUrl)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-3.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
+                      className="site-button inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-3.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
                     >
                       {svcKey === "storybook" ? (
                         <BookOpen className="h-4 w-4" />
@@ -114,7 +114,7 @@ export function ServiceLandingView({
                     {item.showcaseKind !== "none" && (
                       <a
                         href="#demo"
-                        className="inline-flex items-center gap-2 rounded-xl border border-amber-200/30 bg-white/5 px-5 py-3.5 text-sm font-semibold text-amber-100 transition hover:bg-white/10"
+                        className="site-button inline-flex items-center gap-2 rounded-xl border border-amber-200/30 bg-white/5 px-5 py-3.5 text-sm font-semibold text-amber-100 transition hover:bg-white/10"
                       >
                         {isUk ? "Дивитись приклад" : "Смотреть пример"}
                       </a>
@@ -134,7 +134,7 @@ export function ServiceLandingView({
                           ? "/create/storybook"
                           : "/create/video"
                       )}
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                      className="site-button inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
                     >
                       {item.slug === "multfilm-pro-dytynu"
                         ? isUk
@@ -241,7 +241,7 @@ export function ServiceLandingView({
                           (item.ctaOrderUrl || "").includes("?") ? "&" : "?"
                         }variation=${encodeURIComponent(v.variationSlug)}`
                       )}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                      className="site-button inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                     >
                       {isUk ? "Обрати цей сюжет" : "Выбрать этот сюжет"}
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -400,14 +400,14 @@ export function ServiceLandingView({
                     <div className="grid grid-cols-2 gap-2">
                       <Link
                         href={l(`/${rel.slug}`)}
-                        className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                        className="site-button inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-3 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                       >
                         {isUk ? "Детальніше" : "Подробнее"}
                       </Link>
                       {relOrderable && rel.ctaOrderUrl ? (
                         <Link
                           href={l(rel.ctaOrderUrl)}
-                          className="inline-flex items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                          className="site-button inline-flex items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                         >
                           {isUk ? "Замовити" : "Заказать"}
                           <ArrowRight className="h-3.5 w-3.5" />

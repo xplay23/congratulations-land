@@ -60,14 +60,21 @@ export function LanguageProvider({
     }
 
     if (prevPathnameRef.current !== pathname) {
+      const previousUrlLang = getLocaleFromPathname(prevPathnameRef.current);
       prevPathnameRef.current = pathname;
       const urlLang = getLocaleFromPathname(pathname);
       setLangState(urlLang);
       window.localStorage.setItem("videovitannya_lang", urlLang);
+
+      // Locale rewrites share route segments, so Next.js can reuse the previous
+      // server page and layout. Refresh their localized CMS data after navigation.
+      if (previousUrlLang !== urlLang) {
+        router.refresh();
+      }
     } else {
       window.localStorage.setItem("videovitannya_lang", lang);
     }
-  }, [pathname, lang]);
+  }, [pathname, lang, router]);
 
   const l = useCallback(
     (href: string) => localizeHref(href, lang),

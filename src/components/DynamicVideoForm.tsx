@@ -382,7 +382,7 @@ export function DynamicVideoForm({
               }))
             }
             aria-label="Decrease age"
-            className="flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
+            className="icon-button flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -424,7 +424,7 @@ export function DynamicVideoForm({
               }))
             }
             aria-label="Increase age"
-            className="flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
+            className="icon-button flex h-8 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-amber-200 transition hover:bg-amber-400/20 disabled:opacity-30"
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -718,14 +718,14 @@ export function DynamicVideoForm({
                     type="button"
                     onClick={() => void handleClearPhoto(field.fieldKey)}
                     aria-label="Remove photo"
-                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/75 text-white hover:bg-rose-500"
+                    className="icon-button absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/75 text-white hover:bg-rose-500"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </div>
               )}
 
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/10 px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/20">
+              <label className="site-button inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/10 px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-400/20">
                 {isUploading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -855,7 +855,7 @@ export function DynamicVideoForm({
                 desc: template.cardDescription,
               })
             }
-            className="absolute bottom-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
+            className="icon-button absolute bottom-2.5 right-2.5 flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
           >
             <ZoomIn className="h-4 w-4" />
           </button>

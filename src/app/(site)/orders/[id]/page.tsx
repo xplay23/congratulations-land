@@ -399,7 +399,7 @@ export default function OrderPage() {
 
               <a
                 href={order.downloadUrl}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-[#071510] shadow-lg shadow-emerald-500/25 hover:bg-emerald-300"
+                className="site-button inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-5 py-3 text-sm font-bold text-[#071510] shadow-lg shadow-emerald-500/25 hover:bg-emerald-300"
               >
                 <Download className="h-4 w-4" />
                 {order.productType === "storybook"
@@ -539,7 +539,7 @@ export default function OrderPage() {
           </div>
           <Link
             href={l(order.productType === "storybook" ? "/create/storybook" : "/create/video")}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-2.5 text-sm font-bold text-[#0b1020]"
+            className="site-button inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-2.5 text-sm font-bold text-[#0b1020]"
           >
             <RefreshCw className="h-4 w-4" />
             {isUk ? "Створити нове замовлення" : "Создать новый заказ"}
@@ -624,7 +624,7 @@ export default function OrderPage() {
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href={l(order.productType === "storybook" ? "/create/storybook" : "/create/video")}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-2.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 hover:brightness-105"
+              className="site-button inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-2.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 hover:brightness-105"
             >
               <RefreshCw className="h-4 w-4" />
               {order.productType === "storybook"
@@ -637,7 +637,7 @@ export default function OrderPage() {
             </Link>
             <Link
               href={l("/")}
-              className="inline-flex items-center rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-white/10"
+              className="site-button inline-flex items-center rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:bg-white/10"
             >
               {isUk ? "На головну" : "На главную"}
             </Link>
@@ -710,7 +710,7 @@ export default function OrderPage() {
                   href={order.result.previewPdfUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-1.5 font-semibold text-amber-200 hover:bg-amber-400/20"
+                  className="site-button inline-flex items-center gap-1.5 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-1.5 font-semibold text-amber-200 hover:bg-amber-400/20"
                 >
                   <FileText className="h-3.5 w-3.5" />
                   {isUk ? "Відкрити прев'ю PDF" : "Открыть превью PDF"}

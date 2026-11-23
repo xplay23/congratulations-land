@@ -141,7 +141,7 @@ function HeroBlockView({
               {vidEnabled && (
                 <Link
                   href={l("/create/video")}
-                  className="inline-flex items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-4 py-2.5 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/25"
+                  className="site-button inline-flex items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-4 py-2.5 text-xs font-semibold text-amber-100 transition hover:bg-amber-400/25"
                 >
                   <Video className="h-4 w-4 text-amber-300" />
                   {isUk ? "Замовити відео від Миколая" : "Заказать видео от Николая"}
@@ -150,7 +150,7 @@ function HeroBlockView({
               {sbEnabled && (
                 <Link
                   href={l("/create/storybook")}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                  className="site-button inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                 >
                   <BookOpen className="h-4 w-4 text-amber-300" />
                   {isUk ? "Створити іменну казку" : "Создать именную сказку"}
@@ -158,7 +158,7 @@ function HeroBlockView({
               )}
               <a
                 href="#live-demos"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                className="site-button inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
               >
                 <PlayCircle className="h-4 w-4 text-sky-300" />
                 {isUk ? "Дивитись приклади" : "Смотреть примеры"}
@@ -357,14 +357,14 @@ function ServicesCatalogBlockView({
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <Link
                       href={l(`/${svc.slug}`)}
-                      className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
+                      className="site-button inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
                     >
                       {isUk ? "Детальніше" : "Подробнее"}
                     </Link>
                     {svc.ctaOrderUrl && (
                       <Link
                         href={l(svc.ctaOrderUrl)}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-4 py-3 text-xs font-bold text-[#0b1020] shadow-md shadow-amber-500/20 transition hover:brightness-105"
+                        className="site-button inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-4 py-3 text-xs font-bold text-[#0b1020] shadow-md shadow-amber-500/20 transition hover:brightness-105"
                       >
                         {isUk ? "Замовити" : "Заказать"}
                         <ArrowRight className="h-4 w-4" />
@@ -494,14 +494,14 @@ function PricingTableBlockView({
                 <div className="flex flex-wrap gap-2 md:justify-end">
                   <Link
                     href={l(`/${item.slug}`)}
-                    className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                    className="site-button inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                   >
                     {isUk ? "Детальніше" : "Подробнее"}
                   </Link>
                   {isOrderable && item.ctaOrderUrl ? (
                     <Link
                       href={l(item.ctaOrderUrl)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                      className="site-button inline-flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                     >
                       {isUk ? "Замовити" : "Заказать"}
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -793,7 +793,7 @@ function BannerBlockView({
             localStorage.setItem(storageKey, "dismissed");
             setVisible(false);
           }}
-          className="absolute right-3 top-1/2 -translate-y-1/2 opacity-70 transition hover:opacity-100"
+          className="icon-button absolute right-3 top-1/2 -translate-y-1/2 opacity-70 transition hover:opacity-100"
         >
           <X className="h-4 w-4" />
         </button>
@@ -1015,7 +1015,7 @@ export function RenderBlocks({
                 <div className="pt-2">
                   <a
                     href={href}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-3.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
+                    className="site-button inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-3.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
                   >
                     {block.buttonLabel}
                     <ArrowRight className="h-4 w-4" />
@@ -1258,7 +1258,7 @@ export function RenderBlocks({
                   {block.ctaLabel && block.ctaUrl && (
                     <a
                       href={resolveHref(l, block.ctaUrl)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-3 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
+                      className="site-button inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-3 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
                     >
                       {block.ctaLabel}
                       <ArrowRight className="h-4 w-4" />
@@ -1440,7 +1440,7 @@ export function RenderBlocks({
                       </div>
                       <a
                         href={resolveHref(l, plan.ctaUrl)}
-                        className={`mt-6 inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold transition ${
+                        className={`site-button mt-6 inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-sm font-bold transition ${
                           plan.highlighted
                             ? "bg-gradient-to-r from-amber-300 to-amber-500 text-[#0b1020] shadow-lg shadow-amber-500/20 hover:brightness-105"
                             : "border border-white/15 bg-white/5 text-white hover:bg-white/10"

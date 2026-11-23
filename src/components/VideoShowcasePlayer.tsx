@@ -135,7 +135,7 @@ export function VideoShowcasePlayer({
           {showOrderCta && (
             <Link
               href={l("/create/video")}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-3 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
+              className="site-button inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-3 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
             >
               {isUk ? "Замовити таке відео" : "Заказать такое видео"}
               <ArrowRight className="h-4 w-4" />

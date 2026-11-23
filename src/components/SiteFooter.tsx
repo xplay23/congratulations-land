@@ -70,7 +70,7 @@ export function SiteFooter({ shell }: { shell?: CmsSiteShell }) {
                   className="h-full w-full object-contain"
                 />
               </span>
-              <span className="font-serif-book text-xl font-bold text-amber-100">
+              <span className="brand-wordmark font-serif-book text-xl font-bold text-amber-100">
                 {brandName}
               </span>
             </Link>
@@ -95,7 +95,7 @@ export function SiteFooter({ shell }: { shell?: CmsSiteShell }) {
                     href={soc.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-amber-300/40 hover:text-amber-200"
+                    className="site-button rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-amber-300/40 hover:text-amber-200"
                   >
                     {soc.label || soc.platform}
                   </a>

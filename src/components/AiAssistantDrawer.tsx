@@ -77,7 +77,7 @@ export function AiAssistantDrawer() {
           <button
             type="button"
             onClick={() => setAssistantOpen(false)}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
+            className="icon-button rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -140,7 +140,7 @@ export function AiAssistantDrawer() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded-xl bg-amber-400 p-2.5 text-[#0b1020] transition hover:bg-amber-300 disabled:opacity-50"
+            className="icon-button rounded-xl bg-amber-400 p-2.5 text-[#0b1020] transition hover:bg-amber-300 disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
           </button>

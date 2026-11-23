@@ -119,11 +119,9 @@ export function SiteHeader({ shell }: { shell?: CmsSiteShell }) {
               className="h-full w-full object-contain"
             />
           </span>
-          <div>
-            <span className="font-serif-book text-lg font-bold tracking-wide text-amber-100">
-              {brandName}
-            </span>
-          </div>
+          <span className="brand-wordmark font-serif-book text-lg font-bold tracking-wide text-amber-100">
+            {brandName}
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-5 text-sm font-medium md:flex">
@@ -229,7 +227,7 @@ export function SiteHeader({ shell }: { shell?: CmsSiteShell }) {
           <button
             type="button"
             onClick={() => setAssistantOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
+            className="icon-button flex items-center gap-1.5 rounded-lg border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400/20"
           >
             <Bot className="h-4 w-4" />
             <span className="hidden sm:inline">{t.assistantBtn}</span>
@@ -248,7 +246,7 @@ export function SiteHeader({ shell }: { shell?: CmsSiteShell }) {
                   ? "Відкрити меню"
                   : "Открыть меню"
             }
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition hover:bg-white/10 md:hidden"
+            className="icon-button inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-200 transition hover:bg-white/10 md:hidden"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>

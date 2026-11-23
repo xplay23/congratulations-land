@@ -866,7 +866,7 @@ export default function CreateStorybookPage() {
                         type="button"
                         onClick={clearChildPhoto}
                         title={isUk ? "Видалити фото" : "Удалить фото"}
-                        className="absolute right-1 top-1 rounded-full bg-black/70 p-0.5 text-white hover:bg-rose-600"
+                        className="icon-button absolute right-1 top-1 rounded-full bg-black/70 p-0.5 text-white hover:bg-rose-600"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -891,7 +891,7 @@ export default function CreateStorybookPage() {
                   </div>
                 </div>
 
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-4 py-2.5 text-xs font-semibold text-amber-200 hover:bg-amber-400/25">
+                <label className="site-button inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-4 py-2.5 text-xs font-semibold text-amber-200 hover:bg-amber-400/25">
                   {uploadingChild ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -1099,7 +1099,7 @@ export default function CreateStorybookPage() {
                               desc: meta.description[lang],
                             });
                           }}
-                          className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
+                          className="icon-button absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
                         >
                           <ZoomIn className="h-4 w-4" />
                         </button>
@@ -1172,7 +1172,7 @@ export default function CreateStorybookPage() {
                               desc: meta.description[lang],
                             });
                           }}
-                          className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
+                          className="icon-button absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white backdrop-blur-xs transition hover:bg-amber-400 hover:text-[#0b1020]"
                         >
                           <ZoomIn className="h-4 w-4" />
                         </button>
@@ -1315,7 +1315,7 @@ export default function CreateStorybookPage() {
                                 desc: opt.description[lang],
                               });
                             }}
-                            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white hover:bg-amber-400 hover:text-[#0b1020]"
+                            className="icon-button absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white hover:bg-amber-400 hover:text-[#0b1020]"
                           >
                             <ZoomIn className="h-3.5 w-3.5" />
                           </button>
@@ -1423,7 +1423,7 @@ export default function CreateStorybookPage() {
                                 desc: opt.description[lang],
                               });
                             }}
-                            className="absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white hover:bg-amber-400 hover:text-[#0b1020]"
+                            className="icon-button absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-black/65 text-white hover:bg-amber-400 hover:text-[#0b1020]"
                           >
                             <ZoomIn className="h-3.5 w-3.5" />
                           </button>
@@ -1987,13 +1987,13 @@ export default function CreateStorybookPage() {
                             type="button"
                             onClick={clearCompanionPhoto}
                             aria-label={isUk ? "Видалити фото" : "Удалить фото"}
-                            className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white hover:bg-rose-600"
+                            className="icon-button absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white hover:bg-rose-600"
                           >
                             <X className="h-3 w-3" />
                           </button>
                         </div>
                       )}
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-4 py-2 text-xs font-semibold text-amber-200">
+                      <label className="site-button inline-flex cursor-pointer items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-4 py-2 text-xs font-semibold text-amber-200">
                         {uploadingCompanion ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (

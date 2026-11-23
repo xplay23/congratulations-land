@@ -65,7 +65,7 @@ export function BlogIndexView({
       >
         <Link
           href={l("/blog")}
-          className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
+          className={`site-button rounded-xl border px-4 py-2 text-xs font-semibold transition ${
             !hub
               ? "border-amber-300 bg-amber-400 text-[#0b1020]"
               : "border-white/15 bg-white/5 text-slate-200 hover:bg-white/10"
@@ -79,7 +79,7 @@ export function BlogIndexView({
             <Link
               key={h.slug}
               href={l(`/blog/${h.slug}`)}
-              className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${
+              className={`site-button rounded-xl border px-4 py-2 text-xs font-semibold transition ${
                 active
                   ? "border-amber-300 bg-amber-400 text-[#0b1020]"
                   : "border-white/15 bg-white/5 text-slate-200 hover:bg-white/10"
@@ -133,14 +133,14 @@ export function BlogIndexView({
           <div className="flex flex-wrap gap-2.5 shrink-0">
             <Link
               href={l(`/${targetService.slug}`)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-white transition hover:bg-white/10"
+              className="site-button inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-white transition hover:bg-white/10"
             >
               {targetService.label}
             </Link>
             {targetService.ctaOrderUrl && targetService.status === "active" && (
               <Link
                 href={l(targetService.ctaOrderUrl)}
-                className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                className="site-button inline-flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
               >
                 {isUk ? "Замовити" : "Заказать"}
                 <ArrowRight className="h-4 w-4" />
@@ -263,14 +263,14 @@ export function BlogArticleView({
             <div className="flex flex-wrap gap-2 shrink-0">
               <Link
                 href={l(`/${ctaService.slug}`)}
-                className="rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/10"
+                className="site-button rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/10"
               >
                 {isUk ? "Детальніше" : "Подробнее"}
               </Link>
               {ctaService.ctaOrderUrl && ctaService.status === "active" && (
                 <Link
                   href={l(ctaService.ctaOrderUrl)}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                  className="site-button inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                 >
                   {isUk ? "Замовити" : "Заказать"}
                   <ArrowRight className="h-4 w-4" />

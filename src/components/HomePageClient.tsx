@@ -163,7 +163,7 @@ export function HomePageClient({
                 {vidEnabled && (
                   <Link
                     href={l("/create/video")}
-                    className="inline-flex items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-5 py-2.5 text-xs font-bold text-amber-100 transition hover:bg-amber-400/25"
+                    className="site-button inline-flex items-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/15 px-5 py-2.5 text-xs font-bold text-amber-100 transition hover:bg-amber-400/25"
                   >
                     <Video className="h-4 w-4 text-amber-300" />
                     {t.ctaVideo}
@@ -172,7 +172,7 @@ export function HomePageClient({
                 {sbEnabled && (
                   <Link
                     href={l("/create/storybook")}
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
+                    className="site-button inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
                   >
                     <BookOpen className="h-4 w-4 text-amber-300" />
                     {t.ctaStorybook}
@@ -180,7 +180,7 @@ export function HomePageClient({
                 )}
                 <a
                   href="#live-demos"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-medium text-slate-300 transition hover:text-amber-200"
+                  className="site-button inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-medium text-slate-300 transition hover:text-amber-200"
                 >
                   <PlayCircle className="h-4 w-4 text-sky-300" />
                   {isUk ? "Живі приклади робіт" : "Живые примеры работ"}
@@ -314,13 +314,13 @@ export function HomePageClient({
                   <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     <Link
                       href={l("/svyatyj-mykolaj")}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
+                      className="site-button inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
                     >
                       {isUk ? "Детальніше" : "Подробнее"}
                     </Link>
                     <Link
                       href={l("/create/video")}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                      className="site-button inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                     >
                       {isUk ? "Замовити" : "Заказать"}
                       <ArrowRight className="h-4 w-4" />
@@ -384,13 +384,13 @@ export function HomePageClient({
                   <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     <Link
                       href={l("/kazka")}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
+                      className="site-button inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
                     >
                       {isUk ? "Детальніше" : "Подробнее"}
                     </Link>
                     <Link
                       href={l("/create/storybook")}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                      className="site-button inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                     >
                       {isUk ? "Замовити" : "Заказать"}
                       <ArrowRight className="h-4 w-4" />
@@ -455,7 +455,7 @@ export function HomePageClient({
                     <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                       <Link
                         href={l(detailHref)}
-                        className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
+                        className="site-button inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-semibold text-slate-100 transition hover:bg-white/10"
                       >
                         {isUk ? "Детальніше" : "Подробнее"}
                       </Link>
@@ -467,7 +467,7 @@ export function HomePageClient({
                       ) : (
                         <Link
                           href={l(landing.constructorHref)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
+                          className="site-button inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-xs font-bold text-[#0b1020] transition hover:bg-amber-300"
                         >
                           {isUk ? "Замовити" : "Заказать"}
                           <ArrowRight className="h-4 w-4" />
@@ -658,7 +658,7 @@ export function HomePageClient({
         <div className="pt-2">
           <a
             href="#gifts"
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-3.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
+            className="site-button inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-6 py-3.5 text-sm font-bold text-[#0b1020] shadow-lg shadow-amber-500/20 transition hover:brightness-105"
           >
             {isUk ? "Обрати привітання" : "Выбрать поздравление"}
             <ArrowRight className="h-4 w-4" />

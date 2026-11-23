@@ -144,7 +144,7 @@ export function ImageLightbox({
           type="button"
           onClick={onClose}
           aria-label="Close preview"
-          className="absolute right-3 top-3 z-10 rounded-full bg-black/70 p-2 text-white transition hover:bg-amber-400 hover:text-[#0b1020]"
+          className="icon-button absolute right-3 top-3 z-10 rounded-full bg-black/70 p-2 text-white transition hover:bg-amber-400 hover:text-[#0b1020]"
         >
           <X className="h-5 w-5" />
         </button>

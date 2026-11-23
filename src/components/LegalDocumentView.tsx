@@ -59,7 +59,7 @@ export function LegalDocumentView({
           )}
           <Link
             href={l("/#gifts")}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/10"
+            className="site-button inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-white/10"
           >
             {isUk ? "Оберіть ваше привітання" : "Выберите ваше поздравление"}
             <ArrowRight className="h-4 w-4" />
